@@ -133,6 +133,7 @@ pub fn close(handle: u64) -> Result<(), String> {
 }
 
 /// Count of live ACP children — used by the Proof page's runtime panel.
+#[allow(dead_code)]
 pub fn live_handles() -> usize {
     registry().lock().map(|r| r.len()).unwrap_or(0)
 }

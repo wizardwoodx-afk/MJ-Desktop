@@ -30,6 +30,7 @@ pub fn is_untracked(e: &StatusEntry) -> bool {
 }
 
 /// True when the entry represents a modification to tracked content.
+#[allow(dead_code)]
 pub fn is_modification(e: &StatusEntry) -> bool {
     !is_untracked(e) && (e.xy.contains('M') || e.xy.contains('D') || e.xy.contains('R') || e.xy.contains('C'))
 }

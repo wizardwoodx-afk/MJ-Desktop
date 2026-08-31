@@ -44,6 +44,7 @@ impl SecretStore {
     }
 
     /// Refs that are stored only in memory and will be lost when the app exits.
+    #[allow(dead_code)]
     pub fn degraded_refs(&self) -> Vec<String> {
         let mut v: Vec<String> = self.degraded.lock().iter().cloned().collect();
         v.sort();
@@ -84,6 +85,7 @@ impl SecretStore {
         self.fallback.lock().get(secret_ref).cloned()
     }
 
+    #[allow(dead_code)]
     pub fn exists(&self, refs: &[String]) -> HashMap<String, bool> {
         refs.iter().map(|r| (r.clone(), self.get(r).is_some())).collect()
     }

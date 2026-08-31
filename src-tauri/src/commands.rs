@@ -1212,7 +1212,7 @@ pub fn package_import(state: State<Arc<AppState>>, pkg: Value) -> Result<Value, 
 }
 
 #[tauri::command]
-pub fn control_validate_graph(state: State<Arc<AppState>>, workflow_id: String) -> Value {
+pub fn control_validate_graph(_state: State<Arc<AppState>>, workflow_id: String) -> Value {
     control_mcp::dispatch("validate_graph", &json!({ "workflowId": workflow_id, "native": true, "host": "tauri" }))
 }
 #[tauri::command]
