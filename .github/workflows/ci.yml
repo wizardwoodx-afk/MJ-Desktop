@@ -1,0 +1,87 @@
+name: CI
+
+# MJ 11.0 (W5). Every claim the docs make becomes checkable: the Rust crate is compiled on
+# three OSes with the real GTK/WebKit stack, every probe runs, the production bundle builds.
+# This workflow exists to retire the oldest line in the honesty ledger:
+#   "`cargo check` has never run on the full Tauri crate."
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            name: linux
+          - os: macos-14
+            name: macos
+          - os: windows-latest
+            name: windows
+    runs-on: ${{ matrix.os }}
+    name: verify (${{ matrix.name }})
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+
+      # Only Linux needs the GTK/WebKit dev stack; macOS/Windows use the platform webviews.
+      - name: Linux system deps (Tauri)
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev bubblewrap
+
+      - name: npm ci
+        run: npm ci
+
+      - name: TypeScript — tsc --noEmit
+        run: ./node_modules/.bin/tsc --noEmit
+
+      - name: Rust — cargo check (the real crate, the real macros)
+        working-directory: src-tauri
+        run: cargo check --all-targets
+
+      - name: Rust — cargo test (parsers, control plane, sandbox shapes)
+        working-directory: src-tauri
+        run: cargo test
+
+      - name: Rust — clippy (advisory, never allowed to rot silently)
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Probes (every assertion in the tree)
+        shell: bash
+        run: |
+          for f in versionDrift acceptance harnessPolicy checkRunner engine replayEvals theme assist acp agentsMd otelExport controlPlane stubLedger sandbox; do
+            ./node_modules/.bin/esbuild probe/$f.test.ts --bundle --platform=node --format=esm \
+              --define:MJ_ROOT='"'$(pwd)'"' --outfile=probe/.$f.mjs --log-level=error
+            node probe/.$f.mjs || exit 1
+          done
+          # The Proof page needs react-dom resolved from inside the project (see README).
+          ./node_modules/.bin/esbuild probe/v10Page.test.tsx --bundle --platform=node --format=esm \
+            --define:MJ_ROOT='"'$(pwd)'"' --external:react --external:react-dom --external:react-dom/server \
+            --outfile=probe/.v10Page.mjs --log-level=error
+          node probe/.v10Page.mjs || exit 1
+          ./node_modules/.bin/esbuild probe/wiring.test.ts --bundle --platform=node --format=esm \
+            --outfile=probe/.wiring.mjs --log-level=error
+          node probe/.wiring.mjs || exit 1
+
+      - name: Production bundle
+        run: ./node_modules/.bin/vite build

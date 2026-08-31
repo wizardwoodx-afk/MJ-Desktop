@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>MJ</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>
+      (function () {
+        window.__mjErrors = [];
+        try {
+          /* Anti-flash theme boot. `mj.editor.prefs` is the single source of truth (same store
+             getEditorPrefs() reads); the legacy `mj.theme` mirror is honored only so users who
+             last ran a version that wrote it do not flash the wrong theme on first load. */
+          var prefs = null;
+          try { prefs = JSON.parse(localStorage.getItem("mj.editor.prefs") || "null"); } catch (_) {}
+          var t = prefs && typeof prefs.theme === "string" ? prefs.theme : localStorage.getItem("mj.theme");
+          if (t) document.documentElement.setAttribute("data-theme", t);
+        } catch (_) {}
+        function record(kind, msg, src) {
+          try {
+            var entry = kind + ": " + msg + (src ? " @" + src : "");
+            window.__mjErrors.push(entry);
+            var el = document.getElementById("boot-error");
+            if (!el) {
+              el = document.createElement("div");
+              el.id = "boot-error";
+              el.style.cssText =
+                "position:fixed;top:36px;left:0;right:0;z-index:99999;background:#2b0000;color:#ff6b6b;font:11px/1.5 ui-monospace,monospace;padding:10px 14px;white-space:pre-wrap;border-bottom:1px solid #a00;";
+              document.body.appendChild(el);
+            }
+            el.textContent += entry + "\n";
+          } catch (_) {}
+        }
+        window.addEventListener("error", function (e) {
+          record("ERROR", e.message, e.filename ? e.lineno + ":" + e.colno : "");
+        });
+        window.addEventListener("unhandledrejection", function (e) {
+          record("REJECTION", String(e.reason && e.reason.stack ? e.reason.stack : e.reason));
+        });
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,66 @@
+# Build output
+dist/
+dist-ssr/
+src-tauri/target/
+*.local
+
+# Dependencies
+node_modules/
+evolution-service/.venv/
+.pnp
+.pnp.js
+
+# Bundled probe output (probes are re-bundled by the commands in README.md)
+probe/*.mjs
+probe/.*.mjs
+
+# Tool caches
+.cache/
+.vite/
+.parcel-cache/
+.eslintcache
+*.tsbuildinfo
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs and env
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.*
+!.env.example
+
+# Local agent state — never commit a developer's keys or session transcripts
+.mj-local/
+*.session.json
+
+# Rust
+**/*.rs.bk
+**/*.bak-*
+*.bak
+
+# Local build / diagnose leftovers — never commit machine-specific logs
+build-log*.txt
+tauri-build-log.txt
+rel*.txt
+*_err.txt
+*_err.*
+check_err.txt
+test_err.txt
+
+# Screenshots are local reference only (keep 1 hero if you want)
+screen*.png
+crop_*.png

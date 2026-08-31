@@ -1,0 +1,80 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "MJ",
+  "version": "11.0.0",
+  "identifier": "com.mj.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "MJ",
+        "width": 1560,
+        "height": 980,
+        "minWidth": 1120,
+        "minHeight": 720,
+        "center": true,
+        "focus": true,
+        "theme": "Dark",
+        "decorations": false,
+        "transparent": false,
+        "shadow": false,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: http://asset.localhost; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:* http://localhost:*"
+    },
+    "trayIcon": {
+      "id": "main",
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true,
+      "tooltip": "MJ \u2014 native agent workstation",
+      "menuOnLeftClick": false
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/YOUR-MJ-OWNER/mj/releases/latest/latest.json"
+      ],
+      "pubkey": "REPLACE_WITH_TAURI_SIGNER_PUBLIC_KEY (tauri signer generate)"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis",
+      "dmg",
+      "appimage",
+      "deb"
+    ],
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "12.0"
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    },
+    "category": "DeveloperTool",
+    "shortDescription": "Native visual AI agent orchestration workstation",
+    "longDescription": "MJ is a local-first desktop workstation for designing, running, and evolving multi-agent workflows. Secrets stay in the OS keychain. The graph is the source of truth.",
+    "createUpdaterArtifacts": true
+  }
+}
