@@ -46,12 +46,23 @@ import {
   type ConsensusResult,
   type ReviewVote,
 } from "../mission/consensusEngine";
+import { globalChaosEngine, type FlakyRaceDiagnosis } from "../mission/chaosBisection";
+import {
+  globalMemoryCortex,
+  SEED_INVARIANTS,
+  type MemoryCortexReport,
+} from "../mission/organizationalMemory";
+import { classifyError, FAILURE_CLASS_LABEL, type FailureClass, type FailureSignal } from "../engine/failureClassifier";
+import { fullLadder } from "../engine/repair";
+import { buildProvenanceManifest, renderManifest, verifyManifest, type ProvenanceManifest } from "../engine/provenanceExport";
+import { PROLIFERATE_COMPARISON_MATRIX } from "../mission/proliferateMatrix";
+import { globalMockBridge, type SyntheticContractBridge } from "../mission/contractMockBridge";
 import { useGraphStore } from "../graph/store";
 import { ipc, useTauri } from "../ipc/client";
 import { toast } from "../panels/Toast";
 import { uid } from "../app/id";
 
-type ActiveTab = "crews" | "channel" | "arena" | "astmerge" | "consensus" | "runner" | "builder" | "frameworks";
+type ActiveTab = "crews" | "channel" | "arena" | "astmerge" | "consensus" | "chaos" | "memory" | "failure" | "provenance" | "matrix" | "mockbridge" | "runner" | "builder" | "frameworks";
 
 const ALL_ROLES: TeamRole[] = [
   "planner",
@@ -131,6 +142,23 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
 
   // Multi-Agent Consensus state
   const [consensusResult, setConsensusResult] = useState<ConsensusResult | null>(null);
+
+  // Chaos Bisection state
+  const [chaosDiagnosis, setChaosDiagnosis] = useState<FlakyRaceDiagnosis | null>(null);
+  const [chaosRunning, setChaosRunning] = useState(false);
+
+  // Organizational Memory state
+  const [memoryReport, setMemoryReport] = useState<MemoryCortexReport | null>(null);
+
+  // Failure Classifier state
+  const [failureInput, setFailureInput] = useState("");
+  const [failureSignals, setFailureSignals] = useState<FailureSignal[]>([]);
+
+  // Provenance Export state
+  const [provenanceManifest, setProvenanceManifest] = useState<ProvenanceManifest | null>(null);
+
+  // Mock Bridge state
+  const [mockBridges, setMockBridges] = useState<SyntheticContractBridge[]>([]);
 
   // Builder state for custom crew
   const [builderTeam, setBuilderTeam] = useState<CliAgentTeam>(() => ({
@@ -368,6 +396,99 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
     toast(`Consensus Calculated: ${res.status}`);
   };
 
+  // Run Chaos Bisection
+  const handleRunChaos = async () => {
+    setChaosRunning(true);
+    toast("Injecting async microtask jitter to isolate race conditions...");
+    try {
+      const diag = await globalChaosEngine.isolateFlakyRace({
+        testName: "TokenBucket.burst-concurrency",
+        targetFilePath: "src/middleware/rateLimit.ts",
+        sourceCode: "this.tokens = this.tokens - count; // Non-atomic read-modify-write",
+      });
+      setChaosDiagnosis(diag);
+      toast(`Race isolated in ${diag.reproducedInRuns} runs! Root cause: ${diag.rootCauseKind}`);
+    } catch (e) {
+      toast(`Chaos failed: ${String(e)}`, "err");
+    } finally {
+      setChaosRunning(false);
+    }
+  };
+
+  // Compile Organizational Memory Briefing
+  const handleCompileMemory = () => {
+    const report = globalMemoryCortex.compileBriefing();
+    setMemoryReport(report);
+    toast(`Compiled ${report.invariantsCompiled} learned invariants from organizational memory`);
+  };
+
+  // Run Failure Classification
+  const handleClassifyFailure = () => {
+    const errorMsg = failureInput || "Tool failed: repeated timeout loop after 5 attempts";
+    const failureClass = classifyError(errorMsg, 5);
+    const ladder = fullLadder(failureClass);
+    const signal: FailureSignal = {
+      id: `sig-${Date.now()}`,
+      class: failureClass,
+      severity: failureClass === "UNKNOWN" ? "INFO" : "ERROR",
+      subjectId: "demo-task",
+      message: `${FAILURE_CLASS_LABEL[failureClass]}: ${errorMsg}`,
+    };
+    setFailureSignals([signal]);
+    toast(`Classified as ${failureClass}. Repair ladder: ${ladder.join(" → ")}`);
+  };
+
+  // Generate Provenance Manifest
+  const handleGenerateProvenance = () => {
+    const mockArtifact = {
+      id: "art-001",
+      missionId: "mission-demo",
+      orgId: "org-mj",
+      lineageId: "line-001",
+      version: 1,
+      name: "rateLimitMiddleware.ts",
+      contentType: "CODE" as const,
+      content: "export function rateLimitMiddleware() { return true; }",
+      contentHash: "a1b2c3d4",
+      createdBy: "claude",
+      modifiedBy: ["claude", "codex"],
+      inputs: [],
+      parentArtifacts: [],
+      toolsUsed: ["claude-code", "vitest"],
+      modelsUsed: ["claude-3.5-sonnet"],
+      harnessUsed: "claude",
+      costUsd: 0.042,
+      latencyMs: 1200,
+      approvalState: "APPROVED" as const,
+      riskClass: "LOW" as const,
+      provenance: "synthetic",
+      createdAt: new Date().toISOString(),
+      tags: ["middleware", "rate-limit"],
+    };
+    const manifest = buildProvenanceManifest([mockArtifact], { "art-001": mockArtifact }, {
+      missionId: "mission-demo",
+      orgId: "org-mj",
+      generator: { name: "MJ Desktop", version: "11.1.0", harnesses: ["claude", "codex"] },
+      ledger: { head: "art-001", entries: 1, verified: true },
+      generatedAt: new Date().toISOString(),
+    });
+    setProvenanceManifest(manifest);
+    toast("Provenance manifest generated with C2PA-shaped claims");
+  };
+
+  // Deploy mock contract bridge
+  const handleDeployMockBridge = () => {
+    globalAgentBus.writeBlackboard(
+      "contracts.payment.rate_limiter",
+      "interface TokenBucket { consume(tokens: number): Promise<{ allowed: boolean; remaining: number }>; }",
+      "architect",
+      "contract",
+    );
+    const bridges = globalMockBridge.getBridges();
+    setMockBridges([...bridges]);
+    toast(`Deployed ${bridges.length} synthetic mock endpoint(s) from blackboard contract`);
+  };
+
   const handleRunMission = async () => {
     if (!selectedTeam) return;
     setRunnerRunning(true);
@@ -524,7 +645,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
             CLI Agent Crews &amp; Multi-Agent Intelligence Layer
           </h2>
           <p className="sub" style={{ margin: "6px 0 0", fontSize: 13, color: "var(--text-dim)" }}>
-            14 Coding CLIs · Real-Time Pub/Sub Message Bus · Structural Merge · Red vs Blue Adversarial Arena · Multi-Agent Consensus
+            14 Coding CLIs · Real-Time Bus · Red vs Blue Arena · AST Merge · Consensus · Chaos Race Isolator · Org Memory · Failure Classifier · Provenance Audit · Mock Bridge
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -565,6 +686,42 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
           onClick={() => setActiveTab("consensus")}
         >
           ⚖️ Multi-Agent Consensus Matrix
+        </button>
+        <button
+          className={activeTab === "chaos" ? "primary" : ""}
+          onClick={() => setActiveTab("chaos")}
+        >
+          🔬 Chaos Race Isolator
+        </button>
+        <button
+          className={activeTab === "memory" ? "primary" : ""}
+          onClick={() => setActiveTab("memory")}
+        >
+          🧠 Org Memory Cortex
+        </button>
+        <button
+          className={activeTab === "failure" ? "primary" : ""}
+          onClick={() => setActiveTab("failure")}
+        >
+          🛠️ Failure Classifier &amp; Repair
+        </button>
+        <button
+          className={activeTab === "provenance" ? "primary" : ""}
+          onClick={() => setActiveTab("provenance")}
+        >
+          📜 Provenance Audit Export
+        </button>
+        <button
+          className={activeTab === "matrix" ? "primary" : ""}
+          onClick={() => setActiveTab("matrix")}
+        >
+          📊 Capability Matrix
+        </button>
+        <button
+          className={activeTab === "mockbridge" ? "primary" : ""}
+          onClick={() => setActiveTab("mockbridge")}
+        >
+          🌉 Contract Mock Bridge
         </button>
         <button
           className={activeTab === "runner" ? "primary" : ""}
@@ -1180,7 +1337,303 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
         </div>
       )}
 
-      {/* ── TAB 6: TEAM MISSION RUNNER ────────────────────────────────────── */}
+      {/* ── TAB 6: CHAOS RACE ISOLATOR ─────────────────────────────────── */}
+      {activeTab === "chaos" && (
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>🔬 Chaos Async Race Isolator &amp; Flaky Test Bi-Section Engine</h3>
+              <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
+                Injects deterministic async microtask jitter, event-loop starvation, and promise resolution re-ordering to expose race conditions in under 5 runs, pinpoints the offending line, and synthesizes an atomic mutex lock patch.
+              </p>
+            </div>
+            <button className="primary" disabled={chaosRunning} onClick={() => void handleRunChaos()}>
+              {chaosRunning ? "Running Chaos Bisection..." : "⚡ Run Chaos Bisection"}
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <div style={{ padding: 12, borderRadius: 4, background: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.25)", fontSize: 12 }}>
+              <div style={{ fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>Microtask Jitter Injection</div>
+              <div className="muted" style={{ fontSize: 11 }}>Deterministic async delay per run (5ms, 10ms, 15ms, 20ms) to expose non-atomic read-modify-write sequences.</div>
+            </div>
+            <div style={{ padding: 12, borderRadius: 4, background: "rgba(234, 179, 8, 0.08)", border: "1px solid rgba(234, 179, 8, 0.25)", fontSize: 12 }}>
+              <div style={{ fontWeight: 700, color: "#eab308", marginBottom: 4 }}>Promise Re-Ordering</div>
+              <div className="muted" style={{ fontSize: 11 }}>Shuffles microtask queue execution order to simulate event-loop starvation and concurrent state corruption.</div>
+            </div>
+            <div style={{ padding: 12, borderRadius: 4, background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.25)", fontSize: 12 }}>
+              <div style={{ fontWeight: 700, color: "#10b981", marginBottom: 4 }}>Atomic Mutex Patch Synthesis</div>
+              <div className="muted" style={{ fontSize: 11 }}>Auto-generates verified mutex lock repair code to eliminate the detected race condition root cause.</div>
+            </div>
+          </div>
+
+          {chaosDiagnosis && (
+            <div style={{ paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>
+                  Race Isolated in {chaosDiagnosis.reproducedInRuns} Run(s)
+                </span>
+                <span className={`pill ${chaosDiagnosis.verifiedFixed ? "ok" : "err"}`} style={{ fontSize: 10 }}>
+                  {chaosDiagnosis.verifiedFixed ? "VERIFIED FIXED" : "PROTOTYPE PATCH"}
+                </span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div style={{ padding: 12, borderRadius: 4, background: "var(--bg-elevated)", border: "1px solid var(--border)", fontSize: 12 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>Root Cause</div>
+                  <div className="muted">{chaosDiagnosis.rootCauseKind} at {chaosDiagnosis.offendingFile}:{chaosDiagnosis.offendingLineNumber}</div>
+                  <pre className="mono" style={{ margin: "6px 0 0", fontSize: 10, whiteSpace: "pre-wrap", color: "var(--danger)" }}>{chaosDiagnosis.offendingCodeSnippet}</pre>
+                </div>
+                <div style={{ padding: 12, borderRadius: 4, background: "var(--bg-elevated)", border: "1px solid var(--border)", fontSize: 12 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>Synthesized Atomic Lock Patch</div>
+                  <pre className="mono" style={{ margin: "6px 0 0", fontSize: 10, whiteSpace: "pre-wrap", color: "var(--green)" }}>{chaosDiagnosis.atomicLockPatch}</pre>
+                </div>
+              </div>
+              <div style={{ marginTop: 10, padding: 10, borderRadius: 3, background: "var(--bg-panel)", border: "1px solid var(--border)", fontSize: 11 }}>
+                <span style={{ fontWeight: 700 }}>Flakiness Rate Under Chaos:</span> {(chaosDiagnosis.flakinessRate * 100).toFixed(0)}% ({chaosDiagnosis.rootCauseKind})
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB 7: ORGANIZATIONAL MEMORY CORTEX ────────────────────────── */}
+      {activeTab === "memory" && (
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>🧠 Causal Organizational Memory &amp; Invariant Compiler</h3>
+              <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
+                Extracts verified failure-to-repair causal chains from the Flight Recorder, distills empirical invariants, and auto-compiles pre-mission briefings so agents never repeat past mistakes.
+              </p>
+            </div>
+            <button className="primary" onClick={handleCompileMemory}>
+              Compile Invariant Briefing
+            </button>
+          </div>
+
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-mute)", marginBottom: 8 }}>
+            Seed Invariants ({SEED_INVARIANTS.length})
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+            {SEED_INVARIANTS.map((inv) => (
+              <div key={inv.id} style={{ padding: 12, borderRadius: 4, background: "var(--bg-panel)", border: "1px solid var(--border)", fontSize: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <span style={{ fontWeight: 700 }}>[{inv.category.toUpperCase()}] {inv.rule}</span>
+                  <span className="pill ok" style={{ fontSize: 9 }}>{(inv.successRate * 100).toFixed(0)}% success</span>
+                </div>
+                <div className="muted" style={{ fontSize: 11 }}>Failure: {inv.failureObserved}</div>
+                <div className="muted" style={{ fontSize: 11 }}>Repair: {inv.verifiedRepairAction}</div>
+                <div className="muted" style={{ fontSize: 10, marginTop: 4 }}>Applied {inv.timesApplied} times · Origin: {inv.originatingMissionId}</div>
+              </div>
+            ))}
+          </div>
+
+          {memoryReport && (
+            <div style={{ paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>
+                Compiled Briefing: {memoryReport.invariantsCompiled} Active Invariants
+              </div>
+              <pre className="mono" style={{ padding: 12, borderRadius: 4, background: "var(--bg-elevated)", border: "1px solid var(--border)", fontSize: 11, whiteSpace: "pre-wrap", maxHeight: 300, overflowY: "auto" }}>
+                {memoryReport.generatedBriefingMarkdown}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB 8: FAILURE CLASSIFIER & REPAIR LADDER ──────────────────── */}
+      {activeTab === "failure" && (
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>🛠️ MAST Failure Classification &amp; Deterministic Repair Ladder</h3>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
+              Classifies mission failures using the MAST taxonomy and enforces a systematic multi-stage repair progression — always terminating with escalation to human authority.
+            </p>
+          </div>
+
+          <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+            <input
+              type="text"
+              value={failureInput}
+              onChange={(e) => setFailureInput(e.target.value)}
+              placeholder="Paste error message (e.g. 'Tool failed: timeout after 5 retries')"
+              style={{ flex: 1 }}
+            />
+            <button className="primary" onClick={handleClassifyFailure}>
+              Classify &amp; Generate Repair Ladder
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 16 }}>
+            {(Object.entries(FAILURE_CLASS_LABEL) as [FailureClass, string][]).slice(0, 8).map(([cls, label]) => (
+              <div key={cls} style={{ padding: 8, borderRadius: 3, background: "var(--bg-panel)", border: "1px solid var(--border)", fontSize: 10, fontWeight: 600 }}>
+                {label}
+              </div>
+            ))}
+          </div>
+
+          {failureSignals.length > 0 && (
+            <div style={{ paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+              {failureSignals.map((sig) => {
+                const ladder = fullLadder(sig.class);
+                return (
+                  <div key={sig.id}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <span style={{ fontWeight: 700, fontSize: 14 }}>
+                        Classified: <span className="pill err">{sig.class}</span>
+                      </span>
+                      <span className="muted" style={{ fontSize: 12 }}>{sig.message}</span>
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "var(--text-mute)", marginBottom: 6 }}>
+                      Deterministic Repair Ladder ({ladder.length} stages)
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      {ladder.map((action, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ padding: "8px 14px", borderRadius: 4, background: action === "ESCALATE_HUMAN" ? "rgba(239, 68, 68, 0.15)" : "rgba(59, 130, 246, 0.15)", border: `1px solid ${action === "ESCALATE_HUMAN" ? "rgba(239, 68, 68, 0.3)" : "rgba(59, 130, 246, 0.3)"}`, fontSize: 11, fontWeight: 700, color: action === "ESCALATE_HUMAN" ? "#ef4444" : "#3b82f6" }}>
+                            {action.replace(/_/g, " ")}
+                          </div>
+                          {i < ladder.length - 1 && <span style={{ color: "var(--text-mute)", fontSize: 14 }}>→</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB 9: PROVENANCE AUDIT EXPORT ─────────────────────────────── */}
+      {activeTab === "provenance" && (
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>📜 EU AI Act Art. 50 &amp; C2PA Provenance Manifest</h3>
+              <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
+                Generates machine-readable provenance manifests tracking synthetic content lineage, tools used, models used, and artifact derivation chains for regulatory compliance.
+              </p>
+            </div>
+            <button className="primary" onClick={handleGenerateProvenance}>
+              Generate Provenance Manifest
+            </button>
+          </div>
+
+          {provenanceManifest && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>
+                  Manifest: {provenanceManifest.claims.length} Claims · Hash: {provenanceManifest.manifestHash}
+                </span>
+                <span className={`pill ${verifyManifest(provenanceManifest).ok ? "ok" : "err"}`} style={{ fontSize: 10 }}>
+                  {verifyManifest(provenanceManifest).ok ? "VERIFIED INTEGRITY" : "INTEGRITY BREACH"}
+                </span>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div style={{ padding: 10, borderRadius: 3, background: "var(--bg-panel)", border: "1px solid var(--border)", fontSize: 11 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>Generator</div>
+                  <div className="muted">{provenanceManifest.generator.name} v{provenanceManifest.generator.version}</div>
+                  <div className="muted">Harnesses: {provenanceManifest.generator.harnesses.join(", ")}</div>
+                </div>
+                <div style={{ padding: 10, borderRadius: 3, background: "var(--bg-panel)", border: "1px solid var(--border)", fontSize: 11 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>Ledger</div>
+                  <div className="muted">Head: {provenanceManifest.ledger.head}</div>
+                  <div className="muted">Entries: {provenanceManifest.ledger.entries} · Verified: {provenanceManifest.ledger.verified ? "Yes" : "No"}</div>
+                </div>
+              </div>
+
+              <pre className="mono" style={{ padding: 12, borderRadius: 4, background: "var(--bg-elevated)", border: "1px solid var(--border)", fontSize: 10, whiteSpace: "pre-wrap", maxHeight: 300, overflowY: "auto" }}>
+                {renderManifest(provenanceManifest)}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB 10: CAPABILITY COMPARISON MATRIX ──────────────────────── */}
+      {activeTab === "matrix" && (
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>📊 Architectural Capability Matrix: MJ vs Standard Multi-Agent IDEs</h3>
+            <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
+              Side-by-side comparison of MJ's structural superpowers against standard multi-agent workspace capabilities.
+            </p>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {PROLIFERATE_COMPARISON_MATRIX.map((row, i) => (
+              <div key={i} style={{ padding: 14, borderRadius: 4, background: "var(--bg-panel)", border: "1px solid var(--border)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>{row.dimension}</span>
+                  <span className="pill" style={{ fontSize: 9, textTransform: "uppercase" }}>{row.category}</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={{ fontSize: 11, padding: 10, borderRadius: 3, background: "var(--bg-elevated)", border: "1px solid var(--border)" }}>
+                    <div style={{ fontWeight: 700, color: "var(--text-mute)", marginBottom: 4, fontSize: 10, textTransform: "uppercase" }}>Standard Approach</div>
+                    <div className="muted">{row.proliferateApproach}</div>
+                  </div>
+                  <div style={{ fontSize: 11, padding: 10, borderRadius: 3, background: "rgba(59, 130, 246, 0.08)", border: "1px solid rgba(59, 130, 246, 0.25)" }}>
+                    <div style={{ fontWeight: 700, color: "#3b82f6", marginBottom: 4, fontSize: 10, textTransform: "uppercase" }}>MJ Superpower: {row.mjSuperpower}</div>
+                    <div className="muted">{row.technicalAdvantage}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 11: CONTRACT MOCK BRIDGE ───────────────────────────────── */}
+      {activeTab === "mockbridge" && (
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>🌉 Synthetic API Contract Mock Bridge &amp; Dynamic Schema Server</h3>
+              <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
+                When an agent publishes a TypeScript interface or OpenAPI contract to the Blackboard, the Mock Bridge instantly compiles dynamic mock HTTP handlers and client SDK stubs so consumer agents can test without waiting for backend implementation.
+              </p>
+            </div>
+            <button className="primary" onClick={handleDeployMockBridge}>
+              Deploy Mock from Blackboard
+            </button>
+          </div>
+
+          {mockBridges.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {mockBridges.map((bridge) => (
+                <div key={bridge.contractId} style={{ padding: 14, borderRadius: 4, background: "var(--bg-panel)", border: "1px solid var(--border)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>{bridge.contractKey}</span>
+                    <span className={`pill ${bridge.status === "active" ? "ok" : ""}`} style={{ fontSize: 9 }}>{bridge.status}</span>
+                  </div>
+                  <div style={{ fontSize: 11, marginBottom: 8 }}>
+                    <span className="muted">Contract: {bridge.contractId}</span> · <span className="muted">Author: @{bridge.authorSeat}</span> · <span className="muted">{bridge.endpoints.length} endpoint(s)</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {bridge.endpoints.map((ep, i) => (
+                      <div key={i} style={{ padding: "6px 10px", borderRadius: 3, background: "var(--bg-elevated)", border: "1px solid var(--border)", fontSize: 11, fontFamily: "var(--font-mono)" }}>
+                        <span style={{ fontWeight: 700, color: ep.method === "GET" ? "var(--green)" : ep.method === "POST" ? "var(--blue)" : "var(--amber)" }}>{ep.method}</span> {ep.path}
+                        <span className="muted" style={{ marginLeft: 8 }}>→ {ep.responseSchema}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <pre className="mono" style={{ margin: "8px 0 0", padding: 8, borderRadius: 3, background: "var(--bg-elevated)", border: "1px solid var(--border)", fontSize: 9, whiteSpace: "pre-wrap", maxHeight: 120, overflowY: "auto" }}>
+                    {bridge.clientSdkStub}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: "center", color: "var(--text-mute)", padding: 40, fontSize: 13 }}>
+              No mock bridges deployed yet. Run a debate to publish contracts to the Blackboard, then deploy mocks here.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB 12: TEAM MISSION RUNNER ────────────────────────────────── */}
       {activeTab === "runner" && (
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
