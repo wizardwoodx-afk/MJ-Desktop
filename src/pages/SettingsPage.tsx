@@ -48,9 +48,9 @@ export function SettingsPage() {
 
       <div className="card">
         <div className="card-title">Appearance</div>
-        <div className="muted">void · warm dark — graphite · neutral dark — paper · warm light — nothing · dot-matrix black, signal red — terminal · phosphor mono — nord · arctic frost — solar · solarized light — hermes · espresso &amp; brass</div>
-        <div className="row" style={{ marginTop: 10 }}>
-          {(["void", "graphite", "paper", "nothing", "terminal", "nord", "solar", "hermes"] as const).map((t) => (
+        <div className="muted">void · warm dark — graphite · neutral dark — paper · warm light — nothing · Nothing OS dark — nothing-light · Nothing OS chalk — monochrome · stark minimal — cyber-matrix · emerald phosphor — tokyo-night · indigo slate — terminal · phosphor mono — nord · arctic frost — solar · solarized light — hermes · espresso &amp; brass</div>
+        <div className="row" style={{ marginTop: 10, flexWrap: "wrap", gap: 6 }}>
+          {(["void", "graphite", "paper", "nothing", "nothing-light", "monochrome", "cyber-matrix", "tokyo-night", "terminal", "nord", "solar", "hermes"] as const).map((t) => (
             <button key={t} className={prefs.theme === t ? "primary" : ""} onClick={() => apply({ ...prefs, theme: t })}>{t}</button>
           ))}
         </div>

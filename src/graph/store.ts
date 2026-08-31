@@ -16,7 +16,7 @@ interface HistoryEntry {
 export interface EditorPrefs {
   snap: number;
   autosaveMs: number;
-  theme: "void" | "graphite" | "paper" | "nothing" | "terminal" | "nord" | "solar" | "hermes";
+  theme: "void" | "graphite" | "paper" | "nothing" | "nothing-light" | "monochrome" | "cyber-matrix" | "tokyo-night" | "terminal" | "nord" | "solar" | "hermes";
   showMinimap: boolean;
   showGrid: boolean;
   reducedMotion: boolean;
@@ -31,7 +31,7 @@ export function getEditorPrefs(): EditorPrefs {
       return {
         snap: typeof p.snap === "number" && p.snap >= 0 ? p.snap : 16,
         autosaveMs: typeof p.autosaveMs === "number" && p.autosaveMs >= 0 ? p.autosaveMs : 1200,
-        theme: p.theme === "graphite" || p.theme === "paper" || p.theme === "nothing" || p.theme === "terminal" || p.theme === "nord" || p.theme === "solar" || p.theme === "hermes" ? p.theme : "void",
+        theme: p.theme === "graphite" || p.theme === "paper" || p.theme === "nothing" || p.theme === "nothing-light" || p.theme === "monochrome" || p.theme === "cyber-matrix" || p.theme === "tokyo-night" || p.theme === "terminal" || p.theme === "nord" || p.theme === "solar" || p.theme === "hermes" ? p.theme : "void",
         showMinimap: p.showMinimap !== false,
         showGrid: p.showGrid !== false,
         reducedMotion: Boolean(p.reducedMotion),

@@ -21,6 +21,273 @@
 
 import type { HarnessId } from "../domain/harness";
 import { parseReportedUsage, type CapLedger, type ReportedUsage, withDeadline } from "./caps";
+import { scoreMission, type ScoreInput } from "./evaluation";
+import type { MissionScore } from "./types";
+
+/* ------------------------------------------------------------------ dataset-based evals */
+
+export const SCORE_DIMENSIONS = [
+  "goalCompletion",
+  "quality",
+  "tests",
+  "security",
+  "costEfficiency",
+  "latencyEfficiency",
+] as const;
+
+export type ScoreDimension = (typeof SCORE_DIMENSIONS)[number];
+
+export interface EvalDatasetCase {
+  id: string;
+  title: string;
+  expect: Partial<Record<ScoreDimension, number>>;
+  input: () => ScoreInput | Promise<ScoreInput>;
+}
+
+export interface EvalDataset {
+  id: string;
+  name: string;
+  version: string;
+  createdAt: string;
+  cases: EvalDatasetCase[];
+}
+
+export interface CaseJudgment {
+  caseId: string;
+  verdict: "pass" | "fail" | "not_measured" | "error";
+  score?: MissionScore;
+  unmeasuredExpectations: string[];
+  failures: Array<{ dimension: string; expected: number; actual: number }>;
+  error?: string;
+}
+
+export interface SuiteReport {
+  datasetId: string;
+  datasetName: string;
+  version: string;
+  totals: {
+    runs: number;
+    pass: number;
+    fail: number;
+    notMeasured: number;
+    errored: number;
+    passRate: number;
+    hasErrors: boolean;
+  };
+  outcomes: CaseJudgment[];
+  flaky: Array<{ caseId: string; verdicts: string[] }>;
+}
+
+export function judge(c: EvalDatasetCase, score: MissionScore, maxThreshold = 1.0): CaseJudgment {
+  const unmeasured: string[] = [];
+  const failures: Array<{ dimension: string; expected: number; actual: number }> = [];
+
+  for (const [dim, minVal] of Object.entries(c.expect)) {
+    const d = dim as ScoreDimension;
+    const expected = minVal as number;
+    if (expected > maxThreshold) {
+      failures.push({ dimension: d, expected, actual: (score[d] as number) ?? 0 });
+      continue;
+    }
+    const isUnmeasured = score.unmeasured.some((u) => u.toLowerCase().includes(d.toLowerCase()));
+    if (isUnmeasured) {
+      unmeasured.push(d);
+    } else {
+      const actual = (score[d] as number) ?? 0;
+      if (actual < expected) {
+        failures.push({ dimension: d, expected, actual });
+      }
+    }
+  }
+
+  if (unmeasured.length > 0) {
+    return {
+      caseId: c.id,
+      verdict: "not_measured",
+      score,
+      unmeasuredExpectations: unmeasured,
+      failures,
+    };
+  }
+
+  return {
+    caseId: c.id,
+    verdict: failures.length === 0 ? "pass" : "fail",
+    score,
+    unmeasuredExpectations: [],
+    failures,
+  };
+}
+
+export async function runDatasetSuite(
+  dataset: EvalDataset,
+  runner: (c: EvalDatasetCase) => Promise<ScoreInput>,
+  options: { repeats?: number } = {},
+): Promise<SuiteReport> {
+  const repeats = Math.max(1, options.repeats ?? 1);
+  const caseVerdicts = new Map<string, string[]>();
+  const outcomes: CaseJudgment[] = [];
+  let totalRuns = 0;
+  let passCount = 0;
+  let failCount = 0;
+  let notMeasuredCount = 0;
+  let erroredCount = 0;
+
+  for (let r = 0; r < repeats; r++) {
+    for (const c of dataset.cases) {
+      totalRuns++;
+      try {
+        const inp = await runner(c);
+        const sc = scoreMission(inp);
+        const j = judge(c, sc);
+        if (r === 0) outcomes.push(j);
+        const list = caseVerdicts.get(c.id) ?? [];
+        list.push(j.verdict);
+        caseVerdicts.set(c.id, list);
+
+        if (j.verdict === "pass") passCount++;
+        else if (j.verdict === "fail") failCount++;
+        else if (j.verdict === "not_measured") notMeasuredCount++;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const j: CaseJudgment = {
+          caseId: c.id,
+          verdict: "error",
+          unmeasuredExpectations: [],
+          failures: [],
+          error: msg,
+        };
+        if (r === 0) outcomes.push(j);
+        const list = caseVerdicts.get(c.id) ?? [];
+        list.push("error");
+        caseVerdicts.set(c.id, list);
+        erroredCount++;
+      }
+    }
+  }
+
+  const flaky: Array<{ caseId: string; verdicts: string[] }> = [];
+  for (const [caseId, verdicts] of caseVerdicts.entries()) {
+    if (new Set(verdicts).size > 1) {
+      flaky.push({ caseId, verdicts });
+    }
+  }
+
+  const denominator = passCount + failCount;
+  const passRate = denominator > 0 ? passCount / denominator : 0;
+
+  return {
+    datasetId: dataset.id,
+    datasetName: dataset.name,
+    version: dataset.version,
+    totals: {
+      runs: totalRuns,
+      pass: passCount,
+      fail: failCount,
+      notMeasured: notMeasuredCount,
+      errored: erroredCount,
+      passRate,
+      hasErrors: erroredCount > 0,
+    },
+    outcomes,
+    flaky,
+  };
+}
+
+export function compareRuns(before: SuiteReport, after: SuiteReport): {
+  newlyPassing: string[];
+  newlyFailing: string[];
+  passRateBefore: number;
+  passRateAfter: number;
+  deltas: Array<{ dimension: ScoreDimension; before: number; after: number; delta: number }>;
+  regressions: Array<{ dimension: ScoreDimension; before: number; after: number }>;
+} {
+  const beforePass = new Set(before.outcomes.filter((o) => o.verdict === "pass").map((o) => o.caseId));
+  const afterPass = new Set(after.outcomes.filter((o) => o.verdict === "pass").map((o) => o.caseId));
+  const afterFail = new Set(after.outcomes.filter((o) => o.verdict === "fail").map((o) => o.caseId));
+
+  const newlyPassing = [...afterPass].filter((id) => !beforePass.has(id));
+  const newlyFailing = [...afterFail].filter((id) => beforePass.has(id));
+
+  const deltas: Array<{ dimension: ScoreDimension; before: number; after: number; delta: number }> = [];
+  const regressions: Array<{ dimension: ScoreDimension; before: number; after: number }> = [];
+
+  for (const dim of SCORE_DIMENSIONS) {
+    const beforeScores = before.outcomes.map((o) => o.score?.[dim] as number | undefined).filter((n): n is number => typeof n === "number");
+    const afterScores = after.outcomes.map((o) => o.score?.[dim] as number | undefined).filter((n): n is number => typeof n === "number");
+
+    const beforeAvg = beforeScores.length ? beforeScores.reduce((a, b) => a + b, 0) / beforeScores.length : 0;
+    const afterAvg = afterScores.length ? afterScores.reduce((a, b) => a + b, 0) / afterScores.length : 0;
+    const delta = afterAvg - beforeAvg;
+
+    deltas.push({ dimension: dim, before: beforeAvg, after: afterAvg, delta });
+    if (afterAvg < beforeAvg || newlyFailing.length > 0) {
+      if (afterAvg < beforeAvg || dim === "goalCompletion") {
+        regressions.push({ dimension: dim, before: beforeAvg, after: afterAvg });
+      }
+    }
+  }
+
+  return {
+    newlyPassing,
+    newlyFailing,
+    passRateBefore: before.totals.passRate,
+    passRateAfter: after.totals.passRate,
+    deltas,
+    regressions: after.totals.passRate < before.totals.passRate || newlyFailing.length > 0 ? regressions : [],
+  };
+}
+
+export function renderReport(r: SuiteReport): string {
+  const pct = (n: number) => `${Math.round(n * 100)}%`;
+  const lines: string[] = [
+    `Evaluation Suite Report: ${r.datasetName} (v${r.version})`,
+    `  Total runs: ${r.totals.runs} (pass=${r.totals.pass}, fail=${r.totals.fail}, not-measured=${r.totals.notMeasured}, errored=${r.totals.errored})`,
+    `  pass rate: ${pct(r.totals.passRate)} (excludes not-measured from denominator)`,
+  ];
+  if (r.totals.hasErrors) {
+    lines.push("  WARNING: the suite is NOT clean — at least one case encountered an error.");
+  }
+  if (r.totals.notMeasured > 0) {
+    lines.push(`  not measured: ${r.totals.notMeasured} case(s) had unrun checks.`);
+  }
+  for (const o of r.outcomes) {
+    lines.push(`  - [${o.verdict}] ${o.caseId}${o.error ? `: error - ${o.error}` : ""}`);
+  }
+  return lines.join("\n");
+}
+
+export function serializeReport(report: SuiteReport): string {
+  return JSON.stringify({ schemaVersion: 1, report }, null, 2);
+}
+
+export function parseReport(raw: string): { ok: boolean; report: SuiteReport | null; errors: string[] } {
+  try {
+    const obj = JSON.parse(raw) as { schemaVersion?: number; report?: SuiteReport };
+    if (!obj || typeof obj !== "object") return { ok: false, report: null, errors: ["Invalid JSON"] };
+    if (obj.schemaVersion && obj.schemaVersion > 1) {
+      return { ok: false, report: null, errors: [`Schema version ${obj.schemaVersion} is not supported.`] };
+    }
+    if (!obj.report) return { ok: false, report: null, errors: ["Missing report property"] };
+    return { ok: true, report: obj.report, errors: [] };
+  } catch (e) {
+    return { ok: false, report: null, errors: [e instanceof Error ? e.message : String(e)] };
+  }
+}
+
+export function serializeDataset(dataset: EvalDataset): string {
+  return JSON.stringify(
+    {
+      id: dataset.id,
+      name: dataset.name,
+      version: dataset.version,
+      createdAt: dataset.createdAt,
+      cases: dataset.cases.map((c) => ({ id: c.id, title: c.title, expect: c.expect, note: "input thunks are not serializable" })),
+    },
+    null,
+    2,
+  );
+}
 
 /* ------------------------------------------------------------------ suite shape */
 
@@ -161,7 +428,32 @@ function summarise(s: string, limit = 400): string {
  * the harness — a harness that cannot be run at all would otherwise score a perfect pass rate on the
  * cases it never attempted.
  */
-export async function runSuite(suite: EvalSuite, harness: HarnessId, deps: SuiteRunnerDeps): Promise<EvalRun> {
+export async function runSuite(suite: EvalSuite, harness: HarnessId, deps: SuiteRunnerDeps): Promise<EvalRun>;
+export async function runSuite(
+  dataset: EvalDataset,
+  runner: (c: EvalDatasetCase) => Promise<ScoreInput>,
+  options?: { repeats?: number },
+): Promise<SuiteReport>;
+export async function runSuite(
+  suiteOrDataset: EvalSuite | EvalDataset,
+  harnessOrRunner: HarnessId | ((c: EvalDatasetCase) => Promise<ScoreInput>),
+  depsOrOptions?: SuiteRunnerDeps | { repeats?: number },
+): Promise<EvalRun | SuiteReport> {
+  if (typeof harnessOrRunner === "function") {
+    return runDatasetSuite(
+      suiteOrDataset as EvalDataset,
+      harnessOrRunner,
+      (depsOrOptions as { repeats?: number }) ?? {},
+    );
+  }
+  return runHarnessSuite(
+    suiteOrDataset as EvalSuite,
+    harnessOrRunner as HarnessId,
+    depsOrOptions as SuiteRunnerDeps,
+  );
+}
+
+async function runHarnessSuite(suite: EvalSuite, harness: HarnessId, deps: SuiteRunnerDeps): Promise<EvalRun> {
   const startedAt = new Date().toISOString();
   const startedMs = (deps.now ?? Date.now)();
   const results: EvalCaseResult[] = [];
@@ -413,20 +705,30 @@ export function renderRun(run: EvalRun): string {
   return lines.join("\n");
 }
 
-export function renderComparison(cmp: HarnessComparison): string {
-  const lines = [`Comparison on suite "${cmp.suiteName}" (${cmp.caseCount} cases)`];
-  if (!cmp.rows.length) {
-    lines.push("  nothing to compare.");
-  } else {
-    lines.push("  harness            pass   fail  err   rate   cost        tokens   wall");
-    for (const r of [...cmp.rows].sort((a, b) => b.passRate - a.passRate)) {
-      lines.push(
-        `  ${r.harness.padEnd(18)} ${String(r.passed).padStart(4)} ${String(r.failed).padStart(6)} ${String(r.errored).padStart(4)}  ${pct(r.passRate).padStart(5)}  ${(r.costKnown ? `$${(r.costUsd ?? 0).toFixed(4)}` : "unknown").padStart(10)}  ${(r.tokens === null ? "n/a" : r.tokens.toLocaleString()).padStart(8)}  ${(r.durationMs / 1000).toFixed(1)}s${r.hasErrors ? "  (errors)" : ""}`,
-      );
+export function renderComparison(cmp: HarnessComparison | ReturnType<typeof compareRuns>): string {
+  if ("rows" in cmp) {
+    const lines = [`Comparison on suite "${cmp.suiteName}" (${cmp.caseCount} cases)`];
+    if (!cmp.rows.length) {
+      lines.push("  nothing to compare.");
+    } else {
+      lines.push("  harness            pass   fail  err   rate   cost        tokens   wall");
+      for (const r of [...cmp.rows].sort((a, b) => b.passRate - a.passRate)) {
+        lines.push(
+          `  ${r.harness.padEnd(18)} ${String(r.passed).padStart(4)} ${String(r.failed).padStart(6)} ${String(r.errored).padStart(4)}  ${pct(r.passRate).padStart(5)}  ${(r.costKnown ? `$${(r.costUsd ?? 0).toFixed(4)}` : "unknown").padStart(10)}  ${(r.tokens === null ? "n/a" : r.tokens.toLocaleString()).padStart(8)}  ${(r.durationMs / 1000).toFixed(1)}s${r.hasErrors ? "  (errors)" : ""}`,
+        );
+      }
     }
+    lines.push("", cmp.leader ? `  best on this suite: ${cmp.leader}` : "  no leader — nothing here is clean enough to rank.");
+    for (const c of cmp.caveats) lines.push(`  note: ${c}`);
+    return lines.join("\n");
   }
-  lines.push("", cmp.leader ? `  best on this suite: ${cmp.leader}` : "  no leader — nothing here is clean enough to rank.");
-  for (const c of cmp.caveats) lines.push(`  note: ${c}`);
+
+  const lines = [
+    `Run Comparison: pass rate ${pct(cmp.passRateBefore)} -> ${pct(cmp.passRateAfter)}`,
+    `  Newly passing: ${cmp.newlyPassing.join(", ") || "none"}`,
+    `  Newly failing: ${cmp.newlyFailing.join(", ") || "none"}`,
+    `  Regressions: ${cmp.regressions.map((r) => `${r.dimension} (${r.before.toFixed(2)} -> ${r.after.toFixed(2)})`).join(", ") || "none"}`,
+  ];
   return lines.join("\n");
 }
 

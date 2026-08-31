@@ -28,8 +28,20 @@
 
 import type { HarnessId } from "../domain/harness";
 import type { RiskClass } from "./types";
+import { enforcedReadOnly } from "./agentCapabilities";
 
-/** What MJ is asking the harness to do, which is what picks the sandbox. */
+export const ENFORCED_SANDBOX: Record<HarnessId, boolean> = {
+  acp: enforcedReadOnly("acp"),
+  claude: enforcedReadOnly("claude"),
+  codex: enforcedReadOnly("codex"),
+  opencode: enforcedReadOnly("opencode"),
+  cursor: enforcedReadOnly("cursor"),
+  grok: enforcedReadOnly("grok"),
+  cline: enforcedReadOnly("cline"),
+  kilo: enforcedReadOnly("kilo"),
+  hermes: enforcedReadOnly("hermes"),
+  llm: enforcedReadOnly("llm"),
+};
 export interface HarnessPolicyRequest {
   /** Mission classification for this task (§10). */
   risk: RiskClass;
@@ -80,21 +92,6 @@ const WRITE: Partial<Record<HarnessId, string[]>> = {
   cline: ["$PROMPT"],
   kilo: ["$PROMPT"],
   hermes: ["--print", "$PROMPT"],
-};
-
-/**
- * Which harnesses have a genuinely enforced read-only mode. For the rest MJ must not *claim*
- * read-only: it says so instead. Honesty about a missing control beats a false badge.
- */
-export const ENFORCED_SANDBOX: Partial<Record<HarnessId, boolean>> = {
-  claude: true,
-  codex: true,
-  opencode: true,
-  cursor: false,
-  grok: false,
-  cline: false,
-  kilo: false,
-  hermes: false,
 };
 
 const REVIEW_KINDS = new Set(["review", "security", "architecture", "synthesis"]);

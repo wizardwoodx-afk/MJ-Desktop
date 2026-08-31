@@ -439,3 +439,14 @@ export function binaryVerifiedHarnesses(): HarnessId[] {
     Object.values(AGENT_CAPABILITIES[id]).some((v) => v && typeof v === "object" && "confidence" in v && (v as { confidence?: Confidence }).confidence === "binary"),
   );
 }
+
+/** Harnesses that correspond to an executable CLI binary on disk. */
+export const EXECUTABLE_HARNESSES: HarnessId[] = (Object.keys(AGENT_CAPABILITIES) as HarnessId[]).filter(
+  (id) => AGENT_CAPABILITIES[id].bins.length > 0,
+);
+
+/** True when all claims about this harness come from binary verification or vendor docs with no unverified community claims. */
+export function fullyDocumented(id: HarnessId): boolean {
+  return unverifiedClaims(id).length === 0;
+}
+

@@ -68,20 +68,7 @@ jobs:
 
       - name: Probes (every assertion in the tree)
         shell: bash
-        run: |
-          for f in versionDrift acceptance harnessPolicy checkRunner engine replayEvals theme assist acp agentsMd otelExport controlPlane stubLedger sandbox; do
-            ./node_modules/.bin/esbuild probe/$f.test.ts --bundle --platform=node --format=esm \
-              --define:MJ_ROOT='"'$(pwd)'"' --outfile=probe/.$f.mjs --log-level=error
-            node probe/.$f.mjs || exit 1
-          done
-          # The Proof page needs react-dom resolved from inside the project (see README).
-          ./node_modules/.bin/esbuild probe/v10Page.test.tsx --bundle --platform=node --format=esm \
-            --define:MJ_ROOT='"'$(pwd)'"' --external:react --external:react-dom --external:react-dom/server \
-            --outfile=probe/.v10Page.mjs --log-level=error
-          node probe/.v10Page.mjs || exit 1
-          ./node_modules/.bin/esbuild probe/wiring.test.ts --bundle --platform=node --format=esm \
-            --outfile=probe/.wiring.mjs --log-level=error
-          node probe/.wiring.mjs || exit 1
+        run: npm test
 
       - name: Production bundle
         run: ./node_modules/.bin/vite build

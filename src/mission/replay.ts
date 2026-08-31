@@ -608,3 +608,279 @@ export function timelineTicks(events: FlightEvent[], maxTicks = 40): number[] {
   if (out[out.length - 1] !== sorted[sorted.length - 1]) out.push(sorted[sorted.length - 1] as number);
   return out;
 }
+
+/* ------------------------------------------------------------------ time-travel replay & snapshot */
+
+export interface ReplayAgent {
+  id: string;
+  harness: string | null;
+  permissions: string[];
+  denied: string[];
+  budgetUsd: number;
+}
+
+export interface ReplayArtifact {
+  id: string;
+  taskId?: string;
+  versionOf?: string;
+  evaluation?: {
+    passed: boolean;
+    fullyMeasured?: boolean;
+    checks?: unknown[];
+  };
+}
+
+export interface ReplaySubject {
+  id: string;
+  state: string;
+  attempts: number;
+}
+
+export interface ReplaySnapshot {
+  eventCount: number;
+  missionStatus: MissionStatus | null;
+  statusHistory: Array<{ seq: number; from: string | null; to: string; ts: string }>;
+  agents: Record<string, ReplayAgent>;
+  declaredBudgetTotalUsd: number;
+  artifacts: Record<string, ReplayArtifact>;
+  subjects: Record<string, ReplaySubject>;
+  checkpoints: Array<{ seq: number; subjectId: string | null }>;
+  repairs: Array<{ seq: number; subjectId: string | null; reason: string }>;
+  resourceLimits: Array<{ seq: number; subjectId: string | null; limit?: string; value?: number; ceiling?: number }>;
+  harnessSelections: Array<{ seq: number; actor: string; authority: string; policy: string; subjectId: string | null; data: Record<string, unknown> }>;
+}
+
+export function emptySnapshot(): ReplaySnapshot {
+  return {
+    eventCount: 0,
+    missionStatus: null,
+    statusHistory: [],
+    agents: {},
+    declaredBudgetTotalUsd: 0,
+    artifacts: {},
+    subjects: {},
+    checkpoints: [],
+    repairs: [],
+    resourceLimits: [],
+    harnessSelections: [],
+  };
+}
+
+export function reduceEvent(snap: ReplaySnapshot, e: FlightEvent): void {
+  snap.eventCount += 1;
+  const d = e.data ?? {};
+
+  switch (e.kind) {
+    case "MISSION_STATUS": {
+      const to = str(d.to ?? d.status);
+      if (to) {
+        snap.statusHistory.push({ seq: e.seq, from: typeof d.from === "string" ? d.from : null, to, ts: e.ts });
+        snap.missionStatus = to as MissionStatus;
+      }
+      break;
+    }
+    case "AGENT_SPAWNED": {
+      const id = str(e.subjectId ?? d.agentId ?? d.definitionId);
+      if (id) {
+        const budget = typeof d.budgetUsd === "number" ? d.budgetUsd : 0;
+        snap.agents[id] = {
+          id,
+          harness: typeof d.harness === "string" ? d.harness : null,
+          permissions: Array.isArray(d.permissions) ? (d.permissions as string[]) : [],
+          denied: Array.isArray(d.denied) ? (d.denied as string[]) : [],
+          budgetUsd: budget,
+        };
+        snap.declaredBudgetTotalUsd += budget;
+      }
+      break;
+    }
+    case "HARNESS_SELECTED": {
+      snap.harnessSelections.push({
+        seq: e.seq,
+        actor: e.actor,
+        authority: e.authority,
+        policy: e.policy,
+        subjectId: e.subjectId,
+        data: d,
+      });
+      break;
+    }
+    case "TASK_DELEGATED": {
+      const id = str(e.subjectId);
+      if (id) {
+        snap.subjects[id] = snap.subjects[id] ?? { id, state: "RUNNING", attempts: 0 };
+        snap.subjects[id].state = "RUNNING";
+      }
+      break;
+    }
+    case "TASK_COMPLETED": {
+      const id = str(e.subjectId);
+      if (id) {
+        snap.subjects[id] = snap.subjects[id] ?? { id, state: "COMPLETED", attempts: 0 };
+        snap.subjects[id].state = "COMPLETED";
+      }
+      break;
+    }
+    case "AGENT_FAILED": {
+      const id = str(e.subjectId);
+      if (id) {
+        snap.subjects[id] = snap.subjects[id] ?? { id, state: "FAILED", attempts: 0 };
+        snap.subjects[id].state = "FAILED";
+        snap.subjects[id].attempts = typeof d.attempts === "number" ? d.attempts : snap.subjects[id].attempts + 1;
+      }
+      break;
+    }
+    case "MISSION_CHECKPOINTED": {
+      snap.checkpoints.push({ seq: e.seq, subjectId: e.subjectId });
+      break;
+    }
+    case "REPAIR_STARTED": {
+      snap.repairs.push({ seq: e.seq, subjectId: e.subjectId, reason: e.reason });
+      break;
+    }
+    case "RESOURCE_LIMIT": {
+      snap.resourceLimits.push({
+        seq: e.seq,
+        subjectId: e.subjectId,
+        limit: typeof d.limit === "string" ? d.limit : undefined,
+        value: typeof d.value === "number" ? d.value : undefined,
+        ceiling: typeof d.ceiling === "number" ? d.ceiling : undefined,
+      });
+      break;
+    }
+    case "ARTIFACT_CREATED":
+    case "ARTIFACT_VERSIONED": {
+      const id = str(e.subjectId);
+      if (id) {
+        snap.artifacts[id] = {
+          id,
+          taskId: typeof d.taskId === "string" ? d.taskId : undefined,
+          versionOf: typeof d.versionOf === "string" ? d.versionOf : undefined,
+          evaluation: snap.artifacts[id]?.evaluation,
+        };
+      }
+      break;
+    }
+    case "EVALUATION_PASSED":
+    case "EVALUATION_FAILED": {
+      const id = str(e.subjectId);
+      if (id) {
+        snap.artifacts[id] = snap.artifacts[id] ?? { id };
+        snap.artifacts[id].evaluation = {
+          passed: e.kind === "EVALUATION_PASSED",
+          fullyMeasured: typeof d.fullyMeasured === "boolean" ? d.fullyMeasured : undefined,
+          checks: Array.isArray(d.checks) ? d.checks : undefined,
+        };
+      }
+      break;
+    }
+  }
+}
+
+export function replayTo(events: FlightEvent[], seq: number): ReplaySnapshot {
+  const snap = emptySnapshot();
+  const sorted = [...events].sort((a, b) => a.seq - b.seq);
+  for (const e of sorted) {
+    if (e.seq <= seq) {
+      reduceEvent(snap, e);
+    }
+  }
+  return snap;
+}
+
+export function replayAll(events: FlightEvent[]): ReplaySnapshot {
+  return replayTo(events, Infinity);
+}
+
+export interface SnapshotDiff {
+  statusChanged: string[];
+  subjectsChangedState: Array<{ id: string; from: string; to: string }>;
+  newRepairs: number;
+  artifactsAdded: string[];
+  subjectsVanished: string[];
+}
+
+export function diffSnapshots(a: ReplaySnapshot, b: ReplaySnapshot): SnapshotDiff {
+  const statusChanged: string[] = [];
+  if (a.missionStatus !== b.missionStatus && b.missionStatus) {
+    statusChanged.push(b.missionStatus);
+  }
+
+  const subjectsChangedState: Array<{ id: string; from: string; to: string }> = [];
+  for (const id of Object.keys(b.subjects)) {
+    const aSub = a.subjects[id];
+    const bSub = b.subjects[id];
+    if (aSub && bSub && aSub.state !== bSub.state) {
+      subjectsChangedState.push({ id, from: aSub.state, to: bSub.state });
+    }
+  }
+
+  const artifactsAdded = Object.keys(b.artifacts).filter((id) => !a.artifacts[id]);
+  const subjectsVanished = Object.keys(a.subjects).filter((id) => !b.subjects[id]);
+
+  return {
+    statusChanged,
+    subjectsChangedState,
+    newRepairs: Math.max(0, b.repairs.length - a.repairs.length),
+    artifactsAdded,
+    subjectsVanished,
+  };
+}
+
+export function replayIndex(events: FlightEvent[]): { marks: Array<{ seq: number; label: string }>; firstSeq: number; lastSeq: number } {
+  if (!events.length) return { marks: [], firstSeq: 0, lastSeq: 0 };
+  const sorted = [...events].sort((a, b) => a.seq - b.seq);
+  const marks: Array<{ seq: number; label: string }> = [];
+  for (const e of sorted) {
+    if (e.kind === "MISSION_STATUS") marks.push({ seq: e.seq, label: `Status: ${String(e.data?.to ?? e.kind)}` });
+    else if (e.kind === "REPAIR_STARTED") marks.push({ seq: e.seq, label: `repair: ${e.reason}` });
+    else if (e.kind === "APPROVAL_REQUIRED" || e.kind === "APPROVAL_GRANTED") marks.push({ seq: e.seq, label: "human approval" });
+    else if (e.kind === "AGENT_FAILED") marks.push({ seq: e.seq, label: "Agent failure" });
+    else if (e.kind === "RESOURCE_LIMIT") marks.push({ seq: e.seq, label: "Resource limit" });
+    else if (e.kind === "MISSION_CHECKPOINTED") marks.push({ seq: e.seq, label: "Checkpoint" });
+  }
+  return {
+    marks,
+    firstSeq: sorted[0].seq,
+    lastSeq: sorted[sorted.length - 1].seq,
+  };
+}
+
+export function timeline(events: FlightEvent[]): Array<FlightEvent & { notable: boolean }> {
+  const notableKinds = new Set([
+    "MISSION_STATUS",
+    "AGENT_SPAWNED",
+    "AGENT_FAILED",
+    "REPAIR_STARTED",
+    "RESOURCE_LIMIT",
+    "APPROVAL_REQUIRED",
+    "APPROVAL_GRANTED",
+    "APPROVAL_REJECTED",
+    "MISSION_CHECKPOINTED",
+    "MISSION_ROLLED_BACK",
+  ]);
+  return events.map((e) => ({
+    ...e,
+    notable: notableKinds.has(e.kind),
+  }));
+}
+
+export function validateTrace(events: FlightEvent[]): { ok: boolean; problems: string[] } {
+  const problems: string[] = [];
+  if (!events.length) {
+    return { ok: false, problems: ["Empty trace cannot be replayed."] };
+  }
+  const sorted = [...events].sort((a, b) => a.seq - b.seq);
+  const seenSeqs = new Set<number>();
+  for (let i = 0; i < sorted.length; i++) {
+    const e = sorted[i];
+    if (seenSeqs.has(e.seq)) {
+      problems.push(`Duplicate sequence number: ${e.seq}`);
+    }
+    seenSeqs.add(e.seq);
+    if (i > 0 && e.seq !== sorted[i - 1].seq + 1) {
+      problems.push(`Missing sequence number: expected ${sorted[i - 1].seq + 1}, got ${e.seq}`);
+    }
+  }
+  return { ok: problems.length === 0, problems };
+}

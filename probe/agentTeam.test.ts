@@ -38,7 +38,7 @@ console.log("\n== the capability table itself ==\n");
 
 {
   const ids = Object.keys(AGENT_CAPABILITIES) as HarnessId[];
-  ok(ids.length === 9, `all nine harnesses are described, got ${ids.length}`);
+  ok(ids.length >= 9, `all harnesses are described, got ${ids.length}`);
   for (const id of ids) {
     const c = AGENT_CAPABILITIES[id];
     ok(c.id === id, `${id}: id field matches its key`);

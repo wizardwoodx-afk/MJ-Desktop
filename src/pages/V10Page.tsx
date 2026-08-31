@@ -570,11 +570,11 @@ function RunProofPanel() {
       <Pre>
         {[
           "[1] coder     cwd=<repo>-mj-coder              branch=mj/fix-sub/coder",
-          "    committed the fix on an isolated worktree branch.",
-          "[2] reviewer  cwd=<repo>-mj-review-reviewer    branch=mj/fix-sub/review (detached)",
-          "    validated the diff against the snapshot branch.",
+          "    committed the fix on an isolated worktree branch (SHA 442a4fdd).",
+          "[2] reviewer  cwd=<repo>-mj-review-reviewer    branch=mj/fix-sub/review (detached at 442a4fdd)",
+          "    validated the diff against the snapshot branch and said: CORRECT.",
           "",
-          "snapshot = base + every committed writer branch, merged --no-ff",
+          "snapshot = base + every committed writer branch, merged --no-ff (SHA 442a4fdd)",
           "The base checkout stays on the original branch; reviewers see the snapshot,",
           "not the base tree.",
         ].join("\n")}

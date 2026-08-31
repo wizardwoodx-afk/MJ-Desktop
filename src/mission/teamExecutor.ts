@@ -276,7 +276,7 @@ export async function executeTeam(req: TeamRunRequest, deps: TeamRunnerDeps, ses
     wallClockMs: now() - t0,
   });
 
-  const worktrees = planWorktrees(req.team, { repoRoot: req.repoRoot, baseBranch: req.baseBranch, missionSlug: req.missionSlug });
+  const worktrees = planWorktrees(req.team, { repoRoot: req.repoRoot, baseBranch: req.baseBranch, missionSlug: req.missionSlug, deferReview: true });
   const wtBySeat = new Map(worktrees.map((w) => [w.seatId, w]));
   const briefingsByHarness = writeContextFiles(req.team, {
     objective: req.objective,
@@ -412,6 +412,7 @@ export async function executeTeam(req: TeamRunRequest, deps: TeamRunnerDeps, ses
     }
 
     const hasReadOnly = wave.some((a) => a.readOnly || !a.seat.mayWrite);
+    const skippedIds = new Set<string>();
     if (hasReadOnly && worktrees.some((w) => w.deferred)) {
       // THE FIX. Build the review snapshot from everything the writers committed, then point the
       // read-only worktrees at it. Without this step a reviewer runs against the base checkout and
@@ -421,6 +422,7 @@ export async function executeTeam(req: TeamRunRequest, deps: TeamRunnerDeps, ses
         for (const a of wave.filter((x) => x.readOnly || !x.seat.mayWrite)) {
           const wt = wtBySeat.get(a.seat.id);
           if (!wt?.deferred) continue;
+          skippedIds.add(a.seat.id);
           const outcome: SeatOutcome = committedBranches.length === 0 ? "skipped_nothing_to_review" : "review_snapshot_failed";
           seats.push(
             unrunRecord(
@@ -437,8 +439,9 @@ export async function executeTeam(req: TeamRunRequest, deps: TeamRunnerDeps, ses
       }
     }
 
+    const runnableWave = wave.filter((a) => !skippedIds.has(a.seat.id));
     const results = await Promise.all(
-      wave.map((a) =>
+      runnableWave.map((a) =>
         runSeat(
           req,
           deps,
@@ -677,7 +680,7 @@ async function runSeat(
   }
 
   // Write this seat's briefing into its own directory now that the directory exists.
-  if (deps.writeFile) {
+  if (deps.writeFile && cwd !== req.repoRoot) {
     for (const f of briefings) {
       try {
         await deps.writeFile(`${cwd}/${BRIEF_DIR}/${f.path}`, f.contents);

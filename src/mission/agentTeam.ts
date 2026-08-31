@@ -28,6 +28,8 @@ export interface TeamSeat {
   model: string | null;
   /** May this seat modify files? An isolation hint, not a permission grant. */
   mayWrite: boolean;
+  /** Maximum risk level this seat is authorised to take on. */
+  maxRisk?: RiskClass;
   /** Wall-clock ceiling for one invocation, in seconds. */
   timeoutSecs: number;
   /** Turn ceiling, or null when the CLI has no such control and MJ's ledger is the only limit. */
@@ -40,7 +42,11 @@ export interface CliAgentTeam {
   name: string;
   description: string;
   seats: TeamSeat[];
-  schemaVersion: number;
+  budgetUsd?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
+  revision?: number;
+  schemaVersion?: number;
 }
 
 export const SCHEMA_VERSION = 1;
@@ -51,6 +57,7 @@ const seat = (id: string, role: TeamRole, harness: HarnessId, over: Partial<Team
   harness,
   model: null,
   mayWrite: role === "coder" || role === "debugger",
+  maxRisk: role === "coder" || role === "debugger" ? "MEDIUM" : "LOW",
   timeoutSecs: 900,
   maxTurns: null,
   instructions: "",
@@ -63,11 +70,18 @@ export const PREBUILT_TEAMS: CliAgentTeam[] = [
     name: "Balanced",
     description: "Plan, build, test, review. One vendor writes, a second reviews — so the review is not the author grading its own work.",
     schemaVersion: SCHEMA_VERSION,
+    budgetUsd: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    revision: 1,
     seats: [
-      seat("planner", "planner", "claude", { instructions: "Break the objective into steps small enough to verify individually." }),
-      seat("coder", "coder", "claude", { instructions: "Implement the change. Touch only what the task requires." }),
-      seat("tester", "tester", "opencode", { instructions: "Run the repository's own checks and report what failed." }),
-      seat("reviewer", "reviewer", "codex", { instructions: "Review the diff. Say what is wrong, not what is fine." }),
+      seat("planner", "planner", "claude", { mayWrite: false, maxRisk: "LOW", instructions: "Break the objective into steps small enough to verify individually." }),
+      seat("architect", "architect", "claude", { mayWrite: false, maxRisk: "LOW" }),
+      seat("impl", "coder", "claude", { mayWrite: true, maxRisk: "MEDIUM", instructions: "Implement the change. Touch only what the task requires." }),
+      seat("synthesizer", "synthesizer", "grok", { mayWrite: false, maxRisk: "LOW" }),
+      seat("test", "tester", "opencode", { mayWrite: false, maxRisk: "LOW", instructions: "Run the repository's own checks and report what failed." }),
+      seat("reviewer", "reviewer", "codex", { mayWrite: false, maxRisk: "LOW", instructions: "Review the diff. Say what is wrong, not what is fine." }),
+      seat("security", "security", "codex", { mayWrite: false, maxRisk: "LOW", instructions: "Check for security vulnerabilities." }),
     ],
   },
   {
@@ -75,13 +89,36 @@ export const PREBUILT_TEAMS: CliAgentTeam[] = [
     name: "Adversarial",
     description: "Deliberately cross-vendor. Every writer is reviewed by a different vendor, because agreement across vendors is weaker evidence than agreement with itself.",
     schemaVersion: SCHEMA_VERSION,
+    budgetUsd: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    revision: 1,
     seats: [
-      seat("architect", "architect", "claude"),
-      seat("coder", "coder", "claude"),
-      seat("tester", "tester", "cline", { instructions: "Prove the change works or find the case where it does not." }),
-      seat("reviewer", "reviewer", "grok"),
-      seat("security", "security", "codex", { instructions: "Look only for injection, secret leakage and unsafe deserialisation." }),
-      seat("synthesizer", "synthesizer", "opencode", { instructions: "Reconcile the verdicts into one decision." }),
+      seat("planner", "planner", "claude", { mayWrite: false, maxRisk: "LOW" }),
+      seat("impl", "coder", "claude", { mayWrite: true, maxRisk: "MEDIUM" }),
+      seat("test", "tester", "cline", { mayWrite: false, maxRisk: "LOW", instructions: "Prove the change works or find the case where it does not." }),
+      seat("reviewer", "reviewer", "grok", { mayWrite: false, maxRisk: "LOW" }),
+      seat("security", "security", "codex", { mayWrite: false, maxRisk: "LOW", instructions: "Look only for injection, secret leakage and unsafe deserialisation." }),
+      seat("synthesizer", "synthesizer", "opencode", { mayWrite: false, maxRisk: "LOW", instructions: "Reconcile the verdicts into one decision." }),
+    ],
+  },
+  {
+    id: "team.powerhouse",
+    name: "Cross-Vendor Powerhouse",
+    description: "Connects the most popular CLI agents into one unified team: Claude plans, Codex architectures, OpenCode builds, Cursor debugs, Grok tests, Cline reviews, and Hermes synthesizes.",
+    schemaVersion: SCHEMA_VERSION,
+    budgetUsd: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    revision: 1,
+    seats: [
+      seat("planner", "planner", "claude", { mayWrite: false, maxRisk: "LOW", instructions: "Formulate the execution plan and criteria." }),
+      seat("architect", "architect", "codex", { mayWrite: false, maxRisk: "LOW", instructions: "Design component interfaces and data schemas." }),
+      seat("coder", "coder", "opencode", { mayWrite: true, maxRisk: "MEDIUM", instructions: "Implement core logic and tests in isolated worktree." }),
+      seat("debugger", "debugger", "cursor", { mayWrite: true, maxRisk: "MEDIUM", instructions: "Diagnose edge cases and optimize performance." }),
+      seat("tester", "tester", "grok", { mayWrite: false, maxRisk: "LOW", instructions: "Run test suites and fuzz edge cases." }),
+      seat("reviewer", "reviewer", "cline", { mayWrite: false, maxRisk: "LOW", instructions: "Conduct independent peer review against the snapshot merge." }),
+      seat("synthesizer", "synthesizer", "hermes", { mayWrite: false, maxRisk: "LOW", instructions: "Reconcile findings into final release notes." }),
     ],
   },
   {
@@ -89,16 +126,24 @@ export const PREBUILT_TEAMS: CliAgentTeam[] = [
     name: "Solo",
     description: "One seat. Cheap, fast, and the review is advisory only — an author grading its own work is not a review.",
     schemaVersion: SCHEMA_VERSION,
-    seats: [seat("coder", "coder", "opencode", { instructions: "Implement and self-check." })],
+    budgetUsd: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    revision: 1,
+    seats: [seat("impl", "coder", "opencode", { mayWrite: true, maxRisk: "MEDIUM", instructions: "Implement and self-check." })],
   },
   {
-    id: "team.readonly",
+    id: "team.audit",
     name: "Read-only audit",
     description: "No seat may write. For answering 'what is wrong with this code?' without risking a change.",
     schemaVersion: SCHEMA_VERSION,
+    budgetUsd: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    revision: 1,
     seats: [
-      seat("reviewer", "reviewer", "claude", { mayWrite: false }),
-      seat("security", "security", "codex", { mayWrite: false }),
+      seat("reviewer", "reviewer", "claude", { mayWrite: false, maxRisk: "LOW" }),
+      seat("security", "security", "codex", { mayWrite: false, maxRisk: "LOW" }),
     ],
   },
 ];
@@ -202,14 +247,16 @@ export function composeSeatArgv(
       path: ".cursor/cli-config.json",
       contents: JSON.stringify(
         {
-          permissions: wantsReadOnly
-            ? { allow: ["Read(*)", "Shell(git status)", "Shell(git diff)"], deny: ["Write(*)", "Shell(rm)"] }
-            : { allow: ["Read(*)", "Shell(git)", "Shell(npm)"], deny: ["Shell(rm -rf)", "Read(.env*)"] },
+          permissions: {
+            allow: wantsReadOnly ? ["Read(*)", "Shell(git status)", "Shell(git diff)"] : ["Read(*)", "Shell(git)", "Shell(npm)"],
+            deny: wantsReadOnly ? ["Write(*)", "Shell(rm)"] : ["Shell(rm -rf)", "Read(.env*)"],
+          },
         },
         null,
         2,
       ),
     });
+    warnings.push("Cursor's -p mode has a reported bug where the process does not exit after emitting the result. MJ applies a wall-clock timeout and parses the stream rather than waiting for exit.");
   }
   if (teamSeat.harness === "kilo" && wantsReadOnly) {
     // Kilo expresses read-only per agent, so MJ has to author the agent file.
@@ -219,8 +266,8 @@ export function composeSeatArgv(
     });
     warnings.push("Kilo read-only depends on the generated .kilo/agents/mj-readonly.md being picked up; verify with kilo --help.");
   }
-  if (teamSeat.harness === "cursor") {
-    warnings.push("Cursor's -p mode has a reported bug where the process does not exit after emitting the result. MJ applies a wall-clock timeout and parses the stream rather than waiting for exit.");
+  if (teamSeat.harness === "opencode") {
+    warnings.push("Note: opencode issue #13851 permission-preset verification notes apply.");
   }
 
   for (const claim of unverifiedClaims(teamSeat.harness)) warnings.push(`Unverified flag — ${claim}`);
@@ -236,7 +283,7 @@ export function composeSeatArgv(
     files,
     claims: {
       readOnlyEnforced: wantsReadOnly && enforcedReadOnly(teamSeat.harness),
-      costKind: caps.cost === null ? "none" : caps.cost.kind,
+      costKind: caps.cost?.kind ?? "none",
     },
     warnings,
   };
@@ -244,10 +291,8 @@ export function composeSeatArgv(
 
 /* ------------------------------------------------------------------ validation */
 
-export type FindingSeverity = "error" | "warning";
-
 export interface TeamFinding {
-  severity: FindingSeverity;
+  severity: "error" | "warning";
   code: string;
   message: string;
   seatId?: string;
@@ -262,30 +307,48 @@ export interface TeamFinding {
  */
 export function validateTeam(team: CliAgentTeam): TeamFinding[] {
   const out: TeamFinding[] = [];
+  if (!team.name || team.name.trim().length === 0) {
+    out.push({ severity: "error", code: "no_name", message: "Team name is required." });
+  }
   const ids = new Set<string>();
   for (const s of team.seats) {
-    if (ids.has(s.id)) out.push({ severity: "error", code: "duplicate_seat_id", message: `Two seats share the id "${s.id}". Worktrees, sessions and merge steps are keyed by seat id, so one would overwrite the other.`, seatId: s.id });
+    if (ids.has(s.id)) {
+      out.push({ severity: "error", code: "duplicate_seat", message: `Two seats share the id "${s.id}". Worktrees, sessions and merge steps are keyed by seat id, so one would overwrite the other.`, seatId: s.id });
+    }
     ids.add(s.id);
+    if (s.harness === "llm" && (s.role === "coder" || s.role === "debugger" || s.mayWrite)) {
+      out.push({ severity: "error", code: "cannot_write", message: `Seat "${s.id}" is a direct LLM which cannot modify files.`, seatId: s.id });
+    }
     if (!enforcedReadOnly(s.harness) && !s.mayWrite) {
       out.push({ severity: "warning", code: "advisory_readonly", message: `${AGENT_CAPABILITIES[s.harness].name} has no verified read-only enforcement, so "${s.id}" is advisory: it can still modify files despite being a ${s.role}.`, seatId: s.id });
     }
-    if (s.timeoutSecs < 30) out.push({ severity: "warning", code: "short_timeout", message: `${s.timeoutSecs}s is below the 30s floor for a coding agent; expect a timeout on any real edit.`, seatId: s.id });
-    if (!s.mayWrite && (s.role === "coder" || s.role === "debugger")) {
+    if (s.timeoutSecs < 30) {
+      out.push({ severity: "warning", code: "short_timeout", message: `${s.timeoutSecs}s is below the 30s floor for a coding agent; expect a timeout on any real edit.`, seatId: s.id });
+    }
+    if (s.harness === "cline" && s.maxTurns && s.maxTurns > 0) {
+      out.push({ severity: "warning", code: "cline_retries", message: "Cline --retries is a mistake limit, not a turn cap.", seatId: s.id });
+    }
+    if (!s.mayWrite && (s.role === "coder" || s.role === "debugger") && s.harness !== "llm") {
       out.push({ severity: "error", code: "writer_cannot_write", message: `"${s.id}" has the ${s.role} role but mayWrite is false, so it cannot do its job.`, seatId: s.id });
     }
   }
-  if (team.seats.length === 0) out.push({ severity: "error", code: "no_seats", message: "A team with no seats cannot run." });
-  if (!team.seats.some((s) => s.mayWrite)) out.push({ severity: "warning", code: "no_writer", message: "No seat may write, so this team can analyse but cannot change anything." });
+  if (team.seats.length === 0) {
+    out.push({ severity: "error", code: "no_seats", message: "A team with no seats cannot run." });
+  }
+  if (team.seats.length > 0 && !team.seats.some((s) => s.mayWrite)) {
+    out.push({ severity: "warning", code: "no_writer", message: "No seat may write, so this team can analyse but cannot change anything." });
+  }
   if (team.seats.length > 1 && !team.seats.some((s) => s.role === "reviewer" || s.role === "security")) {
     out.push({ severity: "warning", code: "no_reviewer", message: "No reviewer or security seat, so nothing checks the writer's work." });
   }
-  const writerHarnesses = new Set(team.seats.filter((s) => s.mayWrite).map((s) => s.harness));
-  const reviewerHarnesses = new Set(team.seats.filter((s) => s.role === "reviewer" || s.role === "security").map((s) => s.harness));
-  if (writerHarnesses.size === 1 && reviewerHarnesses.size === 1 && [...writerHarnesses][0] === [...reviewerHarnesses][0]) {
-    out.push({ severity: "warning", code: "single_vendor", message: `Every writing and reviewing seat is ${AGENT_CAPABILITIES[[...writerHarnesses][0] as HarnessId].name}. A vendor reviewing its own output agrees with itself more often than it disagrees.` });
-  }
-  if (writerHarnesses.size > 1) {
-    out.push({ severity: "warning", code: "multi_vendor_writers", message: `${writerHarnesses.size} different CLIs will write. That is the point, but it means ${writerHarnesses.size} sets of edits to reconcile — review the merge, not just the branches.` });
+  const writers = team.seats.filter((s) => s.mayWrite);
+  const writingHarnesses = writers.map((s) => s.harness);
+  if (writers.length > 1 && new Set(writingHarnesses).size === 1) {
+    out.push({
+      severity: "warning",
+      code: "single_vendor",
+      message: `Multiple writing seats (${writers.map((w) => w.id).join(", ")}) are assigned to the same harness vendor (${writingHarnesses[0]}). Diversifying writers avoids single-model blind spots.`,
+    });
   }
   return out;
 }
@@ -305,6 +368,7 @@ export interface ParseResult {
   ok: boolean;
   team: CliAgentTeam | null;
   error: string | null;
+  errors: string[];
   findings: TeamFinding[];
 }
 
@@ -313,26 +377,36 @@ export function parseTeam(raw: string): ParseResult {
   try {
     parsed = JSON.parse(raw);
   } catch (e) {
-    return { ok: false, team: null, error: `Not valid JSON: ${e instanceof Error ? e.message : String(e)}`, findings: [] };
+    const err = `Not valid JSON: ${e instanceof Error ? e.message : String(e)}`;
+    return { ok: false, team: null, error: err, errors: [err], findings: [] };
   }
   const env = parsed as Partial<SerializedTeam>;
   if (!env || typeof env !== "object" || !env.team) {
-    return { ok: false, team: null, error: "Missing the `team` object. MJ exports { schemaVersion, team }.", findings: [] };
+    const err = "Missing the `team` object. MJ exports { schemaVersion, team }.";
+    return { ok: false, team: null, error: err, errors: [err], findings: [] };
   }
   if (env.schemaVersion !== SCHEMA_VERSION) {
-    return { ok: false, team: null, error: `Schema version ${String(env.schemaVersion)} is not ${SCHEMA_VERSION}; MJ will not guess how to migrate it.`, findings: [] };
+    const err = `Schema version ${String(env.schemaVersion)} is not supported (expected ${SCHEMA_VERSION}); MJ will not guess how to migrate it.`;
+    return { ok: false, team: null, error: err, errors: [err], findings: [] };
   }
   const t = env.team;
-  if (!Array.isArray(t.seats) || t.seats.length === 0) {
-    return { ok: false, team: null, error: "The team has no seats.", findings: [] };
+  if (!Array.isArray(t.seats)) {
+    const err = "The team has no seats array.";
+    return { ok: false, team: null, error: err, errors: [err], findings: [] };
   }
   const roles = new Set<string>(["planner", "architect", "coder", "tester", "reviewer", "security", "synthesizer", "debugger"]);
   for (const s of t.seats as TeamSeat[]) {
-    if (!s.id || !roles.has(s.role)) return { ok: false, team: null, error: `Seat "${s.id ?? "?"}" has no id or an unknown role "${s.role}".`, findings: [] };
-    if (!(s.harness in AGENT_CAPABILITIES)) return { ok: false, team: null, error: `Seat "${s.id}" names an unknown harness "${s.harness}".`, findings: [] };
+    if (!s.id || !roles.has(s.role)) {
+      const err = `Seat "${s.id ?? "?"}" has no id or an unknown role "${s.role}".`;
+      return { ok: false, team: null, error: err, errors: [err], findings: [] };
+    }
+    if (!(s.harness in AGENT_CAPABILITIES)) {
+      const err = `Seat "${s.id}" names an unknown harness "${s.harness}".`;
+      return { ok: false, team: null, error: err, errors: [err], findings: [] };
+    }
   }
   const findings = validateTeam(t as CliAgentTeam);
-  return { ok: true, team: t as CliAgentTeam, error: null, findings };
+  return { ok: true, team: t as CliAgentTeam, error: null, errors: [], findings };
 }
 
 const STORAGE_KEY = "mj.teams.v1";
@@ -345,8 +419,6 @@ export function loadSavedTeams(): CliAgentTeam[] {
     if (!Array.isArray(arr)) return [];
     return arr.map((x) => parseTeam(JSON.stringify({ schemaVersion: SCHEMA_VERSION, team: x }))).filter((r) => r.ok && r.team).map((r) => r.team as CliAgentTeam);
   } catch {
-    // localStorage is unavailable under node and in some sandboxed frames. An empty list is the honest
-    // answer there: MJ cannot claim teams it cannot read.
     return [];
   }
 }
@@ -361,13 +433,21 @@ export function saveTeams(teams: CliAgentTeam[]): void {
 
 export function upsertTeam(teams: CliAgentTeam[], team: CliAgentTeam): CliAgentTeam[] {
   const i = teams.findIndex((t) => t.id === team.id);
-  if (i === -1) return [...teams, team];
+  const updatedTeam = { ...team, revision: (team.revision ?? 1) + 1 };
+  if (i === -1) return [...teams, updatedTeam];
   const next = [...teams];
-  next[i] = team;
+  next[i] = updatedTeam;
   return next;
 }
 
 /* ------------------------------------------------------------------ binding a team to a plan */
+
+const RISK_LEVELS: Record<RiskClass, number> = {
+  LOW: 1,
+  MEDIUM: 2,
+  HIGH: 3,
+  CRITICAL: 4,
+};
 
 /**
  * Which seat should run a task of this kind and risk.
@@ -381,14 +461,18 @@ export function seatForTask(team: CliAgentTeam, role: TeamRole, risk: RiskClass)
   }
   const candidates = team.seats.filter((s) => s.role === role);
   if (candidates.length === 0) return { seat: null, reason: `This team has no ${role} seat.` };
-  // For a write at HIGH risk, require a harness with verified enforcement — otherwise the "sandbox"
-  // is a label MJ invented.
-  if (risk === "HIGH") {
-    const enforced = candidates.find((s) => enforcedReadOnly(s.harness) || s.mayWrite);
-    if (!enforced) return { seat: null, reason: `No ${role} seat uses a harness with verified isolation, so a HIGH risk task cannot be safely assigned.` };
-    return { seat: enforced, reason: null };
+
+  const taskLevel = RISK_LEVELS[risk] ?? 2;
+  const eligible = candidates.filter((s) => {
+    const maxLevel = RISK_LEVELS[s.maxRisk ?? "MEDIUM"] ?? 2;
+    return maxLevel >= taskLevel;
+  });
+
+  if (eligible.length === 0) {
+    return { seat: null, reason: `A ${risk} risk task exceeds every available ${role}'s maxRisk ceiling — escalate to a human.` };
   }
-  return { seat: candidates[0] ?? null, reason: candidates[0] ? null : `No ${role} seat available.` };
+
+  return { seat: eligible[0] ?? null, reason: null };
 }
 
 export const STEP_KIND_TO_ROLE: Record<string, TeamRole | null> = {
@@ -396,12 +480,10 @@ export const STEP_KIND_TO_ROLE: Record<string, TeamRole | null> = {
   architecture: "architect",
   implementation: "coder",
   test: "tester",
-  review: "reviewer",
   security: "security",
+  review: "reviewer",
   synthesis: "synthesizer",
   release: "coder",
-  // An approval step is a human's, never an agent's. Binding it to a seat would turn a gate into a
-  // rubber stamp.
   approval: null,
 };
 
@@ -416,7 +498,7 @@ export interface BindResult {
   bindings: Binding[];
   bound: number;
   unbound: number;
-  refused: number;
+  refused: string[];
 }
 
 /**
@@ -430,7 +512,7 @@ export function bindTeamToPlan(team: CliAgentTeam, steps: Array<{ id: string; ki
   const bindings: Binding[] = [];
   let bound = 0;
   let unbound = 0;
-  let refused = 0;
+  const refused: string[] = [];
   for (const step of steps) {
     const role = STEP_KIND_TO_ROLE[step.kind];
     if (role === undefined || role === null) {
@@ -443,7 +525,8 @@ export function bindTeamToPlan(team: CliAgentTeam, steps: Array<{ id: string; ki
       bound += 1;
       bindings.push({ stepId: step.id, seatId: seat.id, harness: seat.harness, reason: null });
     } else if (step.risk === "CRITICAL") {
-      refused += 1;
+      refused.push(step.id);
+      unbound += 1;
       bindings.push({ stepId: step.id, seatId: null, harness: null, reason });
     } else {
       unbound += 1;

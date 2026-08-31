@@ -83,10 +83,10 @@ console.log("\n== risk class becomes a real sandbox ==\n");
 }
 {
   // Harnesses with no enforced sandbox must not claim one.
-  const p = policyFor("cursor", base);
-  ok(ENFORCED_SANDBOX.cursor === false, "cursor is not expected to have an enforced sandbox");
-  ok(/advisory/i.test(p.grant), `cursor must say the control is advisory, got: ${p.grant}`);
-  ok(p.canWrite, "cursor write shape still reports canWrite");
+  const p = policyFor("kilo", base);
+  ok(ENFORCED_SANDBOX.kilo === false, "kilo is not expected to have an enforced sandbox");
+  ok(/advisory/i.test(p.grant), `kilo must say the control is advisory, got: ${p.grant}`);
+  ok(p.canWrite, "kilo write shape still reports canWrite");
 }
 {
   // Every real harness must produce argv that contains the prompt exactly once.

@@ -43,6 +43,7 @@ import type {
 import { FlightRecorder, recorderFor } from "./flightRecorder";
 import { collectAgentsContext, writeAgentsMd, type AgentsMdMissionInput } from "./agentsMd";
 import { ArtifactStore } from "./artifactStore";
+import { type CliAgentTeam, bindTeamToPlan, applyTeamToSteps, type BindResult } from "./agentTeam";
 import { ApprovalGateService } from "./approvals";
 import { OrganizationRuntime, tasksFromPlan } from "./organization";
 import { OrganizationSupervisor } from "./supervisor";
@@ -85,6 +86,7 @@ export interface MissionRuntimeOptions {
   /** Called when the mission needs a human, so the UI can surface it. */
   onApprovalRequired?: (approvalId: string) => void;
   repository?: string;
+  team?: CliAgentTeam;
 }
 
 export interface RuntimeServices {
@@ -120,6 +122,7 @@ export class MissionRuntime {
   private options: Required<Pick<MissionRuntimeOptions, "allowSimulated" | "maxRepairAttempts" | "approvalTimeoutMs">> & MissionRuntimeOptions;
   private plan: MissionPlan | null = null;
   private planResult: PlanResult | null = null;
+  private teamBinding: BindResult | null = null;
   private graph: WorkflowGraph;
   private mutations: Array<ReturnType<typeof proposeMutation>["mutation"]> = [];
   private repairs: RepairAttempt[] = [];
@@ -257,8 +260,31 @@ export class MissionRuntime {
         agentsMdSeeded: agentsMdSeeded ?? null,
       },
     });
+    if (this.options.team && this.plan) {
+      this.teamBinding = bindTeamToPlan(this.options.team, this.plan.steps);
+      applyTeamToSteps(this.plan.steps, this.teamBinding);
+      this.recorder.record({
+        kind: "HARNESS_SELECTED",
+        actor: "team",
+        authority: `team:${this.options.team.id}`,
+        policy: "mission.team-bound",
+        reason: `Bound to crew ${this.options.team.name}`,
+        subjectId: null,
+        data: {
+          teamId: this.options.team.id,
+          teamName: this.options.team.name,
+          bound: this.teamBinding.bound,
+          unbound: this.teamBinding.unbound,
+          bindings: this.teamBinding.bindings,
+        },
+      });
+    }
     this.checkpoint("after planning", "The plan is fixed; this is the rollback point for any reorganization.");
     return this.plan;
+  }
+
+  getTeamBinding(): BindResult | null {
+    return this.teamBinding;
   }
 
   getPlan(): MissionPlan | null {

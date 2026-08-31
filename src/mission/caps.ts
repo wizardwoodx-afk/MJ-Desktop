@@ -56,15 +56,19 @@ export interface ChargeResult {
 
 export interface MissionCapState {
   spentUsd: number;
+  spentTokens: number;
   turnsUsed: number;
+  invocationsUsed: number;
   startedAt: number;
   cappedInvocations: Array<{ id: string; outcome: CapOutcome; at: string; detail: string }>;
 }
 
 export interface MissionCaps {
-  maxCostUsd: number;
-  maxTurns: number;
-  timeoutMs: number;
+  maxCostUsd?: number;
+  maxTurns?: number;
+  timeoutMs?: number;
+  maxWallClockMs?: number;
+  maxInvocations?: number;
 }
 
 /**
@@ -83,34 +87,49 @@ export class CapLedger {
 
   constructor(caps: MissionCaps, now: number = Date.now()) {
     this.caps = caps;
-    this.state = { spentUsd: 0, turnsUsed: 0, startedAt: now, cappedInvocations: [] };
+    this.state = { spentUsd: 0, spentTokens: 0, turnsUsed: 0, invocationsUsed: 0, startedAt: now, cappedInvocations: [] };
+  }
+
+  beginInvocation(): void {
+    this.state.invocationsUsed += 1;
   }
 
   /** Can another invocation start at all? Checked BEFORE dispatch — refusing is control, charging after is bookkeeping. */
   admissionError(now: number = Date.now()): string | null {
-    if (this.caps.maxCostUsd > 0 && this.state.spentUsd >= this.caps.maxCostUsd) {
-      return `the mission has already spent $${this.state.spentUsd.toFixed(4)} of its $${this.caps.maxCostUsd.toFixed(4)} ceiling`;
+    const maxCost = this.caps.maxCostUsd ?? 0;
+    if (maxCost > 0 && this.state.spentUsd >= maxCost) {
+      return `the mission has already spent $${this.state.spentUsd.toFixed(4)} of its $${maxCost.toFixed(4)} ceiling`;
     }
-    if (this.caps.maxTurns > 0 && this.state.turnsUsed >= this.caps.maxTurns) {
-      return `the mission has already used ${this.state.turnsUsed} of its ${this.caps.maxTurns} turns`;
+    const maxTurns = this.caps.maxTurns ?? 0;
+    if (maxTurns > 0 && this.state.turnsUsed >= maxTurns) {
+      return `the mission has already used ${this.state.turnsUsed} of its ${maxTurns} turns`;
     }
-    if (this.caps.timeoutMs > 0 && now - this.state.startedAt >= this.caps.timeoutMs) {
-      return `the mission's ${Math.round(this.caps.timeoutMs / 1000)}s wall clock has elapsed`;
+    const maxInvocations = this.caps.maxInvocations ?? 0;
+    if (maxInvocations > 0 && this.state.invocationsUsed >= maxInvocations) {
+      return `the mission has used all ${maxInvocations} permitted invocations`;
+    }
+    const maxWall = this.caps.maxWallClockMs ?? this.caps.timeoutMs ?? 0;
+    if (maxWall > 0 && now - this.state.startedAt >= maxWall) {
+      return `the mission's ${Math.round(maxWall / 1000)}s wall clock has elapsed`;
     }
     return null;
   }
 
   /** Record what a CLI actually consumed. Returns why, so the caller can show it. */
   charge(r: ReportedUsage): ChargeResult {
+    if (r.tokens !== null && Number.isFinite(r.tokens)) {
+      this.state.spentTokens += r.tokens;
+    }
     if (r.costUsd !== null && Number.isFinite(r.costUsd)) {
       this.state.spentUsd += r.costUsd;
-      const breach = this.caps.maxCostUsd > 0 && this.state.spentUsd > this.caps.maxCostUsd ? "mission_cap" : null;
+      const maxCost = this.caps.maxCostUsd ?? 0;
+      const breach = maxCost > 0 && this.state.spentUsd > maxCost ? "mission_cap" : null;
       return {
         chargedUsd: r.costUsd,
         basis: "reported_usd",
         breach,
         reason: breach
-          ? `Charged $${r.costUsd.toFixed(4)} from ${r.source}, taking the mission to $${this.state.spentUsd.toFixed(4)} over a $${this.caps.maxCostUsd.toFixed(4)} ceiling.`
+          ? `Charged $${r.costUsd.toFixed(4)} from ${r.source}, taking the mission to $${this.state.spentUsd.toFixed(4)} over a $${maxCost.toFixed(4)} ceiling.`
           : `Charged $${r.costUsd.toFixed(4)} reported by ${r.source}. Mission total $${this.state.spentUsd.toFixed(4)}.`,
       };
     }
@@ -190,20 +209,22 @@ export async function withDeadline<T>(
 
 export interface TurnAccount {
   used: number;
-  limit: number;
+  cap?: number;
+  limit?: number;
   /** Turns the CLI itself reported, which may differ from MJ's count. */
-  reported: number | null;
+  reported?: number | null;
 }
 
 export function mayRunTurn(account: TurnAccount): { allowed: boolean; reason: string } {
-  if (account.limit <= 0) return { allowed: true, reason: "No turn limit is set." };
+  const cap = account.cap ?? account.limit ?? 0;
+  if (cap <= 0) return { allowed: true, reason: "No turn limit is set (cap 0 means no cap)." };
   // When the CLI reports its own turn count, that is the better number: MJ counts invocations, the
   // CLI counts its internal reasoning steps, and the internal one is what costs money.
-  const effective = account.reported !== null ? Math.max(account.used, account.reported) : account.used;
-  if (effective >= account.limit) {
-    return { allowed: false, reason: `${effective} of ${account.limit} turns used.` };
+  const effective = account.reported !== null && account.reported !== undefined ? Math.max(account.used, account.reported) : account.used;
+  if (effective >= cap) {
+    return { allowed: false, reason: `Turn cap reached: ${effective} of ${cap} turns used.` };
   }
-  return { allowed: true, reason: `${effective} of ${account.limit} turns used.` };
+  return { allowed: true, reason: `${effective} of ${cap} turns used.` };
 }
 
 export function nextTurn(account: TurnAccount): TurnAccount {
@@ -340,8 +361,11 @@ export function capsForSeat(seat: { timeoutSecs: number; maxTurns: number | null
   if (seat.timeoutSecs > 0 && seat.timeoutSecs < 30) {
     warnings.push(`${seat.timeoutSecs}s is below the 30s floor for a coding agent; using it anyway, but expect a timeout on any real edit.`);
   }
-  const maxTurns = seat.maxTurns !== null && seat.maxTurns > 0 ? seat.maxTurns : DEFAULT_CAPS.maxTurns;
-  if (seat.maxTurns !== null && seat.maxTurns > 0 && seat.maxTurns < 3) {
+  if (seat.maxTurns === null || seat.maxTurns === undefined) {
+    warnings.push("No turn cap was specified for this seat; using default.");
+  }
+  const maxTurns = seat.maxTurns !== null && seat.maxTurns !== undefined && seat.maxTurns > 0 ? seat.maxTurns : DEFAULT_CAPS.maxTurns;
+  if (seat.maxTurns !== null && seat.maxTurns !== undefined && seat.maxTurns > 0 && seat.maxTurns < 3) {
     warnings.push(`${seat.maxTurns} turns is almost certainly too few to read a file and edit it.`);
   }
   const maxCostUsd = costUsd !== null && costUsd > 0 ? costUsd : DEFAULT_CAPS.maxCostUsd;

@@ -27,6 +27,13 @@ export type GitRunner = (args: string[], cwd: string) => Promise<GitResult>;
 
 export type FileStatus = "added" | "modified" | "deleted" | "renamed" | "untracked" | "copied";
 
+export interface DiffHunk {
+  header: string;
+  added: string[];
+  removed: string[];
+  lines: string[];
+}
+
 export interface DiffFile {
   path: string;
   oldPath: string | null;
@@ -35,7 +42,7 @@ export interface DiffFile {
   deletions: number;
   binary: boolean;
   /** The hunks, kept so a reviewer seat can be shown the actual change. */
-  hunks: string[];
+  hunks: DiffHunk[];
 }
 
 export interface DiffSummary {
@@ -103,9 +110,11 @@ export function parseStatusPorcelainZ(raw: string): Array<{ status: FileStatus; 
 export function parseUnifiedDiff(raw: string): DiffFile[] {
   const files: DiffFile[] = [];
   let current: DiffFile | null = null;
+  let currentHunk: DiffHunk | null = null;
   const flush = () => {
     if (current) files.push(current);
     current = null;
+    currentHunk = null;
   };
 
   for (const line of raw.split(/\r?\n/)) {
@@ -123,9 +132,24 @@ export function parseUnifiedDiff(raw: string): DiffFile[] {
     else if (line.startsWith("new file mode")) current.status = "added";
     else if (line.startsWith("deleted file mode")) current.status = "deleted";
     else if (line.startsWith("Binary files") || line.startsWith("GIT binary patch")) current.binary = true;
-    else if (line.startsWith("@@")) current.hunks.push(line);
-    else if (line.startsWith("+") && !line.startsWith("+++")) current.additions += 1;
-    else if (line.startsWith("-") && !line.startsWith("---")) current.deletions += 1;
+    else if (line.startsWith("@@")) {
+      currentHunk = { header: line, added: [], removed: [], lines: [] };
+      current.hunks.push(currentHunk);
+    } else if (line.startsWith("+") && !line.startsWith("+++")) {
+      current.additions += 1;
+      if (currentHunk) {
+        currentHunk.added.push(line.slice(1));
+        currentHunk.lines.push(line);
+      }
+    } else if (line.startsWith("-") && !line.startsWith("---")) {
+      current.deletions += 1;
+      if (currentHunk) {
+        currentHunk.removed.push(line.slice(1));
+        currentHunk.lines.push(line);
+      }
+    } else if (currentHunk) {
+      currentHunk.lines.push(line);
+    }
   }
   flush();
 
@@ -214,11 +238,11 @@ export function gitApi(runner: GitRunner): GitApi {
 /** Render a diff summary as a review header, so a verdict is about a diff that was shown. */
 export function renderDiffSummary(s: DiffSummary): string {
   if (s.empty) return "No changes. The working tree matches HEAD.";
-  const lines = [`${s.files.length} file(s) changed, +${s.totalAdditions}/-${s.totalDeletions} (net ${s.netLines >= 0 ? "+" : ""}${s.netLines})`];
+  const lines = [`${s.files.length} files changed, +${s.totalAdditions} / -${s.totalDeletions} (net ${s.netLines >= 0 ? "+" : ""}${s.netLines})`];
   if (s.binaryFiles) lines.push(`${s.binaryFiles} binary file(s) — contents not shown, so they cannot be reviewed from this diff.`);
-  if (s.largest) lines.push(`largest change: ${s.largest}`);
+  if (s.largest) lines.push(`largest change: ${s.largest} (start the review there)`);
   for (const f of s.files.slice(0, 20)) {
-    lines.push(`  ${f.status.padEnd(9)} ${f.path}${f.oldPath ? ` (from ${f.oldPath})` : ""}  +${f.additions}/-${f.deletions}${f.binary ? "  [binary]" : ""}`);
+    lines.push(`  ${f.status.padEnd(9)} ${f.oldPath ? `${f.oldPath} -> ${f.path}` : f.path}  +${f.additions}/-${f.deletions}${f.binary ? "  [binary]" : ""}`);
   }
   if (s.files.length > 20) lines.push(`  …and ${s.files.length - 20} more`);
   return lines.join("\n");
@@ -243,7 +267,8 @@ export function truncateDiffForPrompt(raw: string, maxChars = 24000): { text: st
     kept.push(chunk);
     size += chunk.length;
   }
-  return { text: kept.join(""), truncated: true, omittedFiles: omitted };
+  const notice = `\n\n[DIFF TRUNCATED: ${omitted} file(s) omitted. Do not report that you reviewed everything — note the truncation in your review.]\n`;
+  return { text: kept.join("") + notice, truncated: true, omittedFiles: omitted };
 }
 
 export const GIT_RESULT_OK = OK;
