@@ -64,3 +64,4 @@ test_err.txt
 # Screenshots are local reference only (keep 1 hero if you want)
 screen*.png
 crop_*.png
+filelist.txt  
