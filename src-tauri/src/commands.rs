@@ -495,7 +495,7 @@ pub fn mcp_call(state: State<Arc<AppState>>, server_id: String, tool: String, ar
     if server_id == "mcp.control" {
         // V11 (W2): the control plane gets real database access, so the graph tools mutate
         // and read the store instead of refusing.
-        return Ok(control_mcp::dispatch_with_db(&tool, &arguments, &lock_db(&state)?));
+        return Ok(control_mcp::dispatch_with_db(&tool, &arguments, &*lock_db(&state)?));
     }
     let list = db::mcp_list(&*lock_db(&state)?).map_err(|e| e.to_string())?;
     let found = list.as_array().and_then(|a| a.iter().find(|s| s["id"] == server_id)).cloned();
