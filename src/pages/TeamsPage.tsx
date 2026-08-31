@@ -762,8 +762,11 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
                 style={{ width: "100%", fontSize: 12, padding: "8px 12px" }}
                 onClick={() => void handleSimulateDebate()}
               >
-                {isDebating ? "Agents Debating..." : "⚡ Run Inter-Agent Debate"}
+                {isDebating ? "Agents Debating..." : "⚡ Run Simulated Debate (Prototype)"}
               </button>
+              <div className="muted" style={{ fontSize: 10, marginTop: 6, textAlign: "center" }}>
+                Connected to live engine bus. Real mission runs stream commits &amp; verdicts here.
+              </div>
             </div>
           </div>
 

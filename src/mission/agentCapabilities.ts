@@ -410,7 +410,7 @@ export const AGENT_CAPABILITIES: Record<HarnessId, AgentCapabilities> = {
     install: "npm install -g @google/gemini-cli   or   gemini auth",
     prompt: { argv: ["-p", "$PROMPT"], confidence: "docs", source: "gemini -p <prompt>" },
     json: { argv: ["--output-format", "json"], kind: "json", confidence: "docs", source: "--output-format json" },
-    readOnly: { argv: ["--sandbox", "read-only"], implicit: false, confidence: "docs", source: "--sandbox read-only" },
+    readOnly: { argv: ["--approval-mode", "plan"], implicit: false, confidence: "docs", source: "--approval-mode plan" },
     write: { argv: [], confidence: "docs", source: "default" },
     fullAuto: { argv: ["--full-auto"], confidence: "docs", source: "--full-auto" },
     maxTurns: null,
@@ -424,8 +424,8 @@ export const AGENT_CAPABILITIES: Record<HarnessId, AgentCapabilities> = {
     noAutoUpdate: null,
     filters: null,
     cost: null,
-    enforcedReadOnly: true,
-    gotchas: ["Supports 1M token context window; uses Google authentication."],
+    enforcedReadOnly: false,
+    gotchas: ["Documentation-level integration; uses --approval-mode plan for Plan Mode."],
   },
 
   goose: {
@@ -449,7 +449,7 @@ export const AGENT_CAPABILITIES: Record<HarnessId, AgentCapabilities> = {
     noAutoUpdate: null,
     filters: null,
     cost: null,
-    enforcedReadOnly: true,
+    enforcedReadOnly: false,
     gotchas: ["Open-source agent by Block with extensive MCP extension ecosystem."],
   },
 
@@ -474,16 +474,16 @@ export const AGENT_CAPABILITIES: Record<HarnessId, AgentCapabilities> = {
     noAutoUpdate: null,
     filters: null,
     cost: null,
-    enforcedReadOnly: true,
+    enforcedReadOnly: false,
     gotchas: ["Alibaba open-source terminal agent tuned for Qwen3-Coder models."],
   },
 
   amazonq: {
     id: "amazonq",
     name: "Amazon Q / Kiro CLI",
-    bins: ["kiro-cli", "q"],
-    install: "Install Amazon Q Developer CLI via Homebrew or AWS CLI",
-    prompt: { argv: ["chat", "--no-interactive", "$PROMPT"], confidence: "docs", source: "q chat --no-interactive <prompt>" },
+    bins: ["kiro-cli", "q", "amazonq"],
+    install: "Install Kiro CLI (Amazon Q Developer CLI) via AWS / Homebrew",
+    prompt: { argv: ["chat", "--no-interactive", "$PROMPT"], confidence: "docs", source: "kiro-cli chat --no-interactive <prompt>" },
     json: { argv: ["--json"], kind: "json", confidence: "docs", source: "--json" },
     readOnly: { argv: ["--read-only"], implicit: false, confidence: "docs", source: "--read-only" },
     write: { argv: [], confidence: "docs", source: "default" },
@@ -499,8 +499,8 @@ export const AGENT_CAPABILITIES: Record<HarnessId, AgentCapabilities> = {
     noAutoUpdate: null,
     filters: null,
     cost: null,
-    enforcedReadOnly: true,
-    gotchas: ["AWS enterprise agent with Bedrock integration."],
+    enforcedReadOnly: false,
+    gotchas: ["AWS developer CLI transitioning to Kiro CLI; enterprise Bedrock integration."],
   },
 
   llm: {

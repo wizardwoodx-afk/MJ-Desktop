@@ -82,11 +82,11 @@ console.log("  ok   goose composes correct headless argv");
 // Gemini
 const geminiSeat: TeamSeat = {
   id: "seat_gemini",
-  role: "coder",
+  role: "reviewer",
   harness: "gemini",
   model: null,
-  mayWrite: true,
-  maxRisk: "MEDIUM",
+  mayWrite: false,
+  maxRisk: "LOW",
   timeoutSecs: 600,
   maxTurns: 10,
   instructions: "Analyze diff",
@@ -94,7 +94,8 @@ const geminiSeat: TeamSeat = {
 const geminiComposed = composeSeatArgv(geminiSeat, { prompt: "Analyze", cwd: "/test", readOnly: true });
 assert.equal(geminiComposed.bin, "gemini");
 assert(geminiComposed.argv.includes("-p"), "gemini has '-p' print prompt argument");
-console.log("  ok   gemini CLI composes correct prompt argv");
+assert(geminiComposed.argv.includes("--approval-mode") && geminiComposed.argv.includes("plan"), "gemini uses --approval-mode plan for Plan Mode");
+console.log("  ok   gemini CLI composes correct plan mode argv");
 
 // Qwen
 const qwenSeat: TeamSeat = {

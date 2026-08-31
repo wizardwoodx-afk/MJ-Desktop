@@ -48,6 +48,7 @@ import {
 } from "./collaboration";
 import { planMerge, type MergeCandidate } from "./mergePlan";
 import { detectResumeFailure, followUpPrompt, parseSessionId, SessionStore, type SessionKey } from "./sessions";
+import { globalAgentBus } from "./interAgentChannel";
 
 /* ------------------------------------------------------------------ injected capabilities */
 
@@ -261,19 +262,37 @@ export async function executeTeam(req: TeamRunRequest, deps: TeamRunnerDeps, ses
   const setup: SetupRecord[] = [];
   const emptySnapshot: ReviewSnapshotRecord = { built: false, branch: "", sha: null, writerBranches: [], conflicts: [], detail: "Not attempted." };
 
-  const finish = (status: RunStatus, summary: string, spentUsd: number, snapshot: ReviewSnapshotRecord, briefings: BriefingRecord[]): TeamRunReport => ({
-    seats,
-    status,
-    summary,
-    spentUsd,
-    notRun,
-    setup,
-    briefings,
-    snapshot,
-    merge: { candidates: [], plan: planMerge([], { baseBranch: req.baseBranch, repoRoot: req.repoRoot, testCommand: req.testCommand }) },
-    startedAt,
-    finishedAt: new Date(now()).toISOString(),
-    wallClockMs: now() - t0,
+  const finish = (status: RunStatus, summary: string, spentUsd: number, snapshot: ReviewSnapshotRecord, briefings: BriefingRecord[]): TeamRunReport => {
+    globalAgentBus.publish({
+      channel: "#general",
+      sender: { seatId: "orchestrator", role: "planner", harness: "llm", name: "Team Orchestrator" },
+      mentions: ["@all"],
+      intent: "broadcast",
+      content: `Team mission "${req.missionSlug}" finished with status ${status.toUpperCase()} ($${(spentUsd || 0).toFixed(4)} spent). Summary: ${summary}`,
+    });
+    globalAgentBus.writeBlackboard("mission.verdict", `Status: ${status}\nSummary: ${summary}\nSpent: $${(spentUsd || 0).toFixed(4)}`, "orchestrator", "finding");
+    return {
+      seats,
+      status,
+      summary,
+      spentUsd,
+      notRun,
+      setup,
+      briefings,
+      snapshot,
+      merge: { candidates: [], plan: planMerge([], { baseBranch: req.baseBranch, repoRoot: req.repoRoot, testCommand: req.testCommand }) },
+      startedAt,
+      finishedAt: new Date(now()).toISOString(),
+      wallClockMs: now() - t0,
+    };
+  };
+
+  globalAgentBus.publish({
+    channel: "#general",
+    sender: { seatId: "orchestrator", role: "planner", harness: "llm", name: "Team Orchestrator" },
+    mentions: ["@all"],
+    intent: "broadcast",
+    content: `Launching Team Mission "${req.missionSlug}": ${req.objective} with ${req.team.seats.length} seats.`,
   });
 
   const worktrees = planWorktrees(req.team, { repoRoot: req.repoRoot, baseBranch: req.baseBranch, missionSlug: req.missionSlug, deferReview: true });
@@ -693,6 +712,22 @@ async function runSeat(
   const sessionKey: SessionKey = { seatId: a.seat.id, harness: a.seat.harness, model: a.seat.model, cwd };
   const session = sessions.obtain(sessionKey);
 
+  const channel = a.seat.role === "planner" || a.seat.role === "architect"
+    ? "#architecture"
+    : a.seat.role === "security"
+    ? "#security-audit"
+    : a.seat.mayWrite
+    ? "#implementation-sync"
+    : "#qa-review";
+
+  globalAgentBus.publish({
+    channel,
+    sender: { seatId: a.seat.id, role: a.seat.role, harness: a.seat.harness, name: caps.name },
+    mentions: ["@all"],
+    intent: a.seat.role === "planner" || a.seat.role === "architect" ? "proposal" : a.seat.mayWrite ? "proposal" : "verification",
+    content: `[Wave ${a.wave}] Commencing execution in ${cwd} (${branch}).`,
+  });
+
   const turns: Array<{ prompt: string; turn: number }> = [{ prompt: a.prompt, turn: 1 }];
   if (a.followUp) turns.push({ prompt: a.followUp, turn: 2 });
 
@@ -853,7 +888,7 @@ async function runSeat(
           : `git commit exited ${commit.exitCode}: ${(commit.stderr || commit.stdout).trim().slice(0, 200)}`;
   }
 
-  return {
+  const finalRecord: SeatRecord = {
     ...base,
     argv: lastArgv,
     sessionId: session.sessionId,
@@ -873,6 +908,28 @@ async function runSeat(
     outcome: "completed",
     reason: verified ? "Completed and verified by the repository's own check." : "Completed, but not verified — see verificationDetail.",
   };
+
+  if (!readOnly && commitDetail.includes("Committed on")) {
+    globalAgentBus.publish({
+      channel: "#implementation-sync",
+      sender: { seatId: a.seat.id, role: a.seat.role, harness: a.seat.harness, name: caps.name },
+      mentions: ["@reviewer", "@architect"],
+      intent: "handoff",
+      content: `[Wave ${a.wave}] Changes committed on ${branch}: ${commitDetail}`,
+    });
+    globalAgentBus.writeBlackboard(`commits.${a.seat.id}`, `Worktree: ${cwd}\nBranch: ${branch}\n${commitDetail}`, a.seat.id, "contract");
+  } else if (readOnly) {
+    globalAgentBus.publish({
+      channel: "#qa-review",
+      sender: { seatId: a.seat.id, role: a.seat.role, harness: a.seat.harness, name: caps.name },
+      mentions: ["@all"],
+      intent: "verification",
+      content: `[Wave ${a.wave}] Review finished on ${reviewedRef}. Verdict: ${lastSummary || (verified ? "VERIFIED_PASS" : "DONE")}`,
+    });
+    globalAgentBus.writeBlackboard(`qa.verdict.${a.seat.id}`, `Ref: ${reviewedRef}\nVerdict: ${lastSummary || (verified ? "VERIFIED_PASS" : "DONE")}\nVerified: ${verified}`, a.seat.id, "test_criteria");
+  }
+
+  return finalRecord;
 }
 
 /* ------------------------------------------------------------------ evidence */

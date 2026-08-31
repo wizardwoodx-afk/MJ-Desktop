@@ -2,13 +2,14 @@
  * Real-Time Inter-Agent Communication Bus & Shared Blackboard.
  *
  * Enables parallel multi-agent collaboration across heterogeneous coding CLIs
- * (Claude Code, OpenAI Codex, OpenCode, Cursor, Grok, Cline, Hermes, Aider, Gemini, etc.).
+ * (Claude Code, OpenAI Codex, OpenCode, Cursor, Grok, Cline, Hermes, Aider, Gemini, Goose, Qwen, Amazon Q / Kiro).
  *
  * Provides:
  * 1. Pub/Sub Channel Mesh (`#general`, `#architecture`, `#implementation-sync`, `#qa-review`, `#security-audit`)
  * 2. Targeted Peer-to-Peer Mentions (`@coder`, `@reviewer`, `@architect`, `@all`)
  * 3. Shared Blackboard State (API schemas, architectural decisions, test criteria, blocker registry)
- * 4. Parallel Conversation Loop (agents propose, critique, refine, and hand off in parallel)
+ * 4. Threaded Conversation & Intent Routing (proposals, contracts, blockers, handoffs, verifications)
+ * 5. Direct Integration with Team Execution & Mission Runtime
  */
 
 import type { HarnessId } from "../domain/harness";
@@ -33,15 +34,15 @@ export interface AgentIdentity {
 
 export interface InterAgentMessage {
   id: string;
-  seq: number;
   sequence: number;
+  seq?: number;
+  replyToId?: string;
   timestamp: string;
   channel: string;
   sender: AgentIdentity;
   mentions: string[];
   intent: MessageIntent;
   content: string;
-  replyToId?: string;
   data?: Record<string, unknown>;
 }
 
@@ -91,14 +92,28 @@ export class InterAgentMessageBus {
     return () => this.blackboardListeners.delete(listener);
   }
 
-  publish(msg: Omit<InterAgentMessage, "id" | "seq" | "sequence" | "timestamp">): InterAgentMessage {
-    const seq = ++this.seqCounter;
+  publish(msg: {
+    channel: string;
+    sender: AgentIdentity;
+    mentions?: string[];
+    intent: MessageIntent;
+    content: string;
+    replyToId?: string;
+    data?: Record<string, unknown>;
+  }): InterAgentMessage {
+    const nextSeq = ++this.seqCounter;
     const full: InterAgentMessage = {
-      ...msg,
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      seq,
-      sequence: seq,
+      sequence: nextSeq,
+      seq: nextSeq,
+      replyToId: msg.replyToId,
       timestamp: new Date().toISOString(),
+      channel: msg.channel,
+      sender: msg.sender,
+      mentions: msg.mentions ?? [],
+      intent: msg.intent,
+      content: msg.content,
+      data: msg.data,
     };
     this.messages.push(full);
     for (const listener of this.listeners) {
