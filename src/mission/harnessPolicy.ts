@@ -39,6 +39,11 @@ export const ENFORCED_SANDBOX: Record<HarnessId, boolean> = {
   grok: enforcedReadOnly("grok"),
   cline: enforcedReadOnly("cline"),
   kilo: enforcedReadOnly("kilo"),
+  aider: enforcedReadOnly("aider"),
+  gemini: enforcedReadOnly("gemini"),
+  goose: enforcedReadOnly("goose"),
+  qwen: enforcedReadOnly("qwen"),
+  amazonq: enforcedReadOnly("amazonq"),
   hermes: enforcedReadOnly("hermes"),
   llm: enforcedReadOnly("llm"),
 };
@@ -79,6 +84,11 @@ const READ_ONLY: Partial<Record<HarnessId, string[]>> = {
   grok: ["-p", "$PROMPT"],
   cline: ["$PROMPT"],
   kilo: ["$PROMPT"],
+  aider: ["--message", "$PROMPT", "--yes", "--no-auto-commits", "--read-only"],
+  gemini: ["-p", "$PROMPT", "--sandbox", "read-only"],
+  goose: ["run", "--text", "$PROMPT", "--plan"],
+  qwen: ["-p", "$PROMPT", "--read-only"],
+  amazonq: ["chat", "--no-interactive", "$PROMPT", "--read-only"],
   hermes: ["--print", "$PROMPT"],
 };
 
@@ -91,6 +101,11 @@ const WRITE: Partial<Record<HarnessId, string[]>> = {
   grok: ["-p", "$PROMPT"],
   cline: ["$PROMPT"],
   kilo: ["$PROMPT"],
+  aider: ["--message", "$PROMPT", "--yes", "--no-auto-commits"],
+  gemini: ["-p", "$PROMPT"],
+  goose: ["run", "--text", "$PROMPT"],
+  qwen: ["-p", "$PROMPT"],
+  amazonq: ["chat", "--no-interactive", "$PROMPT"],
   hermes: ["--print", "$PROMPT"],
 };
 

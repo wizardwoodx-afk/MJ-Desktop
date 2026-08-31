@@ -1049,6 +1049,9 @@ fn harness_argv(id: &str, prompt: &str) -> (String, Vec<String>) {
         "kilo" => ("kilo".into(), vec![prompt.into()]),
         "qwen" => ("qwen".into(), vec!["-p".into(), prompt.into()]),
         "gemini" => ("gemini".into(), vec!["-p".into(), prompt.into()]),
+        "aider" => ("aider".into(), vec!["--message".into(), prompt.into(), "--yes".into(), "--no-auto-commits".into()]),
+        "goose" => ("goose".into(), vec!["run".into(), "--text".into(), prompt.into()]),
+        "amazonq" => ("amazonq".into(), vec!["chat".into(), "--no-interactive".into(), prompt.into()]),
         other => (other.into(), vec![prompt.into()]),
     }
 }
@@ -1109,7 +1112,8 @@ fn run_timeout(mut cmd: std::process::Command, secs: u64) -> Result<(String, Str
 /// but it may not make MJ execute an arbitrary program.
 const ALLOWED_CLI_BINS: &[&str] = &[
     "hermes", "claude", "codex", "opencode", "cursor-agent", "agent",
-    "grok", "cline", "kilo", "qwen", "gemini", "aider",
+    "grok", "cline", "kilo", "qwen", "gemini", "aider", "goose", "amazonq",
+    "kiro-cli", "q",
 ];
 
 #[tauri::command]
@@ -1147,7 +1151,8 @@ pub fn cli_env() -> Value {
     let bins = [
         ("hermes", "hermes"), ("claude", "claude"), ("codex", "codex"), ("opencode", "opencode"),
         ("cursor", "cursor-agent"), ("grok", "grok"), ("cline", "cline"), ("kilo", "kilo"),
-        ("qwen", "qwen"), ("gemini", "gemini"),
+        ("qwen", "qwen"), ("gemini", "gemini"), ("aider", "aider"), ("goose", "goose"),
+        ("amazonq", "amazonq"),
     ];
     let rows: Vec<Value> = bins.into_iter().map(|(id, bin)| {
         let resolved = which_bin(bin).or_else(|| which_bin(id));

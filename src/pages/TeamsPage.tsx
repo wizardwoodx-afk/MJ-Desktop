@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AGENT_FRAMEWORKS } from "../domain/frameworks";
 import { HARNESSES, type HarnessId } from "../domain/harness";
 import {
@@ -23,12 +23,19 @@ import { AGENT_CAPABILITIES } from "../mission/agentCapabilities";
 import { planWorktrees, type WorktreePlan } from "../mission/collaboration";
 import { CapLedger } from "../mission/caps";
 import { executeTeam, type SeatRecord, type TeamRunReport, type TeamRunnerDeps } from "../mission/teamExecutor";
+import {
+  DEFAULT_CHANNELS,
+  globalAgentBus,
+  type BlackboardEntry,
+  type InterAgentMessage,
+  type MessageIntent,
+} from "../mission/interAgentChannel";
 import { useGraphStore } from "../graph/store";
 import { ipc, useTauri } from "../ipc/client";
 import { toast } from "../panels/Toast";
 import { uid } from "../app/id";
 
-type ActiveTab = "crews" | "runner" | "builder" | "frameworks";
+type ActiveTab = "crews" | "channel" | "runner" | "builder" | "frameworks";
 
 const ALL_ROLES: TeamRole[] = [
   "planner",
@@ -48,10 +55,26 @@ const HARNESS_BADGES: Record<HarnessId, { label: string; color: string; bg: stri
   cursor: { label: "Cursor Agent", color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.14)" },
   grok: { label: "xAI Grok", color: "#ec4899", bg: "rgba(236, 72, 153, 0.14)" },
   cline: { label: "Cline CLI", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.14)" },
+  aider: { label: "Aider AI", color: "#059669", bg: "rgba(5, 150, 105, 0.14)" },
+  gemini: { label: "Gemini CLI", color: "#2563eb", bg: "rgba(37, 99, 235, 0.14)" },
+  goose: { label: "Goose (Block)", color: "#7c3aed", bg: "rgba(124, 58, 237, 0.14)" },
+  qwen: { label: "Qwen Code", color: "#0284c7", bg: "rgba(2, 132, 199, 0.14)" },
+  amazonq: { label: "Amazon Q", color: "#ea580c", bg: "rgba(234, 88, 12, 0.14)" },
   kilo: { label: "Kilo Code", color: "#06b6d4", bg: "rgba(6, 182, 212, 0.14)" },
   hermes: { label: "Hermes Agent", color: "#eab308", bg: "rgba(234, 179, 8, 0.14)" },
   acp: { label: "ACP Protocol", color: "#14b8a6", bg: "rgba(20, 184, 166, 0.14)" },
   llm: { label: "Direct LLM", color: "#94a3b8", bg: "rgba(148, 163, 184, 0.14)" },
+};
+
+const INTENT_COLORS: Record<MessageIntent, { bg: string; color: string }> = {
+  proposal: { bg: "rgba(59, 130, 246, 0.15)", color: "#3b82f6" },
+  feedback: { bg: "rgba(234, 179, 8, 0.15)", color: "#eab308" },
+  contract: { bg: "rgba(16, 185, 129, 0.15)", color: "#10b981" },
+  blocker: { bg: "rgba(239, 68, 68, 0.15)", color: "#ef4444" },
+  handoff: { bg: "rgba(168, 85, 247, 0.15)", color: "#a855f7" },
+  verification: { bg: "rgba(6, 182, 212, 0.15)", color: "#06b6d4" },
+  operator: { bg: "rgba(244, 63, 94, 0.15)", color: "#f43f5e" },
+  broadcast: { bg: "rgba(148, 163, 184, 0.15)", color: "#94a3b8" },
 };
 
 export function TeamsPage({ onOpened }: { onOpened: () => void }) {
@@ -69,11 +92,19 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
   const [canvasTask, setCanvasTask] = useState("");
 
   // Mission Runner state
-  const [runnerObjective, setRunnerObjective] = useState("Add rate-limiting middleware to payment endpoints with strict token bucket verification");
+  const [runnerObjective, setRunnerObjective] = useState("Implement rate-limiting middleware on payment endpoints with strict token bucket verification");
   const [runnerRepo, setRunnerRepo] = useState("/home/user/workspace/app");
   const [runnerTestCmd, setRunnerTestCmd] = useState("npm test");
   const [runnerRunning, setRunnerRunning] = useState(false);
   const [runnerResult, setRunnerResult] = useState<TeamRunReport | null>(null);
+
+  // Inter-Agent Channel State
+  const [activeChannel, setActiveChannel] = useState<string>("#general");
+  const [channelMessages, setChannelMessages] = useState<InterAgentMessage[]>(() => globalAgentBus.getMessages());
+  const [blackboardEntries, setBlackboardEntries] = useState<BlackboardEntry[]>(() => globalAgentBus.getBlackboard());
+  const [operatorInput, setOperatorInput] = useState("");
+  const [isDebating, setIsDebating] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   // Builder state for custom crew
   const [builderTeam, setBuilderTeam] = useState<CliAgentTeam>(() => ({
@@ -90,13 +121,30 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
   }));
 
   const [inspectSeat, setInspectSeat] = useState<TeamSeat | null>(null);
-
   const store = useGraphStore();
 
   const selectedTeam = useMemo(
     () => cliTeams.find((t) => t.id === selectedTeamId) ?? PREBUILT_TEAMS[0],
     [cliTeams, selectedTeamId],
   );
+
+  // Subscribe to Inter-Agent Message Bus
+  useEffect(() => {
+    const unsubMsg = globalAgentBus.subscribe(() => {
+      setChannelMessages(globalAgentBus.getMessages());
+    });
+    const unsubBoard = globalAgentBus.subscribeBlackboard(() => {
+      setBlackboardEntries(globalAgentBus.getBlackboard());
+    });
+    return () => {
+      unsubMsg();
+      unsubBoard();
+    };
+  }, []);
+
+  useEffect(() => {
+    chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [channelMessages, activeTab]);
 
   // Detect installed CLI tools on load
   useEffect(() => {
@@ -141,6 +189,109 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
     store.rename(`${team.name}: ${task.slice(0, 36)}`);
     toast(`Dealt ${team.seats.length} agents of "${team.name}" onto Canvas!`);
     onOpened();
+  };
+
+  // Trigger real-time multi-agent parallel chat simulation
+  const handleSimulateDebate = async () => {
+    if (isDebating || !selectedTeam) return;
+    setIsDebating(true);
+    toast("Starting parallel multi-agent debate session...");
+
+    const seats = selectedTeam.seats;
+    const planner = seats.find((s) => s.role === "planner") ?? seats[0];
+    const architect = seats.find((s) => s.role === "architect") ?? seats[1 % seats.length];
+    const coder = seats.find((s) => s.mayWrite) ?? seats[2 % seats.length];
+    const reviewer = seats.find((s) => s.role === "reviewer" || s.role === "security") ?? seats[3 % seats.length];
+    const synth = seats.find((s) => s.role === "synthesizer") ?? seats[4 % seats.length];
+
+    // Step 1: Planner posts proposal
+    globalAgentBus.publish({
+      channel: "#architecture",
+      sender: { seatId: planner.id, role: planner.role, harness: planner.harness, name: HARNESS_BADGES[planner.harness]?.label ?? planner.id },
+      mentions: ["@all", `@${architect.id}`],
+      intent: "proposal",
+      content: `I have decomposed our objective ("${runnerObjective}") into 3 waves: Wave 1 schema contract, Wave 2 worktree implementation, Wave 3 snapshot peer review. @${architect.id}, please define the rate-limiter token bucket interface.`,
+    });
+
+    globalAgentBus.writeBlackboard(
+      "plan.milestones",
+      "1. Interface Definition (TokenBucket, RateLimitConfig)\n2. Middleware Implementation with Redis/Memory fallback\n3. Verification Suite (>95% coverage)\n4. Peer Review Snapshot Validation",
+      planner.id,
+      "architecture",
+    );
+
+    await new Promise((r) => setTimeout(r, 800));
+
+    // Step 2: Architect posts contract
+    globalAgentBus.publish({
+      channel: "#architecture",
+      sender: { seatId: architect.id, role: architect.role, harness: architect.harness, name: HARNESS_BADGES[architect.harness]?.label ?? architect.id },
+      mentions: [`@${coder.id}`, `@${reviewer.id}`],
+      intent: "contract",
+      content: `Interface contract finalized. We define TokenBucket with \`consume(tokens: number): Promise<RateLimitResult>\` and 429 status response schema. Publishing contract to Blackboard for parallel implementation.`,
+    });
+
+    globalAgentBus.writeBlackboard(
+      "contracts.rate_limiter_ts",
+      "export interface RateLimitResult { allowed: boolean; remaining: number; resetMs: number; }\nexport interface TokenBucket { consume(tokens: number): Promise<RateLimitResult>; }",
+      architect.id,
+      "contract",
+    );
+
+    await new Promise((r) => setTimeout(r, 900));
+
+    // Step 3: Coder implements in worktree
+    globalAgentBus.publish({
+      channel: "#implementation-sync",
+      sender: { seatId: coder.id, role: coder.role, harness: coder.harness, name: HARNESS_BADGES[coder.harness]?.label ?? coder.id },
+      mentions: [`@${architect.id}`, `@${reviewer.id}`],
+      intent: "handoff",
+      content: `Implementation completed in private worktree \`mj/rate-limiter/${coder.id}\`. Added \`TokenBucketMiddleware\`, test suites, and strict boundary tests. Ready for snapshot merge and review!`,
+    });
+
+    await new Promise((r) => setTimeout(r, 800));
+
+    // Step 4: Reviewer inspects snapshot
+    globalAgentBus.publish({
+      channel: "#qa-review",
+      sender: { seatId: reviewer.id, role: reviewer.role, harness: reviewer.harness, name: HARNESS_BADGES[reviewer.harness]?.label ?? reviewer.id },
+      mentions: [`@${coder.id}`, `@${synth.id}`],
+      intent: "verification",
+      content: `VERDICT: CORRECT. Reviewed diff against merged snapshot \`mj/rate-limiter/review\`. All 8 unit tests passed with exit code 0. No memory leaks detected on high burst simulation.`,
+    });
+
+    globalAgentBus.writeBlackboard(
+      "qa.verdict",
+      "Status: VERIFIED_PASS (100% tests passed in detached review snapshot, zero regressions)",
+      reviewer.id,
+      "test_criteria",
+    );
+
+    await new Promise((r) => setTimeout(r, 700));
+
+    // Step 5: Synthesizer finalizes
+    globalAgentBus.publish({
+      channel: "#general",
+      sender: { seatId: synth.id, role: synth.role, harness: synth.harness, name: HARNESS_BADGES[synth.harness]?.label ?? synth.id },
+      mentions: ["@all"],
+      intent: "broadcast",
+      content: `All agents have reached unanimous consensus. Release package ready for production merge. Total cycle time: 3.2s, spend: $0.038.`,
+    });
+
+    setIsDebating(false);
+    toast("Multi-agent parallel coordination debate completed!");
+  };
+
+  const handleSendOperatorMessage = () => {
+    if (!operatorInput.trim()) return;
+    globalAgentBus.publish({
+      channel: activeChannel,
+      sender: { seatId: "operator", role: "planner", harness: "llm", name: "Human Operator" },
+      mentions: ["@all"],
+      intent: "operator",
+      content: operatorInput.trim(),
+    });
+    setOperatorInput("");
   };
 
   const handleRunMission = async () => {
@@ -192,7 +343,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
 
         // High fidelity multi-turn simulation for browser host or local testbed
         await new Promise((r) => setTimeout(r, 600));
-        const isWriter = req.argv.includes("workspace-write") || req.argv.includes("acceptEdits") || req.argv.includes("--force") || req.argv.includes("build");
+        const isWriter = req.argv.includes("workspace-write") || req.argv.includes("acceptEdits") || req.argv.includes("--force") || req.argv.includes("build") || req.argv.includes("--yes");
         const isReviewer = req.argv.includes("read-only") || req.argv.includes("plan");
 
         let summary = "Task executed successfully.";
@@ -285,16 +436,21 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
     [selectedTeam, runnerRepo],
   );
 
+  const filteredMessages = useMemo(
+    () => channelMessages.filter((m) => activeChannel === "#all" || m.channel === activeChannel),
+    [channelMessages, activeChannel],
+  );
+
   return (
-    <div className="panel-page animate-enter" style={{ maxWidth: 1180, margin: "0 auto" }}>
+    <div className="panel-page animate-enter" style={{ maxWidth: 1200, margin: "0 auto" }}>
       {/* Page Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em" }}>
-            CLI Agent Crews &amp; Multi-Vendor Teams
+            CLI Agent Crews &amp; Parallel Inter-Agent Channel
           </h2>
           <p className="sub" style={{ margin: "6px 0 0", fontSize: 13, color: "var(--text-dim)" }}>
-            Unite all major coding agents — Claude Code, Codex, OpenCode, Cursor, Grok, Cline &amp; Hermes — into one collaborative crew with isolated worktrees, wave sequencing, and cross-vendor peer verification.
+            Connect all major coding CLI agents — Claude Code, Codex, OpenCode, Cursor, Grok, Cline, Aider, Gemini, Goose &amp; Hermes — into synchronized crews communicating in real-time over a shared message bus.
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -311,6 +467,12 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
           onClick={() => setActiveTab("crews")}
         >
           CLI Agent Crews ({cliTeams.length})
+        </button>
+        <button
+          className={activeTab === "channel" ? "primary" : ""}
+          onClick={() => setActiveTab("channel")}
+        >
+          Inter-Agent Channel (Live Parallel Chat)
         </button>
         <button
           className={activeTab === "runner" ? "primary" : ""}
@@ -406,11 +568,11 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
                     <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>{selectedTeam.description}</p>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button className="primary" onClick={() => { setActiveTab("runner"); }}>
-                      Launch Mission
+                    <button className="primary" onClick={() => { setActiveTab("channel"); }}>
+                      Open Inter-Agent Channel
                     </button>
-                    <button onClick={() => void deployToCanvas(selectedTeam)}>
-                      Deploy Canvas
+                    <button onClick={() => { setActiveTab("runner"); }}>
+                      Launch Mission
                     </button>
                   </div>
                 </div>
@@ -541,7 +703,205 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
         </div>
       )}
 
-      {/* ── TAB 2: TEAM MISSION RUNNER ────────────────────────────────────── */}
+      {/* ── TAB 2: INTER-AGENT LIVE PARALLEL CHAT & BLACKBOARD ────────────── */}
+      {activeTab === "channel" && (
+        <div style={{ display: "grid", gridTemplateColumns: "260px 1fr 320px", gap: 16, minHeight: 560 }}>
+          {/* Left Column: Channels & Active Agents */}
+          <div className="card" style={{ padding: 14, display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "var(--text-mute)", marginBottom: 8 }}>
+                Communication Channels
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {DEFAULT_CHANNELS.map((ch) => (
+                  <button
+                    key={ch.id}
+                    className={activeChannel === ch.id ? "primary" : ""}
+                    style={{ justifyContent: "flex-start", padding: "6px 10px", fontSize: 12, textAlign: "left" }}
+                    onClick={() => setActiveChannel(ch.id)}
+                  >
+                    {ch.id}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "var(--text-mute)", marginBottom: 8 }}>
+                Connected Agents ({selectedTeam.seats.length})
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {selectedTeam.seats.map((seat) => {
+                  const badge = HARNESS_BADGES[seat.harness];
+                  return (
+                    <div
+                      key={seat.id}
+                      style={{
+                        padding: "6px 8px",
+                        borderRadius: 3,
+                        background: "var(--bg-panel)",
+                        border: "1px solid var(--border)",
+                        fontSize: 11,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <span style={{ fontWeight: 600 }}>@{seat.id}</span>
+                      <span style={{ fontSize: 9, color: badge?.color }}>{badge?.label.split(" ")[0]}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style={{ marginTop: "auto", borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+              <button
+                className="primary"
+                disabled={isDebating}
+                style={{ width: "100%", fontSize: 12, padding: "8px 12px" }}
+                onClick={() => void handleSimulateDebate()}
+              >
+                {isDebating ? "Agents Debating..." : "⚡ Run Inter-Agent Debate"}
+              </button>
+            </div>
+          </div>
+
+          {/* Center Column: Live Conversation Feed */}
+          <div className="card" style={{ padding: 16, display: "flex", flexDirection: "column", height: 600 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border)", paddingBottom: 10, marginBottom: 12 }}>
+              <div>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>{activeChannel}</span>
+                <span className="muted" style={{ fontSize: 12, marginLeft: 8 }}>
+                  {DEFAULT_CHANNELS.find((c) => c.id === activeChannel)?.description ?? "Message stream"}
+                </span>
+              </div>
+              <button
+                style={{ fontSize: 11, padding: "2px 8px" }}
+                onClick={() => { globalAgentBus.clear(); setChannelMessages([]); }}
+              >
+                Clear Stream
+              </button>
+            </div>
+
+            {/* Chat Messages */}
+            <div ref={chatScrollRef} style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, paddingRight: 4 }}>
+              {filteredMessages.length === 0 ? (
+                <div style={{ textAlign: "center", color: "var(--text-mute)", margin: "auto", fontSize: 12 }}>
+                  No messages in {activeChannel} yet. Click &ldquo;Run Inter-Agent Debate&rdquo; or send an operator instruction below!
+                </div>
+              ) : (
+                filteredMessages.map((msg) => {
+                  const intentBadge = INTENT_COLORS[msg.intent] ?? { bg: "var(--bg-panel)", color: "var(--text)" };
+                  const badge = HARNESS_BADGES[msg.sender.harness];
+                  return (
+                    <div
+                      key={msg.id}
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: 4,
+                        background: "var(--bg-panel)",
+                        border: "1px solid var(--border)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 6,
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontWeight: 700, fontSize: 12, color: badge?.color ?? "var(--text)" }}>
+                            {msg.sender.name} (@{msg.sender.seatId})
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 9,
+                              padding: "1px 5px",
+                              borderRadius: 2,
+                              backgroundColor: intentBadge.bg,
+                              color: intentBadge.color,
+                              fontWeight: 700,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {msg.intent}
+                          </span>
+                        </div>
+                        <span className="muted" style={{ fontSize: 10 }}>
+                          {new Date(msg.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Operator Message Input */}
+            <div style={{ display: "flex", gap: 8, marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--border)" }}>
+              <input
+                type="text"
+                placeholder={`Inject operator guidance into ${activeChannel} (e.g. "@coder optimize token bucket performance")...`}
+                value={operatorInput}
+                onChange={(e) => setOperatorInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSendOperatorMessage(); }}
+                style={{ flex: 1 }}
+              />
+              <button className="primary" onClick={handleSendOperatorMessage}>
+                Send
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column: Shared Blackboard & API Contracts */}
+          <div className="card" style={{ padding: 14, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "var(--text-mute)" }}>
+              Shared Blackboard State
+            </div>
+            <div className="muted" style={{ fontSize: 11 }}>
+              Shared facts, active contracts, and schemas agreed upon by parallel agents.
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1, overflowY: "auto" }}>
+              {blackboardEntries.length === 0 ? (
+                <div style={{ textAlign: "center", color: "var(--text-mute)", margin: "auto", fontSize: 11 }}>
+                  Blackboard is empty. Agents write contracts and specs here during collaboration.
+                </div>
+              ) : (
+                blackboardEntries.map((entry) => (
+                  <div
+                    key={entry.key}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 3,
+                      background: "var(--bg-panel)",
+                      border: "1px solid var(--border)",
+                      fontSize: 11,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span className="mono" style={{ fontWeight: 700, color: "var(--amber)" }}>
+                        {entry.key}
+                      </span>
+                      <span className="pill" style={{ fontSize: 9 }}>v{entry.version}</span>
+                    </div>
+                    <pre className="mono" style={{ margin: 0, fontSize: 10, whiteSpace: "pre-wrap", color: "var(--text)" }}>
+                      {entry.value}
+                    </pre>
+                    <div className="muted" style={{ fontSize: 9, marginTop: 4 }}>
+                      Author: @{entry.author} · {new Date(entry.updatedAt).toLocaleTimeString()}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 3: TEAM MISSION RUNNER ────────────────────────────────────── */}
       {activeTab === "runner" && (
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -654,7 +1014,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
         </div>
       )}
 
-      {/* ── TAB 3: CUSTOM CREW BUILDER ────────────────────────────────────── */}
+      {/* ── TAB 4: CUSTOM CREW BUILDER ────────────────────────────────────── */}
       {activeTab === "builder" && (
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -826,7 +1186,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
         </div>
       )}
 
-      {/* ── TAB 4: CANVAS FRAMEWORKS ─────────────────────────────────────── */}
+      {/* ── TAB 5: CANVAS FRAMEWORKS ─────────────────────────────────────── */}
       {activeTab === "frameworks" && (
         <div>
           <label className="field" style={{ marginBottom: 16 }}>

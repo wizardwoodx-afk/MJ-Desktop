@@ -16,6 +16,11 @@ export type HarnessId =
   | "grok"
   | "cline"
   | "kilo"
+  | "aider"
+  | "gemini"
+  | "goose"
+  | "qwen"
+  | "amazonq"
   | "llm";
 
 export interface HarnessSpec {
@@ -78,6 +83,38 @@ export const HARNESSES: HarnessSpec[] = [
     notes: "Cursor's agent CLI. Uses Cursor auth.",
   },
   {
+    id: "aider",
+    name: "Aider AI Pair Programmer",
+    bins: ["aider"],
+    argv: ["--yes", "--no-auto-commits", "--message", "$PROMPT"],
+    install: "pip install aider-chat   then   aider",
+    notes: "Git-integrated AI pair programmer. Edits directly in git worktrees.",
+  },
+  {
+    id: "gemini",
+    name: "Google Gemini CLI",
+    bins: ["gemini"],
+    argv: ["-p", "$PROMPT"],
+    install: "npm install -g @google/gemini-cli   or   gemini auth",
+    notes: "Google Gemini Code Assist CLI with 1M token context window.",
+  },
+  {
+    id: "goose",
+    name: "Goose (Block)",
+    bins: ["goose"],
+    argv: ["run", "--text", "$PROMPT"],
+    install: "curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | bash",
+    notes: "Block's open-source extensible AI developer agent with 70+ MCP extensions.",
+  },
+  {
+    id: "amazonq",
+    name: "Amazon Q / Kiro CLI",
+    bins: ["kiro-cli", "q"],
+    argv: ["chat", "--no-interactive", "$PROMPT"],
+    install: "Install Amazon Q Developer CLI via Homebrew/WinGet or AWS CLI",
+    notes: "AWS enterprise terminal coding agent with Bedrock model routing.",
+  },
+  {
     id: "grok",
     name: "Grok CLI",
     bins: ["grok"],
@@ -92,6 +129,14 @@ export const HARNESSES: HarnessSpec[] = [
     argv: ["$PROMPT"],
     install: "Install Cline CLI if you have it on PATH (VS Code extension is not enough)",
     notes: "Only the CLI binary. The VS Code extension cannot be spawned from MJ.",
+  },
+  {
+    id: "qwen",
+    name: "Qwen Code",
+    bins: ["qwen"],
+    argv: ["-p", "$PROMPT"],
+    install: "npm install -g @qwen/code-cli   then   qwen login",
+    notes: "Alibaba Qwen3-Coder terminal agent for open multi-model coding.",
   },
   {
     id: "kilo",
