@@ -30,12 +30,28 @@ import {
   type InterAgentMessage,
   type MessageIntent,
 } from "../mission/interAgentChannel";
+import {
+  runAdversarialDuel,
+  STANDARD_ATTACK_VECTORS,
+  type HardeningReport,
+} from "../mission/adversarialArena";
+import {
+  synthesizeAstMerge,
+  type AstMergeResult,
+} from "../mission/astSynthesizer";
+import {
+  evaluateConsensus,
+  INITIAL_REPUTATIONS,
+  type AgentReputation,
+  type ConsensusResult,
+  type ReviewVote,
+} from "../mission/consensusEngine";
 import { useGraphStore } from "../graph/store";
 import { ipc, useTauri } from "../ipc/client";
 import { toast } from "../panels/Toast";
 import { uid } from "../app/id";
 
-type ActiveTab = "crews" | "channel" | "runner" | "builder" | "frameworks";
+type ActiveTab = "crews" | "channel" | "arena" | "astmerge" | "consensus" | "runner" | "builder" | "frameworks";
 
 const ALL_ROLES: TeamRole[] = [
   "planner",
@@ -59,7 +75,7 @@ const HARNESS_BADGES: Record<HarnessId, { label: string; color: string; bg: stri
   gemini: { label: "Gemini CLI", color: "#2563eb", bg: "rgba(37, 99, 235, 0.14)" },
   goose: { label: "Goose (Block)", color: "#7c3aed", bg: "rgba(124, 58, 237, 0.14)" },
   qwen: { label: "Qwen Code", color: "#0284c7", bg: "rgba(2, 132, 199, 0.14)" },
-  amazonq: { label: "Amazon Q", color: "#ea580c", bg: "rgba(234, 88, 12, 0.14)" },
+  amazonq: { label: "Amazon Q / Kiro", color: "#ea580c", bg: "rgba(234, 88, 12, 0.14)" },
   kilo: { label: "Kilo Code", color: "#06b6d4", bg: "rgba(6, 182, 212, 0.14)" },
   hermes: { label: "Hermes Agent", color: "#eab308", bg: "rgba(234, 179, 8, 0.14)" },
   acp: { label: "ACP Protocol", color: "#14b8a6", bg: "rgba(20, 184, 166, 0.14)" },
@@ -105,6 +121,16 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
   const [operatorInput, setOperatorInput] = useState("");
   const [isDebating, setIsDebating] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  // Adversarial Arena state
+  const [duelRunning, setDuelRunning] = useState(false);
+  const [duelReport, setDuelReport] = useState<HardeningReport | null>(null);
+
+  // Structural Merge state
+  const [astMergeResult, setAstMergeResult] = useState<AstMergeResult | null>(null);
+
+  // Multi-Agent Consensus state
+  const [consensusResult, setConsensusResult] = useState<ConsensusResult | null>(null);
 
   // Builder state for custom crew
   const [builderTeam, setBuilderTeam] = useState<CliAgentTeam>(() => ({
@@ -220,7 +246,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
       "architecture",
     );
 
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 600));
 
     // Step 2: Architect posts contract
     globalAgentBus.publish({
@@ -238,7 +264,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
       "contract",
     );
 
-    await new Promise((r) => setTimeout(r, 900));
+    await new Promise((r) => setTimeout(r, 600));
 
     // Step 3: Coder implements in worktree
     globalAgentBus.publish({
@@ -249,7 +275,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
       content: `Implementation completed in private worktree \`mj/rate-limiter/${coder.id}\`. Added \`TokenBucketMiddleware\`, test suites, and strict boundary tests. Ready for snapshot merge and review!`,
     });
 
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 600));
 
     // Step 4: Reviewer inspects snapshot
     globalAgentBus.publish({
@@ -267,7 +293,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
       "test_criteria",
     );
 
-    await new Promise((r) => setTimeout(r, 700));
+    await new Promise((r) => setTimeout(r, 500));
 
     // Step 5: Synthesizer finalizes
     globalAgentBus.publish({
@@ -275,7 +301,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
       sender: { seatId: synth.id, role: synth.role, harness: synth.harness, name: HARNESS_BADGES[synth.harness]?.label ?? synth.id },
       mentions: ["@all"],
       intent: "broadcast",
-      content: `All agents have reached unanimous consensus. Release package ready for production merge. Total cycle time: 3.2s, spend: $0.038.`,
+      content: `All agents have reached unanimous consensus. Release package ready for production merge. Total cycle time: 2.3s, spend: $0.038.`,
     });
 
     setIsDebating(false);
@@ -292,6 +318,54 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
       content: operatorInput.trim(),
     });
     setOperatorInput("");
+  };
+
+  // Run Adversarial Arena Duel
+  const handleRunDuel = async () => {
+    setDuelRunning(true);
+    toast("Starting Red Team vs Blue Team Adversarial Arena Duel...");
+    try {
+      const rep = await runAdversarialDuel({
+        objective: runnerObjective,
+        defenderSeatId: "blue_builder",
+        defenderHarness: "claude",
+        attackerSeatId: "red_fuzzer",
+        attackerHarness: "grok",
+        targetCwd: runnerRepo,
+      });
+      setDuelReport(rep);
+      toast(`Adversarial duel finished! Defense Score: ${rep.defenseScore}%`);
+    } catch (e) {
+      toast(`Duel failed: ${String(e)}`, "err");
+    } finally {
+      setDuelRunning(false);
+    }
+  };
+
+  // Run Structural Merge Simulation
+  const handleRunAstMerge = () => {
+    const baseCode = `import { Request, Response } from "express";\n\nexport interface AppConfig {\n  port: number;\n}\n\nexport function createApp() {\n  return { ok: true };\n}\n`;
+    const branch1Code = `import { Request, Response } from "express";\nimport { TokenBucket } from "./bucket";\n\nexport interface AppConfig {\n  port: number;\n  rateLimitTokens: number;\n}\n\nexport function rateLimitMiddleware(req: Request, res: Response) {\n  return true;\n}\n\nexport function createApp() {\n  return { ok: true };\n}\n`;
+    const branch2Code = `import { Request, Response } from "express";\nimport { auditLogger } from "./logger";\n\nexport interface AppConfig {\n  port: number;\n  enableAuditLogs: boolean;\n}\n\nexport function auditLogMiddleware(req: Request, res: Response) {\n  auditLogger.log(req.path);\n}\n\nexport function createApp() {\n  return { ok: true };\n}\n`;
+
+    const res = synthesizeAstMerge("src/app.ts", baseCode, [
+      { seatId: "claude_seat", branch: "mj/rate-limiter/claude", content: branch1Code },
+      { seatId: "codex_seat", branch: "mj/rate-limiter/codex", content: branch2Code },
+    ]);
+    setAstMergeResult(res);
+    toast("Synthesized structural 3-way merge.");
+  };
+
+  // Run Multi-Agent Consensus Simulation
+  const handleRunConsensus = () => {
+    const votes: ReviewVote[] = [
+      { seatId: "claude_reviewer", harness: "claude", verdict: "APPROVE", confidence: 0.95, rationale: "All 12 unit tests pass; structural interface union verified without regressions.", diffRef: "mj/rate-limiter/review", timestamp: new Date().toISOString() },
+      { seatId: "codex_security", harness: "codex", verdict: "APPROVE", confidence: 0.90, rationale: "Token bucket mutex correctly prevents race conditions under burst simulation.", diffRef: "mj/rate-limiter/review", timestamp: new Date().toISOString() },
+      { seatId: "grok_fuzzer", harness: "grok", verdict: "APPROVE", confidence: 0.85, rationale: "Fuzzing vectors (null inputs, boundary overflow) rejected safely.", diffRef: "mj/rate-limiter/review", timestamp: new Date().toISOString() },
+    ];
+    const res = evaluateConsensus(runnerObjective, votes);
+    setConsensusResult(res);
+    toast(`Consensus Calculated: ${res.status}`);
   };
 
   const handleRunMission = async () => {
@@ -447,10 +521,10 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em" }}>
-            CLI Agent Crews &amp; Parallel Inter-Agent Channel
+            CLI Agent Crews &amp; Multi-Agent Intelligence Layer
           </h2>
           <p className="sub" style={{ margin: "6px 0 0", fontSize: 13, color: "var(--text-dim)" }}>
-            Connect all major coding CLI agents — Claude Code, Codex, OpenCode, Cursor, Grok, Cline, Aider, Gemini, Goose &amp; Hermes — into synchronized crews communicating in real-time over a shared message bus.
+            14 Coding CLIs · Real-Time Pub/Sub Message Bus · Structural Merge · Red vs Blue Adversarial Arena · Multi-Agent Consensus
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -461,7 +535,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
       </div>
 
       {/* Main Tabs */}
-      <div className="row" style={{ gap: 6, marginBottom: 20, borderBottom: "1px solid var(--border)", paddingBottom: 10 }}>
+      <div className="row" style={{ gap: 6, marginBottom: 20, borderBottom: "1px solid var(--border)", paddingBottom: 10, flexWrap: "wrap" }}>
         <button
           className={activeTab === "crews" ? "primary" : ""}
           onClick={() => setActiveTab("crews")}
@@ -472,7 +546,25 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
           className={activeTab === "channel" ? "primary" : ""}
           onClick={() => setActiveTab("channel")}
         >
-          Inter-Agent Channel (Live Parallel Chat)
+          Inter-Agent Bus &amp; Chat
+        </button>
+        <button
+          className={activeTab === "arena" ? "primary" : ""}
+          onClick={() => setActiveTab("arena")}
+        >
+          ⚔️ Adversarial Arena (Red vs Blue)
+        </button>
+        <button
+          className={activeTab === "astmerge" ? "primary" : ""}
+          onClick={() => setActiveTab("astmerge")}
+        >
+          🧬 Structural 3-Way Merge
+        </button>
+        <button
+          className={activeTab === "consensus" ? "primary" : ""}
+          onClick={() => setActiveTab("consensus")}
+        >
+          ⚖️ Multi-Agent Consensus Matrix
         </button>
         <button
           className={activeTab === "runner" ? "primary" : ""}
@@ -569,7 +661,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button className="primary" onClick={() => { setActiveTab("channel"); }}>
-                      Open Inter-Agent Channel
+                      Open Inter-Agent Bus
                     </button>
                     <button onClick={() => { setActiveTab("runner"); }}>
                       Launch Mission
@@ -613,7 +705,6 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
-                          transition: "border-color 0.15s ease",
                         }}
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -703,7 +794,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
         </div>
       )}
 
-      {/* ── TAB 2: INTER-AGENT LIVE PARALLEL CHAT & BLACKBOARD ────────────── */}
+      {/* ── TAB 2: INTER-AGENT LIVE BUS & CHAT ────────────────────────────── */}
       {activeTab === "channel" && (
         <div style={{ display: "grid", gridTemplateColumns: "260px 1fr 320px", gap: 16, minHeight: 560 }}>
           {/* Left Column: Channels & Active Agents */}
@@ -791,7 +882,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
             <div ref={chatScrollRef} style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, paddingRight: 4 }}>
               {filteredMessages.length === 0 ? (
                 <div style={{ textAlign: "center", color: "var(--text-mute)", margin: "auto", fontSize: 12 }}>
-                  No messages in {activeChannel} yet. Click &ldquo;Run Inter-Agent Debate&rdquo; or send an operator instruction below!
+                  No messages in {activeChannel} yet. Run a mission or debate to see real-time parallel communication!
                 </div>
               ) : (
                 filteredMessages.map((msg) => {
@@ -904,7 +995,192 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
         </div>
       )}
 
-      {/* ── TAB 3: TEAM MISSION RUNNER ────────────────────────────────────── */}
+      {/* ── TAB 3: ADVERSARIAL ARENA (RED TEAM VS BLUE TEAM) ──────────────── */}
+      {activeTab === "arena" && (
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>⚔️ Autonomous Adversarial Hardening Arena</h3>
+              <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
+                Pit Builder agents (Blue Team) against specialized Fuzzers and Penetration Hackers (Red Team) to prove code invariants under adversarial stress before merging.
+              </p>
+            </div>
+            <button
+              className="primary"
+              disabled={duelRunning}
+              onClick={() => void handleRunDuel()}
+              style={{ padding: "8px 20px" }}
+            >
+              {duelRunning ? "Running Adversarial Duel..." : "⚡ Execute Red vs Blue Duel"}
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+            <div style={{ padding: 14, borderRadius: 4, background: "rgba(59, 130, 246, 0.08)", border: "1px solid rgba(59, 130, 246, 0.25)" }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: "#3b82f6", marginBottom: 6 }}>🛡️ Blue Team (Defender / Builder)</div>
+              <div style={{ fontSize: 12 }}>Agent: <strong>Claude Code / Codex</strong></div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>Builds target features in isolated worktree, synthesizes patches when breaches are uncovered.</div>
+            </div>
+            <div style={{ padding: 14, borderRadius: 4, background: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.25)" }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: "#ef4444", marginBottom: 6 }}>⚔️ Red Team (Attacker / Fuzzer)</div>
+              <div style={{ fontSize: 12 }}>Agent: <strong>xAI Grok / Cline Hacker</strong></div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>Generates malicious payloads, race condition fixtures, token bucket burst attacks, and null probes.</div>
+            </div>
+          </div>
+
+          {/* Standard Attack Vectors Display */}
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-mute)", marginBottom: 8 }}>
+            Configured Adversarial Attack Probes ({STANDARD_ATTACK_VECTORS.length})
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
+            {STANDARD_ATTACK_VECTORS.map((v) => (
+              <div key={v.id} style={{ padding: "10px 12px", borderRadius: 3, background: "var(--bg-panel)", border: "1px solid var(--border)", fontSize: 11 }}>
+                <div style={{ fontWeight: 700, color: "var(--text)" }}>{v.title}</div>
+                <div className="muted" style={{ marginTop: 2 }}>{v.description}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Duel Results */}
+          {duelReport && (
+            <div style={{ paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div style={{ fontSize: 15, fontWeight: 700 }}>
+                  Hardening Verdict:{" "}
+                  <span className={`pill ${duelReport.hardened ? "ok" : "err"}`} style={{ fontSize: 11, textTransform: "uppercase" }}>
+                    {duelReport.hardened ? "CERTIFIED HARDENED" : "REMEDIATION REQUIRED"}
+                  </span>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>
+                  Defense Score: <span style={{ color: duelReport.defenseScore >= 90 ? "var(--green)" : "var(--amber)" }}>{duelReport.defenseScore}%</span>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {duelReport.rounds.map((r) => (
+                  <div key={r.round} style={{ padding: 12, borderRadius: 4, background: "var(--bg-elevated)", border: "1px solid var(--border)", fontSize: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontWeight: 700 }}>Round {r.round}: {r.vector.title}</span>
+                      <span className={`pill ${r.defenseStatus === "defended" ? "ok" : "err"}`} style={{ fontSize: 10 }}>
+                        {r.defenseStatus.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="muted" style={{ fontSize: 11 }}>
+                      {r.defenseStatus === "patched" ? "🚨 Vulnerability detected! Blue Team synthesized a verified mutex patch." : "✅ Invariant held cleanly."}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB 4: SEMANTIC STRUCTURAL MERGE SYNTHESIZER ────────────────── */}
+      {activeTab === "astmerge" && (
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>🧬 Semantic Structural 3-Way Merge &amp; Interface Union Engine</h3>
+              <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
+                When multiple coding agents modify the same file in parallel worktrees, standard git text merge creates conflict markers. MJ decomposes source structures, computes member unions, and synthesizes clean unified source code without conflict markers.
+              </p>
+            </div>
+            <button className="primary" onClick={handleRunAstMerge}>
+              Run Structural Merge Demo
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <div style={{ padding: 10, background: "var(--bg-panel)", borderRadius: 3, border: "1px solid var(--border)", fontSize: 11 }}>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>Base Tree (`main`)</div>
+              <pre className="mono" style={{ margin: 0, fontSize: 10, whiteSpace: "pre-wrap" }}>
+{`export function createApp() {
+  return { ok: true };
+}`}
+              </pre>
+            </div>
+            <div style={{ padding: 10, background: "var(--bg-panel)", borderRadius: 3, border: "1px solid var(--border)", fontSize: 11 }}>
+              <div style={{ fontWeight: 700, color: "var(--blue)", marginBottom: 4 }}>Seat 1: `claude_coder`</div>
+              <pre className="mono" style={{ margin: 0, fontSize: 10, whiteSpace: "pre-wrap" }}>
+{`export function rateLimitMiddleware() {
+  return true;
+}`}
+              </pre>
+            </div>
+            <div style={{ padding: 10, background: "var(--bg-panel)", borderRadius: 3, border: "1px solid var(--border)", fontSize: 11 }}>
+              <div style={{ fontWeight: 700, color: "var(--green)", marginBottom: 4 }}>Seat 2: `codex_coder`</div>
+              <pre className="mono" style={{ margin: 0, fontSize: 10, whiteSpace: "pre-wrap" }}>
+{`export function auditLogMiddleware() {
+  auditLogger.log(req.path);
+}`}
+              </pre>
+            </div>
+          </div>
+
+          {astMergeResult && (
+            <div style={{ paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>
+                  Synthesized Conflict-Free Output ({astMergeResult.astNodeCount} structural blocks reconciled)
+                </span>
+                <span className="pill ok" style={{ fontSize: 10 }}>0 Git Conflict Markers</span>
+              </div>
+              <pre className="mono" style={{ padding: 12, borderRadius: 4, background: "var(--bg-elevated)", border: "1px solid var(--border)", fontSize: 11, whiteSpace: "pre-wrap" }}>
+                {astMergeResult.mergedContent}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB 5: MULTI-AGENT CONSENSUS MATRIX ─────────────────────────── */}
+      {activeTab === "consensus" && (
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>⚖️ Reputation-Weighted Multi-Agent Consensus Engine</h3>
+              <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
+                Multi-agent code review consensus. Agent review votes are mathematically weighted by their empirical track records of verified commits and accurate reviews.
+              </p>
+            </div>
+            <button className="primary" onClick={handleRunConsensus}>
+              Compute Quorum &amp; Consensus
+            </button>
+          </div>
+
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-mute)", marginBottom: 8 }}>
+            Empirical Agent Reputation Weights
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+            {(Object.entries(INITIAL_REPUTATIONS) as [string, AgentReputation][]).slice(0, 8).map(([harness, rep]) => (
+              <div key={harness} style={{ padding: 10, borderRadius: 3, background: "var(--bg-panel)", border: "1px solid var(--border)", fontSize: 11 }}>
+                <div style={{ fontWeight: 700 }}>{HARNESS_BADGES[harness as HarnessId]?.label ?? harness}</div>
+                <div className="muted" style={{ marginTop: 2 }}>Weight: <strong>{rep.reputationWeight.toFixed(1)}x</strong></div>
+                <div className="muted" style={{ fontSize: 10 }}>{rep.verifiedCommits} commits · {rep.accurateReviews} reviews</div>
+              </div>
+            ))}
+          </div>
+
+          {consensusResult && (
+            <div style={{ paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div style={{ fontSize: 14, fontWeight: 700 }}>
+                  Quorum Verdict: <span className="pill ok">{consensusResult.status}</span>
+                </div>
+                <div className="muted" style={{ fontSize: 12 }}>
+                  Score: {(consensusResult.consensusScore * 100).toFixed(1)}% · Approve: {consensusResult.approveWeight.toFixed(2)} / Reject: {consensusResult.rejectWeight.toFixed(2)}
+                </div>
+              </div>
+              <div style={{ padding: 12, borderRadius: 4, background: "var(--bg-elevated)", border: "1px solid var(--border)", fontSize: 12 }}>
+                {consensusResult.summary}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB 6: TEAM MISSION RUNNER ────────────────────────────────────── */}
       {activeTab === "runner" && (
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -1017,7 +1293,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
         </div>
       )}
 
-      {/* ── TAB 4: CUSTOM CREW BUILDER ────────────────────────────────────── */}
+      {/* ── TAB 7: CUSTOM CREW BUILDER ────────────────────────────────────── */}
       {activeTab === "builder" && (
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -1189,7 +1465,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
         </div>
       )}
 
-      {/* ── TAB 5: CANVAS FRAMEWORKS ─────────────────────────────────────── */}
+      {/* ── TAB 8: CANVAS FRAMEWORKS ─────────────────────────────────────── */}
       {activeTab === "frameworks" && (
         <div>
           <label className="field" style={{ marginBottom: 16 }}>

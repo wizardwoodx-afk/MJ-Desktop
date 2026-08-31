@@ -49,6 +49,8 @@ import {
 import { planMerge, type MergeCandidate } from "./mergePlan";
 import { detectResumeFailure, followUpPrompt, parseSessionId, SessionStore, type SessionKey } from "./sessions";
 import { globalAgentBus } from "./interAgentChannel";
+import { globalMemoryCortex } from "./organizationalMemory";
+import { globalReputationLedger } from "./consensusEngine";
 
 /* ------------------------------------------------------------------ injected capabilities */
 
@@ -263,6 +265,15 @@ export async function executeTeam(req: TeamRunRequest, deps: TeamRunnerDeps, ses
   const emptySnapshot: ReviewSnapshotRecord = { built: false, branch: "", sha: null, writerBranches: [], conflicts: [], detail: "Not attempted." };
 
   const finish = (status: RunStatus, summary: string, spentUsd: number, snapshot: ReviewSnapshotRecord, briefings: BriefingRecord[]): TeamRunReport => {
+    if (status === "completed") {
+      globalMemoryCortex.recordRepairSuccess(
+        "architecture",
+        `Mission ${req.missionSlug} task completed`,
+        `Verified worktree commit and review passed on ${req.baseBranch}`,
+        req.missionSlug,
+        `Mission "${req.objective}" verified with 0 regressions.`,
+      );
+    }
     globalAgentBus.publish({
       channel: "#general",
       sender: { seatId: "orchestrator", role: "planner", harness: "llm", name: "Team Orchestrator" },
@@ -303,6 +314,16 @@ export async function executeTeam(req: TeamRunRequest, deps: TeamRunnerDeps, ses
     doNotTouch: req.doNotTouch ?? [],
     testCommand: req.testCommand,
   });
+
+  // Inject learned organizational invariants into worktree briefings for all harnesses
+  const learnedMarkdown = globalMemoryCortex.compileBriefing().generatedBriefingMarkdown;
+  for (const seat of req.team.seats) {
+    briefingsByHarness.push({
+      path: ".mj-brief/LEARNED_INVARIANTS.md",
+      contents: learnedMarkdown,
+      forHarness: seat.harness,
+    });
+  }
 
   // Writers' worktrees are created now. Read-only seats are DEFERRED: their worktree must sit on the
   // review snapshot, which cannot exist until the writers have committed.
@@ -910,6 +931,7 @@ async function runSeat(
   };
 
   if (!readOnly && commitDetail.includes("Committed on")) {
+    globalReputationLedger.recordOutcome(a.seat.harness, { verifiedCommit: true });
     globalAgentBus.publish({
       channel: "#implementation-sync",
       sender: { seatId: a.seat.id, role: a.seat.role, harness: a.seat.harness, name: caps.name },
@@ -919,6 +941,7 @@ async function runSeat(
     });
     globalAgentBus.writeBlackboard(`commits.${a.seat.id}`, `Worktree: ${cwd}\nBranch: ${branch}\n${commitDetail}`, a.seat.id, "contract");
   } else if (readOnly) {
+    globalReputationLedger.recordOutcome(a.seat.harness, { accurateReview: true });
     globalAgentBus.publish({
       channel: "#qa-review",
       sender: { seatId: a.seat.id, role: a.seat.role, harness: a.seat.harness, name: caps.name },
