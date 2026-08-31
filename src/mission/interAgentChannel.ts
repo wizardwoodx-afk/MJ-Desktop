@@ -34,12 +34,14 @@ export interface AgentIdentity {
 export interface InterAgentMessage {
   id: string;
   seq: number;
+  sequence: number;
   timestamp: string;
   channel: string;
   sender: AgentIdentity;
   mentions: string[];
   intent: MessageIntent;
   content: string;
+  replyToId?: string;
   data?: Record<string, unknown>;
 }
 
@@ -89,11 +91,13 @@ export class InterAgentMessageBus {
     return () => this.blackboardListeners.delete(listener);
   }
 
-  publish(msg: Omit<InterAgentMessage, "id" | "seq" | "timestamp">): InterAgentMessage {
+  publish(msg: Omit<InterAgentMessage, "id" | "seq" | "sequence" | "timestamp">): InterAgentMessage {
+    const seq = ++this.seqCounter;
     const full: InterAgentMessage = {
       ...msg,
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      seq: ++this.seqCounter,
+      seq,
+      sequence: seq,
       timestamp: new Date().toISOString(),
     };
     this.messages.push(full);
