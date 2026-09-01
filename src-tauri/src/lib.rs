@@ -1,7 +1,7 @@
 mod acp;
 mod commands;
+pub mod db;
 mod control_mcp;
-mod db;
 mod git;
 mod hermes;
 mod mcp;

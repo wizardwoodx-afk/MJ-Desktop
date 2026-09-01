@@ -1,4 +1,4 @@
-# MJ 11.0 — agent organization runtime
+# MJ 11.1 — agent organization runtime
 
 Product name **MJ**. A **Tauri v2** desktop app.
 

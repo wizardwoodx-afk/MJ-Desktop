@@ -532,7 +532,7 @@ mod tests {
     #[test]
     fn truncation_keeps_whole_files() {
         let raw = "diff --git a/a.js b/a.js\n--- a/a.js\n+++ b/a.js\n@@ -1 +1 @@\n-x\n+y\ndiff --git a/b.js b/b.js\n--- a/b.js\n+++ b/b.js\n@@ -1 +1 @@\n-p\n+q\n";
-        let cut = truncate_diff_for_prompt(&raw, 90);
+        let cut = truncate_diff_for_prompt(raw, 90);
         // Whatever survived must contain a complete file section, never half of one.
         assert!(cut.contains("diff --git a/a.js") || cut.contains("diff --git a/b.js"));
         assert!(!cut.contains("-x\n+y\ndiff --git a/b.js b/b.js\n--- a/b.js\n+++ b/b.js\n@@ -1 +1 @@\n-p"), "a file was cut in half");

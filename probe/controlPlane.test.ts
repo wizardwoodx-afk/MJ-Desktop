@@ -62,7 +62,7 @@ section("2. the production entry point has database access");
 ok("dispatch_with_db exists and routes every graph tool",
   ["list_nodes", "connect_ports", "disconnect_ports", "run_workflow"].every((t) => new RegExp(`dispatch_with_db[\\s\\S]*?"${t}"\\s*=>`).test(cm)),
   "each tool must be routed through the db-backed dispatcher");
-ok("mcp_call serves the control server through dispatch_with_db", commands.includes("control_mcp::dispatch_with_db(&tool, &arguments, &lock_db(&state)?)"));
+ok("mcp_call serves the control server through dispatch_with_db", commands.includes("control_mcp::dispatch_with_db(&tool, &arguments, &*lock_db(&state)?)"));
 ok("validate_graph aliases the TS graph shape", cm.includes('or_else(|| graph.get("connections"))') && cm.includes('or_else(|| str_field(n, "definitionId"))'));
 
 section("3. every mutation is Plan → Apply → Verify, with refusals that name what failed");

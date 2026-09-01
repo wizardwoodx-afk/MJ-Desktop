@@ -19,7 +19,7 @@ use serde_json::{json, Value};
 /// `cancel_execution` are DELISTED rather than faked: execution state is owned by the frontend
 /// runtime, and a tool that cannot reach it has no business being advertised. What remains
 /// advertised is exactly what is implemented — every call either does the thing or says why not.
-
+///
 /// A single validation finding. `nodeId`/`wireId` are null when the finding is graph-wide.
 fn issue(severity: &str, code: &str, message: String, node_id: Option<String>, wire_id: Option<String>) -> Value {
     json!({
@@ -114,7 +114,7 @@ pub fn validate_graph(args: &Value) -> Value {
     // -- nodes -------------------------------------------------------------------
     let nodes_val = graph.get("nodes").cloned().unwrap_or(Value::Null);
     let node_objs: Vec<Value> = match &nodes_val {
-        Value::Array(a) => a.iter().cloned().collect(),
+        Value::Array(a) => a.to_vec(),
         Value::Null => Vec::new(),
         other => {
             issues.push(issue("error", "bad_nodes", format!("`nodes` must be an array, got {}", kind_name(other)), None, None));
@@ -122,7 +122,9 @@ pub fn validate_graph(args: &Value) -> Value {
         }
     };
     if node_objs.is_empty() {
-        issues.push(issue("warning", "empty_graph", "The graph has no nodes, so there is nothing to run.".to_string(), None, None));
+        // Not a warning: a graph with nothing to run is not runnable, and `run_workflow`
+        // must refuse to queue it rather than queue a promise that cannot deliver.
+        issues.push(issue("error", "empty_graph", "The graph has no nodes, so it cannot run; no run request for it may be queued.".to_string(), None, None));
     }
 
     let mut ids: Vec<String> = Vec::new();
@@ -155,7 +157,7 @@ pub fn validate_graph(args: &Value) -> Value {
     // accept both shapes so an external MCP caller can send either.
     let wires_val = graph.get("wires").or_else(|| graph.get("connections")).cloned().unwrap_or(Value::Null);
     let wire_objs: Vec<Value> = match &wires_val {
-        Value::Array(a) => a.iter().cloned().collect(),
+        Value::Array(a) => a.to_vec(),
         Value::Null => Vec::new(),
         other => {
             issues.push(issue("error", "bad_wires", format!("`wires` must be an array, got {}", kind_name(other)), None, None));
@@ -167,10 +169,13 @@ pub fn validate_graph(args: &Value) -> Value {
     let mut adj: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
     for (idx, w) in wire_objs.iter().enumerate() {
         let wid = str_field(w, "id").unwrap_or_else(|| format!("wires[{idx}]"));
-        let from = str_field(w, "from");
-        let to = str_field(w, "to");
+        // MJ's own tools write `sourceNodeId` / `targetNodeId`; the legacy shape used
+        // `from` / `to`. Accept both, exactly as the module comment promises — a wire is
+        // only "incomplete" when BOTH shapes are missing an endpoint.
+        let from = str_field(w, "from").or_else(|| str_field(w, "sourceNodeId"));
+        let to = str_field(w, "to").or_else(|| str_field(w, "targetNodeId"));
         let (Some(from), Some(to)) = (from, to) else {
-            issues.push(issue("error", "incomplete_wire", format!("Wire '{wid}' is missing `from` or `to`."), None, Some(wid)));
+            issues.push(issue("error", "incomplete_wire", format!("Wire '{wid}' is missing `from`/`to` (or `sourceNodeId`/`targetNodeId`)."), None, Some(wid)));
             continue;
         };
         if !id_set.contains(&from) {

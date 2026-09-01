@@ -102,6 +102,12 @@ export function sandboxProfileFor(risk: RiskClass, workspace: string, platform: 
   }
   if (platform === "linux") {
     // bubblewrap: the whole root read-only, the workspace + tmp writable, /dev and /proc stubbed.
+    // The "outside the workspace" canary must target a path the profile is supposed to seal:
+    // the read-only root. A sibling-of-workspace path is wrong — the workspace lives inside
+    // os.tmpdir(), and session temp is deliberately writable, so `dirname(workspace)` is part
+    // of the area the sandbox is *supposed* to leave writable. Writing to the root of the
+    // (read-only) filesystem actually proves the seal.
+    const canaryPath = path.posix.join("/", "mj-sandbox-canary.txt");
     const wrapper = [
       "bwrap",
       "--ro-bind", "/", "/",
@@ -118,7 +124,7 @@ export function sandboxProfileFor(risk: RiskClass, workspace: string, platform: 
       canaries: [
         {
           name: "write outside the workspace must fail",
-          argv: [...wrapper, "sh", "-c", `echo mj-canary > ${path.join(path.dirname(workspace), "mj-sandbox-canary.txt")}`],
+          argv: [...wrapper, "sh", "-c", `echo mj-canary > ${canaryPath}`],
           mustFail: true,
         },
         ...(tier === "fs+net"
@@ -130,6 +136,9 @@ export function sandboxProfileFor(risk: RiskClass, workspace: string, platform: 
   }
   if (platform === "macos") {
     // Seatbelt via sandbox-exec: write only the workspace; network denied at fs+net.
+    // Same canary boundary as Linux: the sealed path is outside workspace+temp, not a
+    // sibling temp directory (which seatbelt deliberately allows).
+    const canaryPath = path.posix.join("/", "mj-sandbox-canary.txt");
     const profile =
       tier === "fs+net"
         ? `(version 1)(deny default)(allow process*)(allow file-read*)(allow file-write* (subpath "${workspace}") (subpath "${os.tmpdir()}"))(deny network*)`
@@ -140,7 +149,7 @@ export function sandboxProfileFor(risk: RiskClass, workspace: string, platform: 
       canaries: [
         {
           name: "write outside the workspace must fail",
-          argv: ["sandbox-exec", "-p", profile, "sh", "-c", `echo mj-canary > ${path.join(path.dirname(workspace), "mj-sandbox-canary.txt")}`],
+          argv: ["sandbox-exec", "-p", profile, "sh", "-c", `echo mj-canary > ${canaryPath}`],
           mustFail: true,
         },
       ],

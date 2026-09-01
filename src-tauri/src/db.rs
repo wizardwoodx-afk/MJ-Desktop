@@ -641,8 +641,7 @@ pub fn evaluation_save(
 /// The real history for a node, newest first. An empty array now genuinely means "never evaluated".
 pub fn evaluation_history(conn: &Connection, node_key: &str) -> rusqlite::Result<Value> {
     let mut st = conn
-        .prepare("SELECT id, execution_id, suite_json, score, details_json, created_at FROM evaluations WHERE node_key = ?1 ORDER BY created_at DESC LIMIT 100")
-        .map_err(rusqlite::Error::from)?;
+        .prepare("SELECT id, execution_id, suite_json, score, details_json, created_at FROM evaluations WHERE node_key = ?1 ORDER BY created_at DESC LIMIT 100")?;
     let rows = st
         .query_map([node_key], |r| {
             Ok(json!({
@@ -653,11 +652,10 @@ pub fn evaluation_history(conn: &Connection, node_key: &str) -> rusqlite::Result
                 "details": serde_json::from_str::<Value>(&r.get::<_, String>(4)?).unwrap_or(Value::Null),
                 "createdAt": r.get::<_, String>(5)?,
             }))
-        })
-        .map_err(rusqlite::Error::from)?;
+        })?;
     let mut out = Vec::new();
     for row in rows {
-        out.push(row.map_err(rusqlite::Error::from)?);
+        out.push(row?);
     }
     Ok(Value::Array(out))
 }
@@ -677,8 +675,7 @@ pub fn suite_save(conn: &Connection, suite_id: Option<&str>, name: &str, cases: 
 /// Every stored suite, newest update first.
 pub fn suite_list(conn: &Connection) -> rusqlite::Result<Value> {
     let mut st = conn
-        .prepare("SELECT id, name, cases_json, updated_at FROM suites ORDER BY updated_at DESC")
-        .map_err(rusqlite::Error::from)?;
+        .prepare("SELECT id, name, cases_json, updated_at FROM suites ORDER BY updated_at DESC")?;
     let rows = st
         .query_map([], |r| {
             Ok(json!({
@@ -687,11 +684,10 @@ pub fn suite_list(conn: &Connection) -> rusqlite::Result<Value> {
                 "cases": serde_json::from_str::<Value>(&r.get::<_, String>(2)?).unwrap_or(Value::Null),
                 "updatedAt": r.get::<_, String>(3)?,
             }))
-        })
-        .map_err(rusqlite::Error::from)?;
+        })?;
     let mut out = Vec::new();
     for row in rows {
-        out.push(row.map_err(rusqlite::Error::from)?);
+        out.push(row?);
     }
     Ok(Value::Array(out))
 }
