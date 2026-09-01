@@ -68,3 +68,35 @@ export function measureCardHeight(nodeId: string): number | null {
 function cssEscape(s: string): string {
   return typeof CSS !== "undefined" && CSS.escape ? CSS.escape(s) : s.replace(/["\\]/g, "\\$&");
 }
+
+/**
+ * Port metrics invalidation bus (V11.2).
+ *
+ * The wire layer's geometry depends on DOM measurements (card height, anchor offsets), so it has
+ * to re-derive them when the DOM changes — a node's status flips and the `stream-preview` appears
+ * or disappears, a description wraps to a new line, fonts load and change every row height.
+ * Relying on React's memo deps for this was the original bug X regression: the memo re-ran, but
+ * the values it read were stale, because nothing told the graph that the DOM had moved.
+ *
+ * Components that DRAW wires subscribe; components that KNOW (NodeCard's ResizeObserver, port ref
+ * callbacks, runtime status effects) publish. `invalidatePortMetrics()` is cheap: it bumps a
+ * version counter and subscribers re-read whatever they need on the next draw.
+ */
+let metricsVersion = 0;
+const metricsListeners = new Set<() => void>();
+
+export function getMetricsVersion(): number {
+  return metricsVersion;
+}
+
+export function subscribePortMetrics(fn: () => void): () => void {
+  metricsListeners.add(fn);
+  return () => {
+    metricsListeners.delete(fn);
+  };
+}
+
+export function invalidatePortMetrics(): void {
+  metricsVersion += 1;
+  for (const fn of metricsListeners) fn();
+}

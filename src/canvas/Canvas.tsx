@@ -1,31 +1,48 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { DATA_TYPE_COLORS } from "../domain/dataTypes";
 import { DEFINITIONS_BY_ID } from "../domain/nodeLibrary";
 import { getEditorPrefs, useGraphStore, useNodeRuntimeOutput, useNodeRuntimeStatus } from "../graph/store";
 import { iconFor } from "./icons";
+import { bezier, NODE_W, nodeH as geomNodeH, portPos as geomPortPos, zoomAt, type NodeMetrics } from "./geometry";
+import { getMetricsVersion, invalidatePortMetrics, measureCardHeight, measurePort, registerPortAnchor, subscribePortMetrics, type PortPoint } from "./ports";
 import type { NodeInstance } from "../domain/types";
 
 export { iconFor };
 
-const NODE_W = 248;
-
-function nodeH(n: NodeInstance) {
-  const ports = Math.max(n.inputs.length, n.outputs.length);
-  const isControl = n.definitionId.startsWith("control.");
-  return isControl ? 52 : 86 + ports * 19;
+/**
+ * V11.2 (bug X, the real fix): wire geometry comes from MEASURED port anchors, not from a model
+ * of the card. The old hard-coded model (top = 86 + portIndex*19 + 10) assumed a fixed header and
+ * no optional content, so wires drifted every time a description wrapped or the stream preview
+ * appeared. `measurePort` reads the rendered anchors; the model below only covers the first paint,
+ * before the DOM has laid out.
+ */
+function cardHeight(nodeId: string, n: NodeInstance): number {
+  return measureCardHeight(nodeId) ?? geomNodeH(n);
 }
 
-function portPos(n: NodeInstance, portId: string, dir: "in" | "out") {
-  const list = dir === "in" ? n.inputs : n.outputs;
-  const i = list.findIndex((p) => p.id === portId);
-  const isControl = n.definitionId.startsWith("control.");
-  const top = isControl ? 26 : 86 + i * 19 + 10;
-  return { x: n.x + (dir === "out" ? (isControl ? 118 : NODE_W) : 0), y: n.y + top };
-}
-
-function bezier(a: { x: number; y: number }, b: { x: number; y: number }) {
-  const dx = Math.max(60, Math.abs(b.x - a.x) * 0.45);
-  return `M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
+/** Snapshot of the rendered port geometry, keyed by node id. Rebuilt when the DOM invalidates it. */
+function measuredMetrics(nodes: NodeInstance[]): Map<string, NodeMetrics> {
+  const metrics = new Map<string, NodeMetrics>();
+  for (const n of nodes) {
+    const ports = new Map<string, PortPoint>();
+    let any = false;
+    for (const p of n.inputs) {
+      const m = measurePort(n.id, p.id, "in");
+      if (m) {
+        ports.set(`in:${p.id}`, m);
+        any = true;
+      }
+    }
+    for (const p of n.outputs) {
+      const m = measurePort(n.id, p.id, "out");
+      if (m) {
+        ports.set(`out:${p.id}`, m);
+        any = true;
+      }
+    }
+    if (any) metrics.set(n.id, { ports, h: measureCardHeight(n.id) ?? geomNodeH(n) });
+  }
+  return metrics;
 }
 
 export function Canvas({ onOpenLibrary }: { onOpenLibrary: () => void }) {
@@ -35,9 +52,14 @@ export function Canvas({ onOpenLibrary }: { onOpenLibrary: () => void }) {
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; nodeId?: string; connId?: string } | null>(null);
+  /** The input port the cursor is currently over while linking, so the ghost wire snaps to it. */
+  const [hoverPort, setHoverPort] = useState<{ nodeId: string; portId: string } | null>(null);
   const drag = useRef<{ ids: string[]; ox: number; oy: number; start: { id: string; x: number; y: number }[] } | null>(null);
   const pan = useRef<{ x: number; y: number; vx: number; vy: number } | null>(null);
   const space = useRef(false);
+
+  /** Re-render the wire layer whenever the DOM invalidates a port measurement. */
+  const metricsVersion = useSyncExternalStore(subscribePortMetrics, getMetricsVersion);
 
   const vp = store.graph.viewport;
   const toWorld = useCallback(
@@ -68,7 +90,7 @@ export function Canvas({ onOpenLibrary }: { onOpenLibrary: () => void }) {
     const minX = Math.min(...nodes.map((n) => n.x)) - 40;
     const minY = Math.min(...nodes.map((n) => n.y)) - 40;
     const maxX = Math.max(...nodes.map((n) => n.x + NODE_W)) + 40;
-    const maxY = Math.max(...nodes.map((n) => n.y + nodeH(n))) + 40;
+    const maxY = Math.max(...nodes.map((n) => n.y + cardHeight(n.id, n))) + 40;
     const w = el.clientWidth;
     const h = el.clientHeight;
     const zoom = Math.min(1.4, Math.max(0.3, Math.min(w / (maxX - minX), h / (maxY - minY))));
@@ -112,12 +134,19 @@ export function Canvas({ onOpenLibrary }: { onOpenLibrary: () => void }) {
   }, []);
 
   /**
-   * Wheel zoom/pan over a native NON-passive listener.
+   * Wheel gestures over a native NON-passive listener.
    *
-   * Bug fix: React registers delegated `wheel` listeners as passive, so the previous
-   * `onWheel` + `e.preventDefault()` never actually prevented the default — the host page
-   * (or WebView) scrolled/zoomed alongside the canvas and Chromium logged
-   * "Unable to preventDefault inside passive event listener" on every gesture.
+   * V11.2 (bug Y, the real fix — geometry.ts shipped `zoomAt` in V8 but Canvas never used it):
+   *
+   *   BUG   plain wheel panned the viewport (vp.y changed), so scrolling the mouse moved the
+   *         nodes up and down instead of zooming — the exact inversion of every node editor.
+   *   FIX   plain wheel = cursor-anchored zoom via `zoomAt` (the point under the cursor stays
+   *         exactly under the cursor); Shift+wheel = horizontal pan (trackpads put deltaX
+   *         here); Ctrl/Cmd+wheel also zooms (browser-style pinch / page zoom).
+   *
+   * The listener is registered natively with { passive: false } because React's delegated `wheel`
+   * listeners are passive — the old `onWheel` + preventDefault never prevented anything and the
+   * host page scrolled alongside the canvas (Chromium logged that on every gesture).
    */
   useEffect(() => {
     const el = wrap.current;
@@ -125,15 +154,14 @@ export function Canvas({ onOpenLibrary }: { onOpenLibrary: () => void }) {
     const onWheelNative = (e: WheelEvent) => {
       e.preventDefault();
       const vpNow = useGraphStore.getState().graph.viewport;
-      if (e.ctrlKey || e.metaKey) {
-        const next = Math.min(2.4, Math.max(0.2, vpNow.zoom * (e.deltaY < 0 ? 1.08 : 0.92)));
-        const r = el.getBoundingClientRect();
-        const mx = e.clientX - r.left;
-        const my = e.clientY - r.top;
-        const k = next / vpNow.zoom;
-        useGraphStore.getState().setViewport({ zoom: next, x: mx - (mx - vpNow.x) * k, y: my - (my - vpNow.y) * k });
+      const r = el.getBoundingClientRect();
+      const cursor = { x: e.clientX - r.left, y: e.clientY - r.top };
+      if (e.shiftKey) {
+        useGraphStore
+          .getState()
+          .setViewport({ x: vpNow.x - (e.deltaX || e.deltaY), y: vpNow.y - (e.deltaX ? e.deltaY : 0) });
       } else {
-        useGraphStore.getState().setViewport({ x: vpNow.x - e.deltaX, y: vpNow.y - e.deltaY });
+        useGraphStore.getState().setViewport(zoomAt(vpNow, cursor, e.deltaY, e.deltaMode));
       }
     };
     el.addEventListener("wheel", onWheelNative, { passive: false });
@@ -190,13 +218,14 @@ export function Canvas({ onOpenLibrary }: { onOpenLibrary: () => void }) {
     wrap.current?.classList.remove("panning");
     pan.current = null;
     drag.current = null;
+    setHoverPort(null);
     if (marquee) {
       const x1 = Math.min(marquee.x, marquee.x + marquee.w);
       const y1 = Math.min(marquee.y, marquee.y + marquee.h);
       const x2 = Math.max(marquee.x, marquee.x + marquee.w);
       const y2 = Math.max(marquee.y, marquee.y + marquee.h);
       if (Math.abs(marquee.w) > 6 || Math.abs(marquee.h) > 6) {
-        const ids = store.graph.nodes.filter((n) => n.x < x2 && n.x + NODE_W > x1 && n.y < y2 && n.y + nodeH(n) > y1).map((n) => n.id);
+        const ids = store.graph.nodes.filter((n) => n.x < x2 && n.x + NODE_W > x1 && n.y < y2 && n.y + cardHeight(n.id, n) > y1).map((n) => n.id);
         store.selectMany(ids);
       }
       setMarquee(null);
@@ -212,16 +241,22 @@ export function Canvas({ onOpenLibrary }: { onOpenLibrary: () => void }) {
     store.addNode(defId, snapCoord(w.x), snapCoord(w.y));
   };
 
+  /**
+   * V11.2 (bug X): rebuilt measured geometry every time the DOM invalidates it, and the wire
+   * endpoints come from `geometry.portPos` with those measurements — so a wire attaches to the
+   * anchor a human can see, not to the anchor a hard-coded model predicted.
+   */
+  const metrics = useMemo(() => measuredMetrics(store.graph.nodes), [store.graph.nodes, metricsVersion]);
   const wires = useMemo(() => {
     return store.graph.connections.map((c) => {
       const sn = store.graph.nodes.find((n) => n.id === c.sourceNodeId);
       const tn = store.graph.nodes.find((n) => n.id === c.targetNodeId);
       if (!sn || !tn) return null;
-      const a = portPos(sn, c.sourcePortId, "out");
-      const b = portPos(tn, c.targetPortId, "in");
+      const a = geomPortPos(sn, c.sourcePortId, "out", metrics);
+      const b = geomPortPos(tn, c.targetPortId, "in", metrics);
       return { c, d: bezier(a, b), color: DATA_TYPE_COLORS[c.dataType] ?? "#aaa" };
     }).filter(Boolean) as Array<{ c: (typeof store.graph.connections)[0]; d: string; color: string }>;
-  }, [store.graph]);
+  }, [store.graph, metrics]);
 
   return (
     <div
@@ -251,8 +286,19 @@ export function Canvas({ onOpenLibrary }: { onOpenLibrary: () => void }) {
         {link && (() => {
           const n = store.graph.nodes.find((x) => x.id === link.nodeId);
           if (!n) return null;
-          const a = portPos(n, link.portId, "out");
-          return <path className="wire active" d={bezier(a, mouse)} />;
+          const a = geomPortPos(n, link.portId, "out", metrics);
+          // The ghost wire snaps to the input port under the cursor when it is a valid target,
+          // so connecting ends on the anchor a human can see — not at the cursor's pixel.
+          let end = mouse;
+          if (hoverPort) {
+            const hn = store.graph.nodes.find((x) => x.id === hoverPort.nodeId);
+            if (hn && useGraphStore.getState().canConnect(link.nodeId, link.portId, hn.id, hoverPort.portId)) {
+              end = geomPortPos(hn, hoverPort.portId, "in", metrics);
+            } else {
+              end = mouse;
+            }
+          }
+          return <path className="wire active" d={bezier(a, end)} />;
         })()}
       </svg>
       <div className="nodes-layer" style={{ transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.zoom})` }}>
@@ -271,6 +317,7 @@ export function Canvas({ onOpenLibrary }: { onOpenLibrary: () => void }) {
             node={n}
             selected={store.selectedIds.includes(n.id)}
             linking={link}
+            onHoverPort={(p) => setHoverPort(p)}
             onDragStart={(e) => {
               const ids = store.selectedIds.includes(n.id) ? store.selectedIds : [n.id];
               store.selectMany(ids);
@@ -350,8 +397,28 @@ export function Canvas({ onOpenLibrary }: { onOpenLibrary: () => void }) {
   );
 }
 
+/**
+ * V11.2 (bug X): the wire-layer geometry depends on the card's rendered height. A status flip or
+ * a stream output makes the preview block appear/disappear and reflows the card; the ResizeObserver
+ * catches every layout change and invalidates the port metrics, and the effect keyed on
+ * [status, out] catches the changes that happen between renders, before layout settles.
+ */
+function useNodeCardWatch(nodeId: string, cardRef: React.RefObject<HTMLDivElement | null>) {
+  const status = useNodeRuntimeStatus(nodeId);
+  const out = useNodeRuntimeOutput(nodeId);
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    invalidatePortMetrics();
+    const ro = new ResizeObserver(() => invalidatePortMetrics());
+    ro.observe(el);
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodeId, cardRef, status, out]);
+}
+
 function NodeCard({
-  node, selected, linking, onDragStart, onPortDown, onContext,
+  node, selected, linking, onDragStart, onPortDown, onContext, onHoverPort,
 }: {
   node: NodeInstance;
   selected: boolean;
@@ -359,11 +426,13 @@ function NodeCard({
   onDragStart: (e: React.PointerEvent) => void;
   onPortDown: (portId: string, dir: "in" | "out", e: React.PointerEvent) => void;
   onContext: (e: React.MouseEvent) => void;
+  onHoverPort: (p: { nodeId: string; portId: string } | null) => void;
 }) {
   const status = useNodeRuntimeStatus(node.id);
   const out = useNodeRuntimeOutput(node.id);
   const def = DEFINITIONS_BY_ID.get(node.definitionId);
   const cat = def?.category ?? "agent";
+  const cardRef = useRef<HTMLDivElement>(null);
   const glyph = status === "failed" ? "err" : status === "succeeded" ? "done" : status === "running" || status === "streaming" ? "on" : "";
   // Subscribe (not getState()) so the fill dots repaint when connections change even if this
   // card's own props did not.
@@ -371,8 +440,12 @@ function NodeCard({
   const filledIn = new Set(connections.filter((c) => c.targetNodeId === node.id).map((c) => c.targetPortId));
   const filledOut = new Set(connections.filter((c) => c.sourceNodeId === node.id).map((c) => c.sourcePortId));
 
+  useNodeCardWatch(node.id, cardRef);
+
   return (
     <div
+      ref={cardRef}
+      data-node-id={node.id}
       className={`node-card ${cat} ${selected ? "selected" : ""}`}
       style={{ left: node.x, top: node.y, width: cat === "control" ? undefined : NODE_W }}
       onPointerDown={onDragStart}
@@ -391,9 +464,12 @@ function NodeCard({
           {node.inputs.map((p) => (
             <div key={p.id} className="port-row input">
               <span
+                ref={(el) => registerPortAnchor(`${node.id}:in:${p.id}`, el)}
                 className={`port-anchor ${filledIn.has(p.id) ? "filled" : ""} ${linking && !useGraphStore.getState().canConnect(linking.nodeId, linking.portId, node.id, p.id) ? "dimmed" : ""} ${linking && useGraphStore.getState().canConnect(linking.nodeId, linking.portId, node.id, p.id) ? "valid-target" : ""}`}
                 style={{ borderColor: DATA_TYPE_COLORS[p.dataType] }}
                 onPointerDown={(e) => onPortDown(p.id, "in", e)}
+                onPointerEnter={() => onHoverPort({ nodeId: node.id, portId: p.id })}
+                onPointerLeave={() => onHoverPort(null)}
               />
               <span className="port-name">{p.label}</span>
             </div>
@@ -404,6 +480,7 @@ function NodeCard({
             <div key={p.id} className="port-row output">
               <span className="port-name">{p.label}</span>
               <span
+                ref={(el) => registerPortAnchor(`${node.id}:out:${p.id}`, el)}
                 className={`port-anchor ${filledOut.has(p.id) ? "filled" : ""}`}
                 style={{ borderColor: DATA_TYPE_COLORS[p.dataType] }}
                 onPointerDown={(e) => onPortDown(p.id, "out", e)}

@@ -24,6 +24,18 @@ import { planWorktrees, type WorktreePlan } from "../mission/collaboration";
 import { CapLedger } from "../mission/caps";
 import { executeTeam, type SeatRecord, type TeamRunReport, type TeamRunnerDeps } from "../mission/teamExecutor";
 import {
+  applyTeamFeedback,
+  decideCandidate,
+  evolveTeamAfterRun,
+  applyCandidateToTeam,
+  loadTeamEvoStore,
+  saveTeamEvoStore,
+  signalsFromSeatRecords,
+  type TeamEvoStore,
+  type TeamEvolutionCandidate,
+  type TeamEvolveMode,
+} from "../mission/teamEvolution";
+import {
   DEFAULT_CHANNELS,
   globalAgentBus,
   type BlackboardEntry,
@@ -62,7 +74,7 @@ import { ipc, useTauri } from "../ipc/client";
 import { toast } from "../panels/Toast";
 import { uid } from "../app/id";
 
-type ActiveTab = "crews" | "channel" | "arena" | "astmerge" | "consensus" | "chaos" | "memory" | "failure" | "provenance" | "matrix" | "mockbridge" | "runner" | "builder" | "frameworks";
+type ActiveTab = "crews" | "channel" | "arena" | "astmerge" | "consensus" | "chaos" | "memory" | "failure" | "provenance" | "matrix" | "mockbridge" | "runner" | "evolve" | "builder" | "frameworks";
 
 const ALL_ROLES: TeamRole[] = [
   "planner",
@@ -124,6 +136,14 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
   const [runnerTestCmd, setRunnerTestCmd] = useState("npm test");
   const [runnerRunning, setRunnerRunning] = useState(false);
   const [runnerResult, setRunnerResult] = useState<TeamRunReport | null>(null);
+  /* V11.2 — team self-evolution & feedback loop state. */
+  const [evo, setEvo] = useState<TeamEvoStore>(() => loadTeamEvoStore());
+  const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
+  const [feedbackComment, setFeedbackComment] = useState("");
+  const updateEvo = (next: TeamEvoStore) => {
+    setEvo(next);
+    saveTeamEvoStore(next);
+  };
 
   // Inter-Agent Channel State
   const [activeChannel, setActiveChannel] = useState<string>("#general");
@@ -603,13 +623,14 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
         turnNumber: idx + 1,
       }));
 
+      const runId = uid("run");
       const res = await executeTeam(
         {
           team: selectedTeam,
           assignments,
           repoRoot: runnerRepo,
           baseBranch: "main",
-          missionSlug: `mission-${uid("run")}`,
+          missionSlug: `mission-${runId}`,
           objective: runnerObjective,
           ledger,
           testCommand: runnerTestCmd.split(" "),
@@ -618,6 +639,41 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
       );
       setRunnerResult(res);
       toast(`Mission finished: ${res.status.toUpperCase()}`);
+      // V11.2 — fold the run into the team's self-evolution ledger. Every seat's measured
+      // facts (ran / verified / cost / latency) become signal; AUTONOMOUS teams apply
+      // candidates that pass every gate; SUGGEST teams queue them for the Evolution tab.
+      try {
+        const signals = signalsFromSeatRecords({
+          runId,
+          ts: new Date().toISOString(),
+          teamId: selectedTeam.id,
+          seats: res.seats.map((s) => ({
+            seatId: s.seatId,
+            role: s.role,
+            harness: s.harness,
+            outcome: s.outcome,
+            exitCode: s.exitCode,
+            chargedUsd: s.chargedUsd,
+            durationMs: s.durationMs,
+            verified: s.verified,
+          })),
+        });
+        let store = loadTeamEvoStore();
+        const appliedCandidates: TeamEvolutionCandidate[] = [];
+        for (const sig of signals) {
+          const r = evolveTeamAfterRun({ store, team: selectedTeam, signal: sig, actor: "team-evolver" });
+          store = r.store;
+          if (r.applied && r.candidate) appliedCandidates.push(r.candidate);
+        }
+        updateEvo(store);
+        for (const c of appliedCandidates) {
+          const updated = applyCandidateToTeam(selectedTeam, c, "team-evolver");
+          saveCliTeams(upsertTeam(cliTeams, updated));
+          toast(`Team evolved: ${selectedTeam.name} seat "${c.seatId}" instructions updated (autonomous)`);
+        }
+      } catch (evErr) {
+        console.error("team evolution fold failed", evErr);
+      }
     } catch (err) {
       toast(`Execution error: ${String(err)}`, "err");
     } finally {
@@ -728,6 +784,12 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
           onClick={() => setActiveTab("runner")}
         >
           Team Mission Runner {runnerRunning && "●"}
+        </button>
+        <button
+          className={activeTab === "evolve" ? "primary" : ""}
+          onClick={() => setActiveTab("evolve")}
+        >
+          ⟳ Evolution &amp; Feedback
         </button>
         <button
           className={activeTab === "builder" ? "primary" : ""}
@@ -1743,6 +1805,182 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
               </div>
             </div>
           )}
+          {/* V11.2 — FEEDBACK LOOP: the operator rates the run; the rating queues as evidence. */}
+          {runnerResult && (
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px dashed var(--border)" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Rate this run</div>
+              <div className="row" style={{ marginBottom: 8 }}>
+                {[1, 2, 3, 4, 5].map((r) => (
+                  <button key={r} className={feedbackRating === r ? "primary" : ""} onClick={() => setFeedbackRating(r)}>{r}</button>
+                ))}
+                <input
+                  type="text"
+                  placeholder="What should the team do differently? (becomes evidence)"
+                  value={feedbackComment}
+                  onChange={(e) => setFeedbackComment(e.target.value)}
+                  style={{ flex: 1, minWidth: 220 }}
+                />
+                <button
+                  className="primary"
+                  disabled={feedbackRating === null}
+                  onClick={() => {
+                    if (feedbackRating === null) return;
+                    // A rating belongs to the whole run; attach it to every seat that ran so the
+                    // seat-level ledger sees it, then clear the form.
+                    let store = loadTeamEvoStore();
+                    for (const s of runnerResult.seats) {
+                      store = applyTeamFeedback(store, {
+                        teamId: selectedTeam.id,
+                        seatId: s.seatId,
+                        runId: `run-${runnerResult.startedAt}`,
+                        rating: feedbackRating,
+                        comment: feedbackComment,
+                      });
+                    }
+                    updateEvo(store);
+                    toast(`Feedback recorded (${feedbackRating}/5) — queued as evolution evidence`);
+                    setFeedbackRating(null);
+                    setFeedbackComment("");
+                  }}
+                >
+                  Submit feedback
+                </button>
+              </div>
+              {feedbackRating !== null && feedbackRating >= 4 && (
+                <div className="muted" style={{ fontSize: 11 }}>
+                  Praise suppresses new candidates for the next 3 runs — a seat that is working is not a seat to change.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB: TEAM EVOLUTION & FEEDBACK LOOP ───────────────────────────── */}
+      {activeTab === "evolve" && (
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Team Evolution &amp; Feedback Loop</h3>
+              <p className="muted" style={{ margin: "4px 0 0", fontSize: 13 }}>
+                V11.2 — every run is folded into a per-seat ledger. Evidence (failed runs, unverified
+                checks, human ratings) produces a gated candidate edit of the seat's instructions.
+                SUGGEST asks you; AUTONOMOUS applies what passes every gate. A candidate's score is
+                never claimed before a run measured it.
+              </p>
+            </div>
+            <div className="row">
+              {(["OFF", "SUGGEST", "AUTONOMOUS"] as const).map((m) => (
+                <button
+                  key={m}
+                  className={(evo.byTeam[selectedTeam.id]?.mode ?? "SUGGEST") === m ? "primary" : ""}
+                  onClick={() => {
+                    const te = evo.byTeam[selectedTeam.id] ?? { mode: "SUGGEST" as TeamEvolveMode, seats: {} };
+                    updateEvo({ ...evo, byTeam: { ...evo.byTeam, [selectedTeam.id]: { ...te, mode: m } } });
+                  }}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="muted" style={{ fontSize: 12, marginBottom: 14 }}>
+            Selected team: <strong>{selectedTeam.name}</strong> — mode: {evo.byTeam[selectedTeam.id]?.mode ?? "SUGGEST"}
+          </div>
+
+          {/* per-seat ledgers */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 10, marginBottom: 18 }}>
+            {selectedTeam.seats.map((s) => {
+              const st = evo.byTeam[selectedTeam.id]?.seats[s.id];
+              const stats = st?.stats;
+              const fb = evo.feedback.filter((f) => f.teamId === selectedTeam.id && f.seatId === s.id);
+              return (
+                <div key={s.id} style={{ border: "1px solid var(--border)", padding: 10, borderRadius: 2 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700 }}>[{s.id}] {s.role} <span className="muted mono">{s.harness}</span></div>
+                  <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
+                    runs {stats?.runs ?? 0} · ok {stats ? Math.round(stats.okRate * 100) : 0}% · verified {stats ? Math.round(stats.verifiedRate * 100) : 0}%
+                    {stats && stats.totalCostUsd > 0 ? ` · $${stats.totalCostUsd.toFixed(3)}` : ""}
+                    {stats?.feedbackCount ? ` · rated avg ${(stats.feedbackAvg ?? 0).toFixed(1)}` : ""}
+                  </div>
+                  <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                    instructions v{st?.instructionVersion ?? 1} · edits {st?.editCount ?? 0}
+                    {st && st.pendingFeedback.length > 0 ? ` · ${st.pendingFeedback.length} queued feedback` : ""}
+                  </div>
+                  {fb.length > 0 && (
+                    <div style={{ fontSize: 11, marginTop: 4, color: "var(--text-dim)" }}>
+                      last rating: {fb[0].rating}/5{fb[0].comment ? ` — "${fb[0].comment}"` : ""}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* candidates */}
+          {(() => {
+            const cands = evo.candidates.filter((c) => c.teamId === selectedTeam.id);
+            if (cands.length === 0) {
+              return <div className="muted" style={{ fontSize: 12 }}>No evolution candidates yet. Run the Team Mission Runner with SUGGEST or AUTONOMOUS and evidence will appear here.</div>;
+            }
+            return (
+              <>
+                <div className="card-title" style={{ marginBottom: 8 }}>Candidates ({cands.length})</div>
+                {cands.map((c) => (
+                  <div key={c.id} style={{ border: "1px solid var(--border)", padding: 12, borderRadius: 2, marginBottom: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>
+                        seat "{c.seatId}" ({c.role}, {c.harness}) · trigger {c.trigger}
+                        <span className={`pill ${c.status === "DECIDED" ? (c.decision === "ACCEPTED" ? "ok" : "err") : ""}`} style={{ marginLeft: 8, fontSize: 10 }}>
+                          {c.decision}
+                        </span>
+                      </div>
+                      <div className="muted" style={{ fontSize: 11 }}>{c.createdAt.slice(0, 19).replace("T", " ")}</div>
+                    </div>
+                    <div style={{ fontSize: 11, marginTop: 6 }}>
+                      baseline score {c.baselineScore !== null ? c.baselineScore.toFixed(3) : "—"} · candidate score{" "}
+                      <span className="muted">{c.candidateScore !== null ? c.candidateScore.toFixed(3) : "unmeasured"}</span>
+                      {c.candidateScore === null && <span className="muted"> ({c.scoreNote})</span>}
+                    </div>
+                    <div style={{ fontSize: 11, marginTop: 6 }}>
+                      {c.evidence.map((e, i) => (
+                        <div key={i} className="muted" style={{ marginTop: 2 }}>▸ {e.text} <span className="mono">w{e.weight}</span></div>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                      {c.gates.map((g) => (
+                        <span key={g.name} className={`pill ${g.passed ? "ok" : "err"}`} style={{ fontSize: 10 }} title={g.message}>
+                          {g.name}
+                        </span>
+                      ))}
+                    </div>
+                    <pre className="mono" style={{ fontSize: 10, whiteSpace: "pre-wrap", maxHeight: 120, overflow: "auto", background: "var(--bg-input)", padding: 8, marginTop: 8, border: "1px solid var(--border)" }}>
+                      {c.candidate}
+                    </pre>
+                    {c.status === "PROPOSED" && (
+                      <div className="row" style={{ marginTop: 8 }}>
+                        <button
+                          className="primary"
+                          disabled={!c.passed}
+                          title={c.passed ? "" : "Gates not passed — AUTONOMOUS would refuse this too"}
+                          onClick={() => {
+                            const updated = applyCandidateToTeam(selectedTeam, c, "human:operator");
+                            saveCliTeams(upsertTeam(cliTeams, updated));
+                            updateEvo(decideCandidate(evo, c.id, "ACCEPTED", "human:operator"));
+                            toast(`Candidate accepted: "${c.seatId}" instructions updated (v${(selectedTeam.revision ?? 1) + 1})`);
+                          }}
+                        >
+                          Accept
+                        </button>
+                        <button className="danger" onClick={() => { updateEvo(decideCandidate(evo, c.id, "REJECTED", "human:operator")); toast("Candidate rejected"); }}>
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </>
+            );
+          })()}
         </div>
       )}
 

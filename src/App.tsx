@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { detectHost, detectPlatform, downloadText, getWindowApi, pickJsonFile, type WindowApi } from "./app/desktop";
 import { fmtRemaining, shortId } from "./app/id";
 import { resolveShortcut } from "./app/shortcuts";
@@ -17,17 +17,21 @@ import { Inspector } from "./panels/Inspector";
 import { LibraryDrawer } from "./panels/LibraryDrawer";
 import { ShortcutsOverlay } from "./panels/ShortcutsOverlay";
 import { ToastHost, toast } from "./panels/Toast";
-import { BrowserPage } from "./pages/BrowserPage";
-import { EvolutionPage } from "./pages/EvolutionPage";
-import { ExecutionsPage } from "./pages/ExecutionsPage";
-import { HomePage } from "./pages/HomePage";
-import { McpHubPage } from "./pages/McpPage";
-import { MissionPage } from "./pages/MissionPage";
-import { ObservabilityPage } from "./pages/ObservabilityPage";
-import { ProvidersPage } from "./pages/ProvidersPage";
-import { SettingsPage } from "./pages/SettingsPage";
-import { TeamsPage } from "./pages/TeamsPage";
-import { V10Page } from "./pages/V10Page";
+// Routes are lazy-loaded. 11 pages × the mission layer made the app chunk exceed the 500 kB
+// Rollup advisory in 11.2; V10.1 already split the framework for the same reason. Splitting at
+// the route keeps the shell + canvas (the app's always-open core) fast while every tab's code
+// loads only when the tab opens — and the build stays warning-free.
+const HomePage = lazy(() => import("./pages/HomePage").then((m) => ({ default: m.HomePage })));
+const MissionPage = lazy(() => import("./pages/MissionPage").then((m) => ({ default: m.MissionPage })));
+const TeamsPage = lazy(() => import("./pages/TeamsPage").then((m) => ({ default: m.TeamsPage })));
+const V10Page = lazy(() => import("./pages/V10Page").then((m) => ({ default: m.V10Page })));
+const McpHubPage = lazy(() => import("./pages/McpPage").then((m) => ({ default: m.McpHubPage })));
+const BrowserPage = lazy(() => import("./pages/BrowserPage").then((m) => ({ default: m.BrowserPage })));
+const ProvidersPage = lazy(() => import("./pages/ProvidersPage").then((m) => ({ default: m.ProvidersPage })));
+const ExecutionsPage = lazy(() => import("./pages/ExecutionsPage").then((m) => ({ default: m.ExecutionsPage })));
+const ObservabilityPage = lazy(() => import("./pages/ObservabilityPage").then((m) => ({ default: m.ObservabilityPage })));
+const EvolutionPage = lazy(() => import("./pages/EvolutionPage").then((m) => ({ default: m.EvolutionPage })));
+const SettingsPage = lazy(() => import("./pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 import { ROLE_PACK_COUNT } from "./domain/rolePacks";
 import { FRAMEWORK_COUNT } from "./domain/frameworks";
 import { MJ_VERSION_SHORT } from "./version";
@@ -469,6 +473,7 @@ export function App() {
 
       <main className="main">
         <div className="stage">
+          <Suspense fallback={<div className="stage-fallback" style={{ color: "var(--text-mute, #6b6b6b)", fontFamily: "var(--font-mono, monospace)", fontSize: 12, letterSpacing: "0.08em", padding: 48 }}>LOADING — MJ</div>}>
           {page === "home" && (
             <HomePage workflows={workflows} onOpen={(id) => void openWorkflow(id)} onCreated={() => { void refreshWorkflows(); setPage("workflow"); }} />
           )}
@@ -512,6 +517,7 @@ export function App() {
           {page === "observability" && <ErrorBoundary label="observability"><ObservabilityPage /></ErrorBoundary>}
           {page === "evolution" && <ErrorBoundary label="evolution"><EvolutionPage /></ErrorBoundary>}
           {page === "settings" && <ErrorBoundary label="settings"><SettingsPage /></ErrorBoundary>}
+          </Suspense>
         </div>
       </main>
 

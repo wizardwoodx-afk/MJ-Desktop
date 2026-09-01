@@ -8,8 +8,10 @@
  * card structure, because jsdom has no layout engine and would report every offset as 0.
  */
 
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { NODE_W, bezier, nodeH, portPos, zoomAt, type NodeMetrics } from "../src/canvas/geometry";
-import { measurePort, portRegistry, registerPortAnchor } from "../src/canvas/ports";
+import { getMetricsVersion, measurePort, portRegistry, registerPortAnchor, subscribePortMetrics } from "../src/canvas/ports";
 import type { NodeInstance, PortDef } from "../src/domain/types";
 
 let pass = 0;
@@ -239,6 +241,28 @@ console.log("\n== the wire path itself ==\n");
   // A very short wire must not collapse either.
   const tiny = bezier({ x: 0, y: 0 }, { x: 10, y: 0 });
   ok(tiny.includes("C 60"), `a short wire keeps the minimum bow, got ${tiny}`);
+}
+
+console.log("\n== the Canvas component uses the fixes, not just the helpers ==\n");
+
+{
+  // V11.2 found bug Y's regression: geometry.ts shipped `zoomAt` in V8, but the Canvas wheel
+  // handler still PANNED on plain wheel (nodes moved up and down) and never imported it. The
+  // measured-anchor path (ports.ts) existed too and Canvas never called it. These source checks
+  // make that specific drift impossible to reintroduce.
+  const src = fs.readFileSync(path.join(process.cwd(), "src/canvas/Canvas.tsx"), "utf8");
+  ok(/import \{[\s\S]*?zoomAt[\s\S]*?\} from "\.\/geometry"/.test(src), "Canvas imports zoomAt from geometry.ts");
+  ok(/setViewport\(zoomAt\(vpNow, cursor, e\.deltaY, e\.deltaMode\)\)/.test(src), "plain wheel calls zoomAt — cursor-anchored zoom");
+  ok(!/setViewport\(\{ x: vpNow\.x - e\.deltaX, y: vpNow\.y - e\.deltaY \}\)/.test(src), "the old pan-on-plain-wheel branch is gone");
+  ok(/onWheelNative[\s\S]*?addEventListener\("wheel", onWheelNative, \{ passive: false \}\)/.test(src), "the wheel listener is native non-passive (preventDefault works)");
+  ok(/registerPortAnchor\(`\$\{node\.id\}:in:\$\{p\.id\}`/.test(src), "input anchors register with the measured registry (bug X)");
+  ok(/registerPortAnchor\(`\$\{node\.id\}:out:\$\{p\.id\}`/.test(src), "output anchors register with the measured registry");
+  ok(/geomPortPos\(sn, c\.sourcePortId, "out", metrics\)/.test(src), "wires are drawn from measured port geometry");
+  ok(/invalidatePortMetrics\(\)/.test(src), "DOM invalidation reaches the wire layer");
+  ok(/data-node-id=\{node\.id\}/.test(src), "cards expose data-node-id for measureCardHeight");
+  ok(/useSyncExternalStore\(subscribePortMetrics, getMetricsVersion\)/.test(src), "the wire layer re-renders when the DOM invalidates");
+  ok(/new ResizeObserver\(\(\) => invalidatePortMetrics\(\)\)/.test(src), "card reflow re-measures the wires");
+  ok(/onHoverPort\(/ .test(src), "the ghost wire snaps to a hovered valid input");
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

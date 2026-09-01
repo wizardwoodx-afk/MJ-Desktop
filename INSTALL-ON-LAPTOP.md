@@ -1,4 +1,4 @@
-# Install MJ 11.1 on your laptop (Windows 11) — the only supported install
+# Install MJ 11.2 on your laptop (Windows 11) — the only supported install
 
 This zip is **native desktop source**, not a website. MJ is a **Tauri v2** app: the UI is React,
 the engine is Rust, and everything real (SQLite, the keyring, agent processes, sandboxes) happens

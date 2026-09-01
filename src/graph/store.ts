@@ -13,14 +13,45 @@ interface HistoryEntry {
   label: string;
 }
 
+export type ThemeId = "inscribed" | "chalk" | "carbon" | "bone" | "indigo" | "sage";
+
+/** One list of themes, owned here. SettingsPage renders it; the theme probe cross-checks CSS. */
+export const THEME_IDS: ThemeId[] = ["inscribed", "chalk", "carbon", "bone", "indigo", "sage"];
+
 export interface EditorPrefs {
   snap: number;
   autosaveMs: number;
-  theme: "void" | "graphite" | "paper" | "nothing" | "nothing-light" | "monochrome" | "cyber-matrix" | "tokyo-night" | "terminal" | "nord" | "solar" | "hermes";
+  theme: ThemeId;
   showMinimap: boolean;
   showGrid: boolean;
   reducedMotion: boolean;
 }
+
+/**
+ * V11.2 — the theme set was replaced. Old saved preferences are migrated to the closest
+ * palette instead of being silently coerced to a default (that was the V10.1 bug: an
+ * unknown theme vanished without a trace). Every old name maps deliberately:
+ *   nothing/nothing-light            → inscribed/chalk   (the renamed family)
+ *   void/monochrome                  → inscribed         (minimal dark)
+ *   graphite/terminal                → carbon            (industrial dark)
+ *   paper/hermes                     → bone              (warm light)
+ *   tokyo-night/nord/cyber-matrix    → indigo            (blue dark)
+ *   solar                            → chalk             (light)
+ */
+const THEME_ALIASES: Record<string, ThemeId> = {
+  nothing: "inscribed",
+  "nothing-light": "chalk",
+  void: "inscribed",
+  monochrome: "inscribed",
+  graphite: "carbon",
+  terminal: "carbon",
+  paper: "bone",
+  hermes: "bone",
+  "tokyo-night": "indigo",
+  nord: "indigo",
+  "cyber-matrix": "indigo",
+  solar: "chalk",
+};
 
 const PREFS_KEY = "mj.editor.prefs";
 export function getEditorPrefs(): EditorPrefs {
@@ -28,10 +59,14 @@ export function getEditorPrefs(): EditorPrefs {
     const raw = localStorage.getItem(PREFS_KEY);
     if (raw) {
       const p = JSON.parse(raw) as Partial<EditorPrefs>;
+      const stored = typeof p.theme === "string" ? p.theme : "";
+      const theme: ThemeId = THEME_IDS.includes(stored as ThemeId)
+        ? (stored as ThemeId)
+        : THEME_ALIASES[stored] ?? "inscribed";
       return {
         snap: typeof p.snap === "number" && p.snap >= 0 ? p.snap : 16,
         autosaveMs: typeof p.autosaveMs === "number" && p.autosaveMs >= 0 ? p.autosaveMs : 1200,
-        theme: p.theme === "graphite" || p.theme === "paper" || p.theme === "nothing" || p.theme === "nothing-light" || p.theme === "monochrome" || p.theme === "cyber-matrix" || p.theme === "tokyo-night" || p.theme === "terminal" || p.theme === "nord" || p.theme === "solar" || p.theme === "hermes" ? p.theme : "void",
+        theme,
         showMinimap: p.showMinimap !== false,
         showGrid: p.showGrid !== false,
         reducedMotion: Boolean(p.reducedMotion),
@@ -40,7 +75,7 @@ export function getEditorPrefs(): EditorPrefs {
   } catch {
     /* ignore */
   }
-  return { snap: 16, autosaveMs: 1200, theme: "void", showMinimap: true, showGrid: true, reducedMotion: false };
+  return { snap: 16, autosaveMs: 1200, theme: "inscribed", showMinimap: true, showGrid: true, reducedMotion: false };
 }
 export function saveEditorPrefs(p: EditorPrefs): void {
   try {

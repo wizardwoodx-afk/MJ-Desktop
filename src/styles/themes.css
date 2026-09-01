@@ -1,0 +1,1257 @@
+/* =============================================================================
+   MJ 11.2 — INSCRIBED THEME SYSTEM
+   -----------------------------------------------------------------------------
+   The V10.1 "nothing" theme (Nothing OS: OLED black, #1B1B1D surfaces, signal red
+   #D71921, dot-matrix display type) is upgraded to the INSCRIBED family — the same
+   design language, sharpened in V11.2:
+
+     1. MONOCHROME IS THE CANVAS. The grey scale carries the hierarchy. One accent
+        colour per theme, and it means "look here now".
+     2. TYPE DOES THE HEAVY LIFTING. Space Grotesk for content, Space Mono for
+        labels and numbers, Doto for the one hero moment per screen. Labels are
+        ALL CAPS monospace — an instrument panel, not a website.
+     3. MECHANICAL HONESTY. No shadows, no blur, no gradients in chrome. Surfaces
+        are separated by a hairline border or by nothing at all. Controls look
+        like controls. Hover breaks the border, never lifts the element.
+     4. SUBTRACT. Spacing communicates grouping; a container is the last resort.
+
+   SIX PALETTES, ONE DESIGN SYSTEM
+     inscribed  — Nothing OS Inscribed: true OLED black, white data, signal red.
+     chalk      — the same system on paper: chalk white, black ink, signal red.
+     carbon     — industrial cool-grey dark, phosphor-green instrument light.
+     bone       — warm parchment light, sepia ink, terracotta accent.
+     indigo     — deep slate-indigo dark, ice-blue accent.
+     sage       — soft botanical light, forest-green accent.
+
+   All component rules below are shared through :is(), so a palette is ONLY a token
+   block — adding a theme means adding tokens, never copying rules. (Tauri's system
+   webviews — WebView2, WKWebView, WebKitGTK — all support :is().)
+
+   Anti-patterns deliberately avoided: shadows, backdrop blur, border-radius above
+   8px on cards, spring easing, gradients, zebra striping, filled icons, and toast
+   popups (MJ uses inline [STATUS] text instead).
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   SHARED DESIGN TOKENS — fonts, type scale, spacing, motion, shape.
+   Overridden per theme only where a palette actually differs.
+   --------------------------------------------------------------------------- */
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) {
+  --font-ui: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-mono: "Space Mono", "JetBrains Mono", ui-monospace, monospace;
+  --font-doto: "Doto", "JetBrains Mono", ui-monospace, monospace;
+
+  /* Shape: technical, never pill. */
+  --r-sm: 0px;
+  --r-md: 1px;
+  --r-lg: 2px;
+
+  /* Motion: percussive ease-out only, never spring. */
+  --t-fast: 90ms cubic-bezier(0.2, 0, 0, 1);
+  --t-med: 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ---------------------------------------------------------------------------
+   PALETTES — every token a component in this file or in mj.css reads.
+   --------------------------------------------------------------------------- */
+
+/* inscribed — Nothing OS Inscribed dark: an instrument panel in a dark room. */
+[data-theme="inscribed"] {
+  --bg: #000000;
+  --bg-elevated: #0d0d0d;
+  --bg-panel: #050505;
+  --bg-input: #0a0a0a;
+  --border: #1f1f1f;
+  --border-strong: #343434;
+  --text: #f1f1f1;
+  --text-dim: #9a9a9a;
+  --text-mute: #6b6b6b;
+  --text-4: #3d3d3d;
+  --amber: #d71921;
+  --amber-dim: rgba(215, 25, 33, 0.14);
+  --amber-hot: #ff2d36;
+  --danger: #ff2d36;
+  --danger-dim: rgba(255, 45, 54, 0.22);
+  --ok: #f1f1f1;
+  --nk-black: #000000;
+  --nk-surface: #0d0d0d;
+  --nk-surface-2: #141414;
+  --nk-surface-3: #1b1b1d;
+  --nk-input: #0a0a0a;
+  --nk-border: #343434;
+  --nk-border-strong: #4a4a4a;
+  --nk-hairline: #1f1f1f;
+  --white: #f1f1f1;
+  --text-1: #f1f1f1;
+  --text-2: #9a9a9a;
+  --text-3: #6b6b6b;
+  --red: #d71921;
+  --red-dim: rgba(215, 25, 33, 0.14);
+  --silver: #9a9a9a;
+  --silver-dim: rgba(154, 154, 154, 0.2);
+  --success: #f1f1f1;
+  --error: #ff2d36;
+  --row-hover: #151515;
+  --accent: #d71921;
+  --accent-hot: #ff2d36;
+  --accent-contrast: #ffffff;
+  --accent-dim: rgba(215, 25, 33, 0.14);
+  --dot-1: rgba(241, 241, 241, 0.05);
+  --dot-2: rgba(215, 25, 33, 0.1);
+  --wire: rgba(241, 241, 241, 0.32);
+  --wire-active: #d71921;
+  --wire-hot: #ff2d36;
+  --wire-done: rgba(241, 241, 241, 0.55);
+  --glyph-off: #1b1b1d;
+  --glyph-on: #d71921;
+  --menu-hover: #1b1b1d;
+  --seg-off: #1b1b1d;
+  --overlay: rgba(0, 0, 0, 0.82);
+  --sel-bg: #d71921;
+  --sel-fg: #ffffff;
+  --scroll-thumb: #2c2c2c;
+  --scroll-thumb-hover: #d71921;
+  --port-edge: #9a9a9a;
+  --inset: #1b1b1d;
+}
+
+/* chalk — the same system in light: a printed technical manual. */
+[data-theme="chalk"] {
+  --bg: #f5f5f5;
+  --bg-elevated: #ffffff;
+  --bg-panel: #fafafa;
+  --bg-input: #ffffff;
+  --border: #e8e8e8;
+  --border-strong: #cccccc;
+  --text: #1a1a1a;
+  --text-dim: #666666;
+  --text-mute: #999999;
+  --text-4: #b3b3b3;
+  --amber: #000000;
+  --amber-dim: rgba(0, 0, 0, 0.12);
+  --amber-hot: #d71921;
+  --danger: #d71921;
+  --danger-dim: rgba(215, 25, 33, 0.15);
+  --ok: #1a1a1a;
+  --nk-black: #f5f5f5;
+  --nk-surface: #ffffff;
+  --nk-surface-2: #f0f0f0;
+  --nk-surface-3: #e8e8e8;
+  --nk-input: #ffffff;
+  --nk-border: #cccccc;
+  --nk-border-strong: #b3b3b3;
+  --nk-hairline: #e8e8e8;
+  --white: #000000;
+  --text-1: #000000;
+  --text-2: #666666;
+  --text-3: #999999;
+  --red: #d71921;
+  --red-dim: rgba(215, 25, 33, 0.15);
+  --silver: #000000;
+  --silver-dim: rgba(0, 0, 0, 0.12);
+  --success: #1a1a1a;
+  --error: #d71921;
+  --row-hover: #f0f0f0;
+  --accent: #000000;
+  --accent-hot: #d71921;
+  --accent-contrast: #ffffff;
+  --accent-dim: rgba(0, 0, 0, 0.12);
+  --dot-1: rgba(26, 26, 26, 0.07);
+  --dot-2: rgba(215, 25, 33, 0.12);
+  --wire: rgba(26, 26, 26, 0.3);
+  --wire-active: #d71921;
+  --wire-hot: #d71921;
+  --wire-done: rgba(26, 26, 26, 0.5);
+  --glyph-off: #e0e0e0;
+  --glyph-on: #000000;
+  --menu-hover: #f0f0f0;
+  --seg-off: #e0e0e0;
+  --overlay: rgba(245, 245, 245, 0.82);
+  --sel-bg: #000000;
+  --sel-fg: #ffffff;
+  --scroll-thumb: #d0d0d0;
+  --scroll-thumb-hover: #b3b3b3;
+  --port-edge: #666666;
+  --inset: #e8e8e8;
+}
+
+/* carbon — industrial cool-grey dark, phosphor-green instrument light. */
+[data-theme="carbon"] {
+  --bg: #0c0d0f;
+  --bg-elevated: #14161a;
+  --bg-panel: #101216;
+  --bg-input: #131519;
+  --border: #23262c;
+  --border-strong: #383d46;
+  --text: #e6e9ee;
+  --text-dim: #9aa1ac;
+  --text-mute: #666d78;
+  --text-4: #3c424c;
+  --amber: #35d07f;
+  --amber-dim: rgba(53, 208, 127, 0.14);
+  --amber-hot: #5ce89b;
+  --danger: #ff5c57;
+  --danger-dim: rgba(255, 92, 87, 0.2);
+  --ok: #e6e9ee;
+  --nk-black: #0c0d0f;
+  --nk-surface: #14161a;
+  --nk-surface-2: #181b20;
+  --nk-surface-3: #1f242b;
+  --nk-input: #131519;
+  --nk-border: #383d46;
+  --nk-border-strong: #4a515d;
+  --nk-hairline: #23262c;
+  --white: #e6e9ee;
+  --text-1: #e6e9ee;
+  --text-2: #9aa1ac;
+  --text-3: #666d78;
+  --red: #ff5c57;
+  --red-dim: rgba(255, 92, 87, 0.2);
+  --silver: #9aa1ac;
+  --silver-dim: rgba(154, 161, 172, 0.2);
+  --success: #e6e9ee;
+  --error: #ff5c57;
+  --row-hover: #171a1f;
+  --accent: #35d07f;
+  --accent-hot: #5ce89b;
+  --accent-contrast: #06110b;
+  --accent-dim: rgba(53, 208, 127, 0.14);
+  --dot-1: rgba(230, 233, 238, 0.05);
+  --dot-2: rgba(53, 208, 127, 0.1);
+  --wire: rgba(230, 233, 238, 0.3);
+  --wire-active: #35d07f;
+  --wire-hot: #5ce89b;
+  --wire-done: rgba(230, 233, 238, 0.55);
+  --glyph-off: #1f242b;
+  --glyph-on: #35d07f;
+  --menu-hover: #1f242b;
+  --seg-off: #1f242b;
+  --overlay: rgba(6, 7, 9, 0.84);
+  --sel-bg: #35d07f;
+  --sel-fg: #06110b;
+  --scroll-thumb: #333944;
+  --scroll-thumb-hover: #35d07f;
+  --port-edge: #9aa1ac;
+  --inset: #1f242b;
+}
+
+/* bone — warm parchment light, sepia ink, terracotta accent. */
+[data-theme="bone"] {
+  --bg: #f2ede4;
+  --bg-elevated: #faf6ee;
+  --bg-panel: #f7f2e8;
+  --bg-input: #fdfaf3;
+  --border: #e0d7c6;
+  --border-strong: #c8bca6;
+  --text: #1c1712;
+  --text-dim: #5d5344;
+  --text-mute: #8d8272;
+  --text-4: #b6ab97;
+  --amber: #c05f3c;
+  --amber-dim: rgba(192, 95, 60, 0.15);
+  --amber-hot: #a84a28;
+  --danger: #b3372f;
+  --danger-dim: rgba(179, 55, 47, 0.16);
+  --ok: #1c1712;
+  --nk-black: #f2ede4;
+  --nk-surface: #faf6ee;
+  --nk-surface-2: #f0e9dc;
+  --nk-surface-3: #e5dcc9;
+  --nk-input: #fdfaf3;
+  --nk-border: #c8bca6;
+  --nk-border-strong: #ab9d82;
+  --nk-hairline: #e0d7c6;
+  --white: #1c1712;
+  --text-1: #1c1712;
+  --text-2: #5d5344;
+  --text-3: #8d8272;
+  --red: #b3372f;
+  --red-dim: rgba(179, 55, 47, 0.16);
+  --silver: #5d5344;
+  --silver-dim: rgba(93, 83, 68, 0.18);
+  --success: #1c1712;
+  --error: #b3372f;
+  --row-hover: #efe7d8;
+  --accent: #c05f3c;
+  --accent-hot: #a84a28;
+  --accent-contrast: #fdfaf3;
+  --accent-dim: rgba(192, 95, 60, 0.15);
+  --dot-1: rgba(28, 23, 18, 0.08);
+  --dot-2: rgba(192, 95, 60, 0.14);
+  --wire: rgba(28, 23, 18, 0.32);
+  --wire-active: #c05f3c;
+  --wire-hot: #a84a28;
+  --wire-done: rgba(28, 23, 18, 0.52);
+  --glyph-off: #e5dcc9;
+  --glyph-on: #1c1712;
+  --menu-hover: #efe7d8;
+  --seg-off: #e5dcc9;
+  --overlay: rgba(242, 237, 228, 0.84);
+  --sel-bg: #c05f3c;
+  --sel-fg: #fdfaf3;
+  --scroll-thumb: #d4c9b2;
+  --scroll-thumb-hover: #c05f3c;
+  --port-edge: #5d5344;
+  --inset: #e5dcc9;
+}
+
+/* indigo — deep slate-indigo dark, ice-blue accent. */
+[data-theme="indigo"] {
+  --bg: #0f1220;
+  --bg-elevated: #171b2e;
+  --bg-panel: #131728;
+  --bg-input: #161a2c;
+  --border: #262c44;
+  --border-strong: #3a4262;
+  --text: #dfe5f4;
+  --text-dim: #9aa5c4;
+  --text-mute: #646e8c;
+  --text-4: #3b435e;
+  --amber: #8ab4ff;
+  --amber-dim: rgba(138, 180, 255, 0.15);
+  --amber-hot: #b3d0ff;
+  --danger: #e0677c;
+  --danger-dim: rgba(224, 103, 124, 0.2);
+  --ok: #dfe5f4;
+  --nk-black: #0f1220;
+  --nk-surface: #171b2e;
+  --nk-surface-2: #1c2238;
+  --nk-surface-3: #242b47;
+  --nk-input: #161a2c;
+  --nk-border: #3a4262;
+  --nk-border-strong: #4d5a85;
+  --nk-hairline: #262c44;
+  --white: #dfe5f4;
+  --text-1: #dfe5f4;
+  --text-2: #9aa5c4;
+  --text-3: #646e8c;
+  --red: #e0677c;
+  --red-dim: rgba(224, 103, 124, 0.2);
+  --silver: #9aa5c4;
+  --silver-dim: rgba(154, 165, 196, 0.2);
+  --success: #dfe5f4;
+  --error: #e0677c;
+  --row-hover: #1a2036;
+  --accent: #8ab4ff;
+  --accent-hot: #b3d0ff;
+  --accent-contrast: #0b0e19;
+  --accent-dim: rgba(138, 180, 255, 0.15);
+  --dot-1: rgba(223, 229, 244, 0.05);
+  --dot-2: rgba(138, 180, 255, 0.11);
+  --wire: rgba(223, 229, 244, 0.3);
+  --wire-active: #8ab4ff;
+  --wire-hot: #b3d0ff;
+  --wire-done: rgba(223, 229, 244, 0.55);
+  --glyph-off: #242b47;
+  --glyph-on: #8ab4ff;
+  --menu-hover: #242b47;
+  --seg-off: #242b47;
+  --overlay: rgba(9, 11, 20, 0.84);
+  --sel-bg: #8ab4ff;
+  --sel-fg: #0b0e19;
+  --scroll-thumb: #323b5c;
+  --scroll-thumb-hover: #8ab4ff;
+  --port-edge: #9aa5c4;
+  --inset: #242b47;
+}
+
+/* sage — soft botanical light, forest-green accent. */
+[data-theme="sage"] {
+  --bg: #eef0ea;
+  --bg-elevated: #f7f8f4;
+  --bg-panel: #f3f5ef;
+  --bg-input: #fbfcf8;
+  --border: #dde1d4;
+  --border-strong: #c2cab8;
+  --text: #1f241e;
+  --text-dim: #5c665a;
+  --text-mute: #8a9486;
+  --text-4: #b8c0b3;
+  --amber: #3f6b52;
+  --amber-dim: rgba(63, 107, 82, 0.15);
+  --amber-hot: #2f5540;
+  --danger: #b34747;
+  --danger-dim: rgba(179, 71, 71, 0.16);
+  --ok: #1f241e;
+  --nk-black: #eef0ea;
+  --nk-surface: #f7f8f4;
+  --nk-surface-2: #eef1e9;
+  --nk-surface-3: #e2e7db;
+  --nk-input: #fbfcf8;
+  --nk-border: #c2cab8;
+  --nk-border-strong: #a8b39b;
+  --nk-hairline: #dde1d4;
+  --white: #1f241e;
+  --text-1: #1f241e;
+  --text-2: #5c665a;
+  --text-3: #8a9486;
+  --red: #b34747;
+  --red-dim: rgba(179, 71, 71, 0.16);
+  --silver: #5c665a;
+  --silver-dim: rgba(92, 102, 90, 0.18);
+  --success: #1f241e;
+  --error: #b34747;
+  --row-hover: #edf0e8;
+  --accent: #3f6b52;
+  --accent-hot: #2f5540;
+  --accent-contrast: #f3f5ef;
+  --accent-dim: rgba(63, 107, 82, 0.15);
+  --dot-1: rgba(31, 36, 30, 0.08);
+  --dot-2: rgba(63, 107, 82, 0.14);
+  --wire: rgba(31, 36, 30, 0.32);
+  --wire-active: #3f6b52;
+  --wire-hot: #2f5540;
+  --wire-done: rgba(31, 36, 30, 0.52);
+  --glyph-off: #e2e7db;
+  --glyph-on: #1f241e;
+  --menu-hover: #edf0e8;
+  --seg-off: #e2e7db;
+  --overlay: rgba(238, 240, 234, 0.84);
+  --sel-bg: #3f6b52;
+  --sel-fg: #f3f5ef;
+  --scroll-thumb: #d2d8c9;
+  --scroll-thumb-hover: #3f6b52;
+  --port-edge: #5c665a;
+  --inset: #e2e7db;
+}
+
+/* ---------------------------------------------------------------------------
+   SHARED COMPONENT RULES — one system, six palettes.
+   --------------------------------------------------------------------------- */
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) ::selection { background: var(--sel-bg); color: var(--sel-fg); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) ::-webkit-scrollbar-thumb { background: var(--scroll-thumb); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) ::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
+
+/* ── chrome ─────────────────────────────────────────────────────────────── */
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) button {
+  border-radius: var(--r-md);
+  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+}
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) button:hover { border-style: dashed; background: transparent; transform: none; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) button.primary:hover { background: var(--accent-hot); border-style: solid; border-color: var(--accent-hot); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) button.danger { color: var(--red); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) button:focus-visible { outline: 1px dashed var(--accent); outline-offset: 2px; }
+
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .titlebar .logo i { color: var(--accent); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .titlebar .host-pill,
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .statusbar,
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .tabstrip .tab {
+  font-family: var(--font-doto);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+}
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .tabstrip .tab.active { font-weight: 700; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .kbd { font-family: var(--font-doto); letter-spacing: 0.1em; border-radius: var(--r-md); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .titlebar .win-btns button:hover { background: var(--inset); border-style: solid; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .titlebar .win-btns .close:hover { background: var(--red); color: var(--sel-fg); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .traffic span { border-radius: var(--r-md); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .traffic .m { background: var(--accent); }
+
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .menubar .menu-item:hover,
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .menubar .menu-item.open { background: var(--menu-hover); box-shadow: inset 0 -2px 0 var(--accent); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .menu-fly button:hover { background: var(--menu-hover); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .menu-fly { border-radius: 0; }
+
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .tabstrip .tab.active { box-shadow: inset 0 2px 0 var(--accent); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .tabstrip .tab .x:hover { color: var(--accent-hot); }
+
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .rail button.active { background: var(--menu-hover); box-shadow: inset 2px 0 0 var(--accent); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .rail button:hover { background: var(--row-hover); }
+
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .statusbar .live { color: var(--accent); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .statusbar .live::before { background: var(--accent); border-radius: var(--r-md); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .statusbar .err { color: var(--red); }
+
+/* ── glyph interface: segmented ETA module reads like instrument LED strips ─ */
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .eta-seg { background: var(--seg-off); border-radius: 0; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .eta-seg.on { background: var(--accent); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .eta-seg.hot { background: var(--red); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .eta-readout { color: var(--text); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* ── canvas ─────────────────────────────────────────────────────────────── */
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .canvas-grid {
+  background-image:
+    radial-gradient(circle, var(--dot-1) 1px, transparent 1px),
+    radial-gradient(circle, var(--dot-2) 1px, transparent 1.5px);
+  background-size: 20px 20px, 100px 100px;
+}
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .wire { stroke: var(--wire); stroke-dasharray: 2 4; filter: none; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .wire.active { stroke: var(--wire-active) !important; stroke-dasharray: 9 8; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .wire.streaming { stroke: var(--wire-hot); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .wire.completed { stroke: var(--wire-done); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .wire.error { stroke: var(--red); }
+
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .node-card { border-radius: var(--r-lg); box-shadow: none !important; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .node-card:hover { border-color: var(--border-strong); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .node-card.selected { border-color: var(--accent); outline: 1px dashed var(--accent); outline-offset: 2px; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .node-card.agent .head .icon { color: var(--text); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .node-card .head { border-bottom: 1px solid var(--border); padding-bottom: 7px; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .node-card .title { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* The glyph light: a dot that turns accent when the node is alive. */
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .glyph-light { border-radius: var(--r-md); background: var(--glyph-off); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .glyph-light.on { background: var(--glyph-on); box-shadow: 0 0 6px var(--accent-dim); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .glyph-light.err { background: var(--red); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .glyph-light.done { background: var(--text); }
+
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .port-anchor { border-radius: 50%; border-color: var(--port-edge); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .port-anchor:hover,
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .port-anchor.valid-target { border-color: var(--accent-hot); background: var(--accent); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .port-anchor.filled { background: var(--accent); border-color: var(--accent); }
+
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .sticky-note { border-left: 3px dotted var(--accent); background: var(--accent-dim); border-radius: 0; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .marquee-rect { border: 1px dashed var(--accent); background: var(--accent-dim); border-radius: 0; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .canvas-toolbar { border-radius: 0; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .minimap { border-radius: 0; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .canvas-empty { background-image: radial-gradient(circle, var(--dot-1) 1px, transparent 1px); background-size: 16px 16px; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .canvas-empty .ce-mark { color: var(--inset); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .canvas-empty .ce-title { font-family: var(--font-doto); letter-spacing: 0.1em; }
+
+/* ── panels & pages ─────────────────────────────────────────────────────── */
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .card,
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .modal .card { border-radius: 0; box-shadow: none !important; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .modal { border-radius: 0; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .modal-overlay,
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .palette-overlay { background: var(--overlay); backdrop-filter: none; -webkit-backdrop-filter: none; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .library-drawer { border-radius: 0; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .lib-item:hover { background: var(--row-hover); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .inspector-head { background: var(--bg-panel); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .palette { border-radius: 0; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .palette input { font-family: var(--font-doto); letter-spacing: 0.04em; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .palette .result { border-radius: 0; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .palette .result:hover,
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .palette .result.hot { background: var(--menu-hover); box-shadow: inset 2px 0 0 var(--accent); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .toast { border-radius: 0; border-left: 3px solid var(--accent); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .toast.err { border-left-color: var(--red); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .assistant-panel { border-radius: 0; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .ctx-menu { border-radius: 0; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .stat { border-radius: 0; }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .stat .n { color: var(--accent); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .home-hero h1 span { color: var(--accent); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .pill { border-radius: var(--r-md); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .pill.ok { color: var(--text); border-color: var(--border-strong); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .pill.err { color: var(--red); border-color: var(--red-dim); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .gantt-bar { border-radius: 0; background: var(--accent); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .diff-add { color: var(--text); }
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .diff-del { color: var(--red); }
+
+/* ── typography: labels are instrument markings, not sentences ───────────── */
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .card-title,
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .ev-kind,
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .lib-cat,
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .eta-readout {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .stat,
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) .canvas-empty .ce-mark {
+  font-family: var(--font-doto);
+  font-size: 40px;
+  letter-spacing: -0.02em;
+  font-variation-settings: "ROND" 0, "WONK" 1;
+}
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) h1,
+:is(
+  [data-theme="inscribed"],
+  [data-theme="chalk"],
+  [data-theme="carbon"],
+  [data-theme="bone"],
+  [data-theme="indigo"],
+  [data-theme="sage"]
+) h2 {
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+/* ── reduced motion, honoured ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  :is(
+    [data-theme="inscribed"],
+    [data-theme="chalk"],
+    [data-theme="carbon"],
+    [data-theme="bone"],
+    [data-theme="indigo"],
+    [data-theme="sage"]
+  ) * {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+}
