@@ -83,6 +83,24 @@ export function SettingsPage() {
         <div className="card-title">Runtime</div>
         <pre className="mono" style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(info, null, 2)}</pre>
       </div>
+
+      <div className="card" style={{ borderLeft: "3px solid var(--amber)" }}>
+        <div className="card-title">License &amp; Copyright</div>
+        <div className="muted" style={{ fontSize: 12, lineHeight: 1.6 }}>
+          MJ Desktop v{MJ_VERSION} — Copyright © 2024-2026 Sree Harshen / MJ Project. All rights reserved.
+          <br /><br />
+          This software is <strong>proprietary</strong> and protected by copyright, trademark, and trade secret laws. No license is granted to copy, modify, redistribute, or use this software for commercial purposes or AI/ML training without express written permission from the Owner.
+          <br /><br />
+          See the <span className="mono">LICENSE</span> file in the repository for full terms. Unauthorized use is strictly prohibited and may be subject to legal action.
+        </div>
+        <div className="row" style={{ marginTop: 10 }}>
+          <button onClick={() => {
+            const licenseText = `MJ Desktop v${MJ_VERSION}\nCopyright (c) 2024-2026 Sree Harshen / MJ Project. All Rights Reserved.\n\nThis software is PROPRIETARY. No license is granted to copy, modify, redistribute, or use for commercial purposes or AI/ML training without express written permission. See LICENSE file for full terms.`;
+            navigator.clipboard?.writeText(licenseText);
+            toast("License notice copied to clipboard");
+          }}>Copy License Notice</button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -84,3 +84,17 @@ cd /tmp/gitcompile && cargo test   # the shipped git.rs
 npm run tauri dev        # dev window
 npm run tauri:build      # nsis / dmg / appimage / deb
 ```
+
+---
+
+## License & Copyright
+
+MJ Desktop v11.2.0 — Copyright © 2024-2026 Sree Harshen / MJ Project. All Rights Reserved.
+
+This software is **PROPRIETARY** and protected by copyright, trademark, and trade secret laws. **No license is granted** to copy, modify, redistribute, sublicense, sell, or use this software for commercial purposes or for AI/ML training without express written permission from the Owner.
+
+**STRICTLY PROHIBITED:** copying the source code, creating derivative works, using the software to train or fine-tune any AI/ML/LLM system, scraping the code for any ML pipeline, or claiming authorship.
+
+The source code is made visible on GitHub solely for the Author's review, demonstration to evaluators/interviewers, and portfolio purposes. Visibility ≠ license.
+
+See the [LICENSE](LICENSE) file for full terms. Unauthorized use is strictly prohibited and will be enforced to the fullest extent of the law.
