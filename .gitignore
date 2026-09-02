@@ -67,3 +67,7 @@ a2a-out.txt
 screen*.png
 crop_*.png
 filelist.txt  
+
+# Python bytecode (evolution-service runs local; never ship caches)
+__pycache__/
+*.pyc

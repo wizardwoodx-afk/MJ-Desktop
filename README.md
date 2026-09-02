@@ -32,6 +32,10 @@ the OS keychain. Hermes skills are `SKILL.md`. Official MCP servers run over **s
 cd mj && npm ci
 ./node_modules/.bin/tsc --noEmit                    # exit 0
 
+# V11.4.1: the official test command — esbuild's JS API, no shell, no bin resolution,
+# identical on linux / macOS / windows. This is the line CI runs too.
+npm test                                            # 37 suites, 0 failed
+
 for f in versionDrift acceptance harnessPolicy checkRunner realExecution engine replayEvals reviewVisibility theme; do
   ./node_modules/.bin/esbuild probe/$f.test.ts --bundle --platform=node --format=esm \
     --define:MJ_ROOT='"'$(pwd)'"' --outfile=/tmp/$f.mjs --log-level=error && node /tmp/$f.mjs
@@ -48,7 +52,7 @@ done
 ./node_modules/.bin/vite build                      # exit 0
 ```
 
-**Last run against this tree (V11.4):** `tsc --noEmit` exit 0; `vite build` exit 0; all 37 probe suites passing (teamEvolution now 45 assertions). Recorded by the release session itself on a Linux x64 sandbox (Node 22, fresh `npm ci`) — a record, not a third-party certification. Rust untouched this pass — no cargo toolchain on that machine; CI still runs `cargo check` on all three OSes.
+**Last run against this tree (V11.4.1):** `tsc --noEmit` exit 0; `npm test` 37/37 (teamEvolution 45 assertions); `vite build` exit 0 — on a fresh `npm ci`, Linux x64 sandbox, Node 22. Recorded by the release session itself — a record, not a third-party certification. Rust and GitHub CI end-to-end remain unverified on that machine (no cargo toolchain); CI's Probes step runs the same `npm test`.
 
 The Rust side is tested too, because the parsers are plain `std` and `include!`d into the Tauri file —
 so the code that ships is the code that was compiled:
@@ -91,7 +95,7 @@ npm run tauri:build      # nsis / dmg / appimage / deb
 
 ## License & Copyright
 
-MJ Desktop v11.4.0 — Copyright © 2024-2026 Sree Harshen / MJ Project. All Rights Reserved.
+MJ Desktop v11.4.1 — Copyright © 2024-2026 Sree Harshen / MJ Project. All Rights Reserved.
 
 This software is **PROPRIETARY** and protected by copyright, trademark, and trade secret laws. **No license is granted** to copy, modify, redistribute, sublicense, sell, or use this software for commercial purposes or for AI/ML training without express written permission from the Owner.
 

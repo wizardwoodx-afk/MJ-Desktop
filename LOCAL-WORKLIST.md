@@ -198,3 +198,18 @@ mj/
   V11.3 dot system (mechanical checkboxes, range thumbs, pill dots) is CSS-verified and
   build-verified only. Open Settings → Appearance on each platform once and confirm the
   toggle travel and dot rendering.
+
+## V11.4.1 addendum — release-layer debt, logged
+
+- **Updater**: placeholder endpoint/pubkey REMOVED from tauri.conf.json (inert plugin left
+  registered). To re-enable: `npm run tauri signer generate -w ~/.tauri/mj.key`, set the CI
+  secrets, put the pubkey + real endpoint back into tauri.conf.json, flip
+  `createUpdaterArtifacts` to true. Until then the app ships without an updater — honest
+  absence beats a placeholder that lies.
+- **Security hardening backlog** (flagged in review, not touched this pass): the Tauri
+  command surface (filesystem/shell scope) is broader than a least-privilege audit would
+  keep; `engine/expression.ts` uses `new Function` and should move to a real parser. Both
+  need design work + tests, not a rushed patch.
+- **CI Rust steps**: cargo test / clippy were never runnable on the V11.4.x release machine.
+  If CI is still red after the Probes fix, read the Rust step logs first.
+- **History**: stop force-pushing. Reviewers cannot trust a rewritten past; commit forward.
