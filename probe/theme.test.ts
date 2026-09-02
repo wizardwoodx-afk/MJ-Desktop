@@ -7,8 +7,10 @@
  * painted default-theme amber in every theme), hover rows were literal #1a1a1a (invisible in
  * paper), and adding a theme meant touching three files that nothing forced to agree.
  *
- * V11.2 rewritten for the INSCRIBED theme system: one design system, six palettes, old theme
- * set removed. The probe now enforces:
+ * V11.2 rewritten for the INSCRIBED theme system: one design system, old theme set removed
+ * (six palettes at V11.2, nine since V11.4 — the count is pinned to whatever SettingsPage
+ * advertises, so adding a palette means updating this probe deliberately, never silently).
+ * The probe now enforces:
  *   1. every theme advertised in Settings exists as a CSS token block, and vice versa;
  *   2. the editor-prefs whitelist (THEME_IDS) accepts exactly the advertised set — and old
  *      names are migrated, not silently coerced to a default (an unknown theme used to just
@@ -71,8 +73,8 @@ const row = settings.match(/\(\[([^\]]+)\] as const\)/);
 ok("SettingsPage declares its theme row as a const array", row !== null, "the ([..] as const) pattern was not found");
 const THEMES = row
   ? (row[1].split(",").map((t) => t.trim().replace(/^"|"$/g, "")) as string[])
-  : ["inscribed", "chalk", "carbon", "bone", "indigo", "sage"];
-ok(`the advertised set is the six-palette INSCRIBED set (${THEMES.length} themes)`, THEMES.length === 6, THEMES.join(","));
+  : ["inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain"];
+ok(`the advertised set is the nine-palette INSCRIBED set (${THEMES.length} themes)`, THEMES.length === 9, THEMES.join(","));
 ok(`themes.css has the expected token block count (got ${THEMES.filter((t) => !themesCss.includes(`[data-theme="${t}"]`)).length} missing)`,
   THEMES.every((t) => themesCss.includes(`[data-theme="${t}"]`)),
   THEMES.filter((t) => !themesCss.includes(`[data-theme="${t}"]`)).join(", ") || "all present");
@@ -98,7 +100,7 @@ section("1. the INSCRIBED design tokens are real");
 ok("inscribed carries the true OLED black canvas", /\[data-theme="inscribed"\]\s*\{[\s\S]*?--bg: #000000/.test(themesCss), "missing #000000 background");
 ok("the #1B1B1D Nothing surface gray survives", themesCss.includes("#1b1b1d"), "missing #1B1B1D");
 ok("signal red #D71921 accent", /#d71921/i.test(themesCss), "missing #D71921");
-ok("all six palettes define an accent signal (--accent)", (themesCss.match(/--accent: /g) ?? []).length >= 6, `got ${(themesCss.match(/--accent: /g) ?? []).length}`);
+ok("all palettes define an accent signal (--accent)", (themesCss.match(/--accent: /g) ?? []).length >= 9, `got ${(themesCss.match(/--accent: /g) ?? []).length}`);
 ok("dot-matrix display font is wired via --font-doto", /--font-doto: "Doto"/.test(themesCss), "--font-doto never names Doto");
 ok("display surfaces read --font-doto (titlebar wordmark)", /\.titlebar \.logo \{\n  font-family: var\(--font-doto\)/.test(css), "titlebar wordmark not on --font-doto");
 ok("themes.css is imported by mj.css", /@import "\.\/themes\.css";/.test(css), "missing import");

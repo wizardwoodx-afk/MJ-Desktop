@@ -23,6 +23,7 @@ import { AGENT_CAPABILITIES } from "../mission/agentCapabilities";
 import { planWorktrees, type WorktreePlan } from "../mission/collaboration";
 import { CapLedger } from "../mission/caps";
 import { executeTeam, type SeatRecord, type TeamRunReport, type TeamRunnerDeps } from "../mission/teamExecutor";
+import { getHarness } from "../mission/harnessAdapters";
 import {
   applyTeamFeedback,
   decideCandidate,
@@ -136,6 +137,9 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
   const [runnerTestCmd, setRunnerTestCmd] = useState("npm test");
   const [runnerRunning, setRunnerRunning] = useState(false);
   const [runnerResult, setRunnerResult] = useState<TeamRunReport | null>(null);
+  /* V11.4 — the runId the evolution fold used, so operator feedback correlates with the
+   * same run in the ledger instead of a synthetic `run-<startedAt>` that matches nothing. */
+  const [runnerRunId, setRunnerRunId] = useState<string | null>(null);
   /* V11.2 — team self-evolution & feedback loop state. */
   const [evo, setEvo] = useState<TeamEvoStore>(() => loadTeamEvoStore());
   const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
@@ -513,6 +517,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
     if (!selectedTeam) return;
     setRunnerRunning(true);
     setRunnerResult(null);
+    setRunnerRunId(null);
 
     const isNative = useTauri();
     const ledger = new CapLedger({ maxCostUsd: selectedTeam.budgetUsd ?? 20.0 });
@@ -638,10 +643,14 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
         deps,
       );
       setRunnerResult(res);
+      setRunnerRunId(runId);
       toast(`Mission finished: ${res.status.toUpperCase()}`);
       // V11.2 — fold the run into the team's self-evolution ledger. Every seat's measured
       // facts (ran / verified / cost / latency) become signal; AUTONOMOUS teams apply
       // candidates that pass every gate; SUGGEST teams queue them for the Evolution tab.
+      // V11.4 fix — `simulated` is now passed through: a seat on the labelled local-test
+      // double is recorded as simulated, so it can never count as a realRun and never alone
+      // justify a candidate (honesty rule #2 in teamEvolution.ts).
       try {
         const signals = signalsFromSeatRecords({
           runId,
@@ -656,6 +665,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
             chargedUsd: s.chargedUsd,
             durationMs: s.durationMs,
             verified: s.verified,
+            simulated: getHarness(s.harness)?.simulated ?? false,
           })),
         });
         let store = loadTeamEvoStore();
@@ -1832,7 +1842,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
                       store = applyTeamFeedback(store, {
                         teamId: selectedTeam.id,
                         seatId: s.seatId,
-                        runId: `run-${runnerResult.startedAt}`,
+                        runId: runnerRunId ?? `run-${runnerResult.startedAt}`,
                         rating: feedbackRating,
                         comment: feedbackComment,
                       });

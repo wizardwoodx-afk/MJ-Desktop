@@ -472,7 +472,10 @@ export function App() {
       </aside>
 
       <main className="main">
-        <div className="stage">
+        {/* V11.4 — keying the stage on the page re-mounts it on every view switch, which
+            replays the 180ms mj-view-in fade (see mj.css). Pages already mount lazily, so
+            this adds the transition without changing what loads. */}
+        <div className="stage" key={page}>
           <Suspense fallback={<div className="stage-fallback" style={{ color: "var(--text-mute, #6b6b6b)", fontFamily: "var(--font-mono, monospace)", fontSize: 12, letterSpacing: "0.08em", padding: 48 }}>LOADING — MJ</div>}>
           {page === "home" && (
             <HomePage workflows={workflows} onOpen={(id) => void openWorkflow(id)} onCreated={() => { void refreshWorkflows(); setPage("workflow"); }} />

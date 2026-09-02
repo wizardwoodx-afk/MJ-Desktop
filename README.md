@@ -1,4 +1,4 @@
-# MJ 11.3 — agent organization runtime
+# MJ 11.4 — agent organization runtime
 
 Product name **MJ**. A **Tauri v2** desktop app.
 
@@ -15,6 +15,7 @@ the OS keychain. Hermes skills are `SKILL.md`. Official MCP servers run over **s
 
 | Document | What it covers |
 |---|---|
+| **`MJ-11.4-UPGRADE.md`** | What V11.4 adds: the Teams loop audit (two real feedback-loop bugs fixed, probe grown to 45 assertions), the signal diet (red → interrupt-only), three new palettes (hazard · orchid · porcelain), theme/view/lamp animations, version-string cleanup |
 | **`MJ-11.3-UPGRADE.md`** | What V11.3 adds: the Inscription pass — failing probe fixed, base CSS de-ambered onto tokens, fonts really declared, the dot system, mechanical motion |
 | **`DESKTOP-NATIVE.md`** | Native install per OS, toolchain, and the risk → sandbox mapping for each coding CLI |
 | **`LOCAL-WORKLIST.md`** | Ordered checklist for a local Claude Code / OpenCode session: what to run, what is verified, what needs your machine |
@@ -47,7 +48,7 @@ done
 ./node_modules/.bin/vite build                      # exit 0
 ```
 
-**Last run against this tree (V11.3):** `tsc --noEmit` exit 0; `vite build` exit 0; all 37 probe suites passing (Linux x64 sandbox, Node 22, fresh `npm ci`). Rust untouched this pass — no cargo toolchain on that machine; CI still runs `cargo check` on all three OSes.
+**Last run against this tree (V11.4):** `tsc --noEmit` exit 0; `vite build` exit 0; all 37 probe suites passing (teamEvolution now 45 assertions). Recorded by the release session itself on a Linux x64 sandbox (Node 22, fresh `npm ci`) — a record, not a third-party certification. Rust untouched this pass — no cargo toolchain on that machine; CI still runs `cargo check` on all three OSes.
 
 The Rust side is tested too, because the parsers are plain `std` and `include!`d into the Tauri file —
 so the code that ships is the code that was compiled:
@@ -90,7 +91,7 @@ npm run tauri:build      # nsis / dmg / appimage / deb
 
 ## License & Copyright
 
-MJ Desktop v11.2.0 — Copyright © 2024-2026 Sree Harshen / MJ Project. All Rights Reserved.
+MJ Desktop v11.4.0 — Copyright © 2024-2026 Sree Harshen / MJ Project. All Rights Reserved.
 
 This software is **PROPRIETARY** and protected by copyright, trademark, and trade secret laws. **No license is granted** to copy, modify, redistribute, sublicense, sell, or use this software for commercial purposes or for AI/ML training without express written permission from the Owner.
 

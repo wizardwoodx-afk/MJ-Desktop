@@ -599,3 +599,57 @@ button:active { border-color: var(--amber); }
   animation: mj-enter-fade 0.2s cubic-bezier(0.2, 0, 0, 1) both;
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════
+   V11.4 — MODE & VIEW TRANSITIONS (the animation pass)
+   Mechanical motion only: opacity and colour steps on the system ease-out.
+   No scale, no slide, no spring — the Inscribed rules still hold. Three
+   surfaces animate:
+     1. THEME SWITCH — `.theme-xing` rides on <html> for ~260ms while the
+        palette changes, so every surface cross-fades to the new tokens
+        instead of snapping.
+     2. VIEW SWITCH — the stage re-keys on page change (App.tsx) and fades
+        in over 180ms.
+     3. INSTRUMENT LAMPS — the live dot and on-glyphs breathe at 1.8s; the
+        ETA segments take their colour with a fast step. A desk of quiet
+        lamps, not a disco.
+   ══════════════════════════════════════════════════════════════════════════ */
+@keyframes mj-view-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.stage { animation: mj-view-in 180ms cubic-bezier(0.2, 0, 0, 1) both; }
+
+.theme-xing,
+.theme-xing *,
+.theme-xing *::before,
+.theme-xing *::after {
+  transition: background-color 140ms cubic-bezier(0.2, 0, 0, 1),
+              color 140ms cubic-bezier(0.2, 0, 0, 1),
+              border-color 140ms cubic-bezier(0.2, 0, 0, 1),
+              fill 140ms cubic-bezier(0.2, 0, 0, 1),
+              stroke 140ms cubic-bezier(0.2, 0, 0, 1),
+              outline-color 140ms cubic-bezier(0.2, 0, 0, 1),
+              box-shadow 140ms cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+@keyframes mj-lamp {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.statusbar .live::before { animation: mj-lamp 1.8s cubic-bezier(0.2, 0, 0, 1) infinite; }
+.glyph-light.on { animation: mj-lamp 1.8s cubic-bezier(0.2, 0, 0, 1) infinite; }
+.eta-seg { transition: background-color 90ms cubic-bezier(0.2, 0, 0, 1); }
+
+/* reduced motion wins over everything above — instant steps, no breathing */
+@media (prefers-reduced-motion: reduce) {
+  .theme-xing,
+  .theme-xing *,
+  .theme-xing *::before,
+  .theme-xing *::after {
+    transition-duration: 1ms !important;
+  }
+  .stage { animation: none !important; }
+  .statusbar .live::before,
+  .glyph-light.on { animation: none !important; }
+}

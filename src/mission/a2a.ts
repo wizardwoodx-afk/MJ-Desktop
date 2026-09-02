@@ -20,6 +20,7 @@
  * point refuses when it is off — loudly, per the honesty rule.
  */
 
+import { MJ_VERSION } from "../version";
 export interface AgentCard {
   name: string;
   description: string;
@@ -118,7 +119,7 @@ export function agentCardForMission(mission: { id: string; title: string; descri
     name: `MJ Mission: ${mission.title}`,
     description: mission.description,
     url: "http://localhost/local-mj",
-    version: "11.0.0",
+    version: MJ_VERSION,
     protocolVersion: "0.3",
     capabilities: { streaming: false, pushNotifications: false },
     defaultInputModes: ["text/plain", "application/json"],

@@ -13,10 +13,10 @@ interface HistoryEntry {
   label: string;
 }
 
-export type ThemeId = "inscribed" | "chalk" | "carbon" | "bone" | "indigo" | "sage";
+export type ThemeId = "inscribed" | "chalk" | "carbon" | "bone" | "indigo" | "sage" | "hazard" | "orchid" | "porcelain";
 
 /** One list of themes, owned here. SettingsPage renders it; the theme probe cross-checks CSS. */
-export const THEME_IDS: ThemeId[] = ["inscribed", "chalk", "carbon", "bone", "indigo", "sage"];
+export const THEME_IDS: ThemeId[] = ["inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain"];
 
 export interface EditorPrefs {
   snap: number;

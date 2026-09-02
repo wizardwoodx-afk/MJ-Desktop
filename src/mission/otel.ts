@@ -21,6 +21,7 @@
  */
 
 import type { FlightEvent } from "./types";
+import { MJ_VERSION } from "../version";
 
 export interface OtlpAttr {
   key: string;
@@ -182,13 +183,13 @@ export function flightToOtlp(events: FlightEvent[], opts: { serviceVersion?: str
         resource: {
           attributes: [
             attr("service.name", "mj"),
-            attr("service.version", opts.serviceVersion ?? "11.0.0"),
+            attr("service.version", opts.serviceVersion ?? MJ_VERSION),
             attr("gen_ai.conventions.status", "development"),
           ],
         },
         scopeSpans: [
           {
-            scope: { name: "mj.flight-recorder", version: "11.0.0" },
+            scope: { name: "mj.flight-recorder", version: MJ_VERSION },
             spans: [root, ...children],
           },
         ],

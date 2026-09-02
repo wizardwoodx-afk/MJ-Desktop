@@ -232,6 +232,39 @@ console.log("\n== 10. config sanity ==\n");
   ok(TEAM_EVO_CONFIG.maxGrowth <= 0.25, "a candidate cannot grow the seat text more than 25%");
 }
 
+console.log("\n== 11. V11.4 — queued praise suppresses, it never becomes failure evidence ==\n");
+{
+  // The UI path queues feedback via applyTeamFeedback (run signals always carry rating: null).
+  // Before V11.4 a queued 5/5 became weight-2 *failure* evidence — the opposite of the
+  // documented rule and of the promise the Teams page shows next to the 4/5 buttons.
+  let store = emptyStore();
+  // three loud real failures — enough runs and evidence that a candidate WOULD be due
+  store = evolveTeamAfterRun({ store, team: team(), signal: sig({ ok: false, exitCode: 1 }), actor: "probe", nowIso: NOW }).store;
+  store = evolveTeamAfterRun({ store, team: team(), signal: sig({ ok: false, exitCode: 1 }), actor: "probe", nowIso: NOW }).store;
+  store = applyTeamFeedback(store, { teamId: "team.test", seatId: "coder", runId: "r-praise", rating: 5, comment: "flawless work", nowIso: NOW });
+  ok(store.byTeam["team.test"].seats["coder"].pendingFeedback.length === 1, "praise queues like any feedback");
+  const r4 = evolveTeamAfterRun({ store, team: team(), signal: sig({ ok: false, exitCode: 1 }), actor: "probe", nowIso: NOW });
+  store = r4.store;
+  const seat = store.byTeam["team.test"].seats["coder"];
+  ok(store.candidates.length === 0, "praise suppresses the candidate even when evidence is otherwise due", `${store.candidates.length}`);
+  ok(seat.praiseSuppression === TEAM_EVO_CONFIG.praiseSuppressRuns, "suppression armed for N runs", `${seat.praiseSuppression}`);
+  ok(!seat.evidence.some((e) => /flawless/.test(e.text)), "the praise comment never becomes evidence");
+  ok(!seat.evidence.some((e) => e.kind === "feedback"), "queued praise contributes no evidence weight at all");
+  // suppression only delays: keep failing past the window and the candidate appears
+  let guard = 0;
+  while (store.candidates.length === 0 && guard++ < 12) {
+    store = evolveTeamAfterRun({ store, team: team(), signal: sig({ ok: false, exitCode: 1 }), actor: "probe", nowIso: NOW }).store;
+  }
+  ok(store.candidates.length === 1, "suppression ends — real failures still produce the candidate", `${store.candidates.length}`);
+  // neutral 3/5: recorded verbatim, but neither evidence nor suppression
+  let s3 = emptyStore();
+  s3 = evolveTeamAfterRun({ store: s3, team: team(), signal: sig({ ok: true, verified: true }), actor: "probe", nowIso: NOW }).store;
+  s3 = applyTeamFeedback(s3, { teamId: "team.test", seatId: "coder", runId: "r-neutral", rating: 3, comment: "fine, nothing to change", nowIso: NOW });
+  const nseat = evolveTeamAfterRun({ store: s3, team: team(), signal: sig({ ok: true, verified: true }), actor: "probe", nowIso: NOW }).store.byTeam["team.test"].seats["coder"];
+  ok(!nseat.evidence.some((e) => e.kind === "feedback"), "a neutral 3/5 is not weighted as evidence");
+  ok(nseat.praiseSuppression === 0, "a neutral 3/5 does not arm suppression", `${nseat.praiseSuppression}`);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) {
   console.log("\nfailures:");

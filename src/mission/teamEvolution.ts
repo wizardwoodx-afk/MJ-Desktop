@@ -383,24 +383,42 @@ export function evolveTeamAfterRun(args: {
   // Evidence ACCUMULATES across runs — a ledger of every failure mode this seat has shown, not a
   // snapshot of the last one. Capped so a long-lived seat cannot grow an unbounded history; the
   // newest signals win. Pending human feedback joins the accumulated evidence below.
+  //
+  // V11.4 fix: the UI path queues feedback here because run signals never carry a rating
+  // (signalsFromSeatRecords sets rating: null). Praise (rating ≥4) queued that way used to
+  // become weight-2 *failure* evidence — the exact opposite of the documented rule and of the
+  // promise the Teams page shows ("praise suppresses new candidates for the next 3 runs").
+  // Now: rating ≤2 is evidence, rating 3 is neutral (recorded, not weighted), rating ≥4
+  // arms praiseSuppression for N runs — identical to a rating carried by a run signal.
   const pendingFeedback = seatEvo.pendingFeedback ?? [];
+  const praiseQueued = pendingFeedback.some((f) => f.rating >= 4);
   const fresh = [
     ...evidenceFrom(args.signal, seat.harness),
-    ...pendingFeedback.map((f) => ({
-      kind: "feedback" as const,
-      text: f.comment.trim() ? `Human: ${f.comment.trim()}` : `Human rating ${f.rating}/5`,
-      weight: 2,
-    })),
+    ...pendingFeedback
+      .filter((f) => f.rating <= 2)
+      .map((f) => ({
+        kind: "feedback" as const,
+        text: f.comment.trim() ? `Human: ${f.comment.trim()}` : `Human rating ${f.rating}/5`,
+        weight: 2,
+      })),
   ];
   const evidence = [...(seatEvo.evidence ?? []), ...fresh].slice(-8);
   const nextSeat: TeamSeatEvoState = {
     ...seatEvo,
     stats: folded,
     evidence,
+    // V11.4 fix: the queue is consumed BY THIS FOLD — it became accumulated evidence (or armed
+    // suppression) above. Before, it survived until a candidate was created, so queued praise
+    // re-armed suppression on every subsequent fold (a permanently frozen seat) and queued
+    // criticism re-added its weight on every run (ledger double-counting).
+    pendingFeedback: [],
     praiseSuppression: Math.max(0, seatEvo.praiseSuppression - 1),
     lastEditedAt: folded.lastAt,
   };
   if (args.signal.rating !== null && args.signal.rating >= 4) {
+    nextSeat.praiseSuppression = TEAM_EVO_CONFIG.praiseSuppressRuns;
+  }
+  if (praiseQueued) {
     nextSeat.praiseSuppression = TEAM_EVO_CONFIG.praiseSuppressRuns;
   }
   store.byTeam[team.id] = { ...teamEvo, seats: { ...teamEvo.seats, [seat.id]: nextSeat } };

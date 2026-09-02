@@ -23,7 +23,14 @@ export function SettingsPage() {
   const apply = (p: EditorPrefs) => {
     setPrefs(p);
     saveEditorPrefs(p);
-    document.documentElement.setAttribute("data-theme", p.theme);
+    /* V11.4 — cross-fade the palette change: `.theme-xing` rides on <html> for ~260ms so
+     * every surface transitions to the new tokens instead of snapping (see mj.css). */
+    const root = document.documentElement;
+    if (!root.classList.contains("theme-xing")) {
+      root.classList.add("theme-xing");
+      window.setTimeout(() => root.classList.remove("theme-xing"), 260);
+    }
+    root.setAttribute("data-theme", p.theme);
   };
 
   const setOccupancy = (m: Occupancy) => {
@@ -48,9 +55,9 @@ export function SettingsPage() {
 
       <div className="card">
         <div className="card-title">Appearance</div>
-        <div className="muted">One Inscribed design system, six palettes — monochrome canvas, one accent signal, dot-matrix display type. inscribed · Nothing OS Inscribed dark — chalk · the same system on paper — carbon · industrial cool-grey, phosphor green — bone · warm parchment, terracotta — indigo · deep slate-blue, ice accent — sage · botanical light, forest green</div>
+        <div className="muted">One Inscribed design system, nine palettes — monochrome canvas, one accent signal, dot-matrix display type. inscribed · Nothing OS dark, signal red — chalk · the system on paper — carbon · industrial, phosphor green — bone · parchment, terracotta — indigo · slate dark, ice blue — sage · botanical light, forest green — hazard · soot dark, safety yellow — orchid · noir plum, orchid magenta — porcelain · porcelain light, ultraviolet</div>
         <div className="row" style={{ marginTop: 10, flexWrap: "wrap", gap: 6 }}>
-          {(["inscribed", "chalk", "carbon", "bone", "indigo", "sage"] as const).map((t) => (
+          {(["inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain"] as const).map((t) => (
             <button key={t} data-t={t} className={"theme-chip" + (prefs.theme === t ? " on primary" : "")} onClick={() => apply({ ...prefs, theme: t })}>
               <span className="tdot" aria-hidden="true"></span>
               {t}
