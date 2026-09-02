@@ -1,4 +1,4 @@
-# MJ 11.2 — agent organization runtime
+# MJ 11.3 — agent organization runtime
 
 Product name **MJ**. A **Tauri v2** desktop app.
 
@@ -15,6 +15,7 @@ the OS keychain. Hermes skills are `SKILL.md`. Official MCP servers run over **s
 
 | Document | What it covers |
 |---|---|
+| **`MJ-11.3-UPGRADE.md`** | What V11.3 adds: the Inscription pass — failing probe fixed, base CSS de-ambered onto tokens, fonts really declared, the dot system, mechanical motion |
 | **`DESKTOP-NATIVE.md`** | Native install per OS, toolchain, and the risk → sandbox mapping for each coding CLI |
 | **`LOCAL-WORKLIST.md`** | Ordered checklist for a local Claude Code / OpenCode session: what to run, what is verified, what needs your machine |
 | **`MJ-10.1-UPGRADE.md`** | What V10.1 adds: the `nothing` theme (Nothing OS design language), the eleven-defect debugging pass, and the theme probe |
@@ -46,7 +47,7 @@ done
 ./node_modules/.bin/vite build                      # exit 0
 ```
 
-**Last run against this tree (V11):** `tsc --noEmit` exit 0; `vite build` exit 0; all probe suites passing.
+**Last run against this tree (V11.3):** `tsc --noEmit` exit 0; `vite build` exit 0; all 37 probe suites passing (Linux x64 sandbox, Node 22, fresh `npm ci`). Rust untouched this pass — no cargo toolchain on that machine; CI still runs `cargo check` on all three OSes.
 
 The Rust side is tested too, because the parsers are plain `std` and `include!`d into the Tauri file —
 so the code that ships is the code that was compiled:

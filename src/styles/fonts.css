@@ -1,3 +1,10 @@
+/* MJ type stack (V11.3 — the Inscription pass).
+   Three jobs, three families — Nothing OS discipline:
+     Inter          — body/UI text. The clean sans. (Nothing OS uses a clean grotesque for body.)
+     Space Mono     — instrument markings: labels, numbers, ALL-CAPS metadata.
+     Doto           — the dot-matrix display face. Hero moments only: wordmark, clock, big numbers.
+   JetBrains Mono stays for long code blocks (more readable at 10–11px than Space Mono).
+   Space Grotesk is declared as the bridge/fallback grotesque. */
 @font-face {
   font-family: "Inter";
   font-style: normal;
@@ -33,8 +40,33 @@
   font-display: swap;
   src: url("../assets/fonts/jetbrains-500.woff2") format("woff2");
 }
+/* Space Mono — V11.3 fix: themes.css asked for "Space Mono" since V11.2 but no @font-face ever
+   declared it, so every --font-mono surface silently fell back to JetBrains Mono. Declared now,
+   from the woff2 that was already bundled in src/assets/fonts. */
+@font-face {
+  font-family: "Space Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/space-mono-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Space Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/space-mono-700.woff2") format("woff2");
+}
+/* Space Grotesk — variable weight axis 300–700 in one file; the display grotesque fallback. */
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("../assets/fonts/space-grotesk-var.woff2") format("woff2");
+}
 /* Doto — OFL dot-matrix variable font (the Nothing OS display style; NDot's open cousin).
-   Variable weight axis 100–900 in one file. Used by the `nothing` theme via --font-doto. */
+   Variable weight axis 100–900 in one file. Used by the INSCRIBED design system via --font-doto. */
 @font-face {
   font-family: "Doto";
   font-style: normal;

@@ -60,6 +60,8 @@ rel*.txt
 *_err.*
 check_err.txt
 test_err.txt
+probe-output*.txt
+a2a-out.txt
 
 # Screenshots are local reference only (keep 1 hero if you want)
 screen*.png

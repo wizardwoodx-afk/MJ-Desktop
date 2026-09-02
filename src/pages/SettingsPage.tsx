@@ -35,7 +35,7 @@ export function SettingsPage() {
   return (
     <div className="panel-page">
       <h2>Settings</h2>
-      <p className="sub">Host {detectHost()} · {detectPlatform()} · MJ {MJ_VERSION} · ROX spec · Inter / JetBrains Mono</p>
+      <p className="sub">Host {detectHost()} · {detectPlatform()} · MJ {MJ_VERSION} · ROX spec · Inter / Space Mono / Doto</p>
 
       <div className="card">
         <div className="card-title">Occupancy</div>
@@ -51,7 +51,10 @@ export function SettingsPage() {
         <div className="muted">One Inscribed design system, six palettes — monochrome canvas, one accent signal, dot-matrix display type. inscribed · Nothing OS Inscribed dark — chalk · the same system on paper — carbon · industrial cool-grey, phosphor green — bone · warm parchment, terracotta — indigo · deep slate-blue, ice accent — sage · botanical light, forest green</div>
         <div className="row" style={{ marginTop: 10, flexWrap: "wrap", gap: 6 }}>
           {(["inscribed", "chalk", "carbon", "bone", "indigo", "sage"] as const).map((t) => (
-            <button key={t} className={prefs.theme === t ? "primary" : ""} onClick={() => apply({ ...prefs, theme: t })}>{t}</button>
+            <button key={t} data-t={t} className={"theme-chip" + (prefs.theme === t ? " on primary" : "")} onClick={() => apply({ ...prefs, theme: t })}>
+              <span className="tdot" aria-hidden="true"></span>
+              {t}
+            </button>
           ))}
         </div>
       </div>

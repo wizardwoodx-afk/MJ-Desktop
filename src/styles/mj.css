@@ -2,52 +2,81 @@
 @import "./themes.css";
 
 :root {
-  --bg: #0a0a0a;
-  --bg-elevated: #111111;
-  --bg-panel: #0e0e0e;
-  --bg-input: #121212;
-  --border: #1a1a1a;
-  --border-strong: #2a2a2a;
-  --text: #ededed;
-  --text-dim: #8a8a8a;
-  --text-mute: #5c5c5c;
-  --amber: #c9a66b;
-  --amber-dim: rgba(201, 166, 107, 0.22);
-  --amber-hot: #e0c08a;
-  --danger: #c45c4a;
-  --danger-dim: rgba(196, 92, 74, 0.28);
-  --ok: #c9a66b;
+  /* V11.3 — the fallback palette IS Inscribed (OLED black, white data, signal red #D71921),
+     so the pre-theme boot flash no longer shows the retired amber heritage scheme.
+     Theme blocks in themes.css override every token below; var names are kept (--amber
+     now means "the one accent signal") because the component layer reads them. */
+  --bg: #000000;
+  --bg-elevated: #0d0d0d;
+  --bg-panel: #050505;
+  --bg-input: #0a0a0a;
+  --border: #1f1f1f;
+  --border-strong: #343434;
+  --text: #f1f1f1;
+  --text-dim: #9a9a9a;
+  --text-mute: #6b6b6b;
+  --amber: #d71921;
+  --amber-dim: rgba(215, 25, 33, 0.14);
+  --amber-hot: #ff2d36;
+  --danger: #ff2d36;
+  --danger-dim: rgba(255, 45, 54, 0.22);
+  --ok: #f1f1f1;
 
   --nk-black: var(--bg);
   --nk-surface: var(--bg-elevated);
   --nk-surface-2: #141414;
-  --nk-surface-3: #1a1a1a;
+  --nk-surface-3: #1b1b1d;
   --nk-input: var(--bg-input);
   --nk-border: var(--border-strong);
-  --nk-border-strong: #3a3a3a;
+  --nk-border-strong: #4a4a4a;
   --nk-hairline: var(--border);
   --white: var(--text);
   --text-1: var(--text);
   --text-2: var(--text-dim);
   --text-3: var(--text-mute);
-  --text-4: #3f3f3f;
-  --red: var(--amber);
-  --red-dim: var(--amber-dim);
-  --silver: var(--amber);
-  --silver-dim: var(--amber-dim);
-  --success: var(--amber);
-  --error: var(--danger);
+  --text-4: #3d3d3d;
+  --red: #d71921;
+  --red-dim: rgba(215, 25, 33, 0.14);
+  --silver: #9a9a9a;
+  --silver-dim: rgba(154, 154, 154, 0.2);
+  --success: #f1f1f1;
+  --error: #ff2d36;
 
-  --font-ui: "Inter", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Cascadia Code", ui-monospace, Consolas, monospace;
-  --font-doto: var(--font-ui);
+  --accent: #d71921;
+  --accent-hot: #ff2d36;
+  --accent-contrast: #ffffff;
+  --accent-dim: rgba(215, 25, 33, 0.14);
+  --sel-bg: #d71921;
+  --sel-fg: #ffffff;
+  --scroll-thumb: #2c2c2c;
+  --scroll-thumb-hover: #d71921;
+  --glyph-off: #1b1b1d;
+  --glyph-on: #d71921;
+  --seg-off: #1b1b1d;
+  --inset: #1b1b1d;
+  --dot-1: rgba(241, 241, 241, 0.05);
+  --dot-2: rgba(215, 25, 33, 0.1);
+  --wire: rgba(241, 241, 241, 0.32);
+  --wire-active: #d71921;
+  --wire-hot: #ff2d36;
+  --wire-done: rgba(241, 241, 241, 0.55);
+  --port-edge: #9a9a9a;
 
-  --r-sm: 2px;
-  --r-md: 3px;
-  --r-lg: 4px;
-  --t-fast: 120ms linear;
-  --t-med: 180ms linear;
-  --row-hover: #1a1a1a;
+  /* V11.3 type: Inter is the clean body sans; Space Mono the instrument voice;
+     Doto the dot-matrix display face. All three are really @font-face-declared
+     in fonts.css (Space Mono was silently undeclared before this release). */
+  --font-ui: "Inter", "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Space Mono", "JetBrains Mono", "Cascadia Code", ui-monospace, Consolas, monospace;
+  --font-doto: "Doto", "Space Mono", ui-monospace, monospace;
+
+  /* Shape: technical, never pill. */
+  --r-sm: 0px;
+  --r-md: 1px;
+  --r-lg: 2px;
+  /* Motion: percussive ease-out only, never spring. */
+  --t-fast: 90ms cubic-bezier(0.2, 0, 0, 1);
+  --t-med: 140ms cubic-bezier(0.2, 0, 0, 1);
+  --row-hover: #151515;
   --title-h: 32px;
   --menu-h: 26px;
   --tab-h: 28px;
@@ -64,10 +93,11 @@ html, body, #root {
   font-size: 13px;
   overflow: hidden;
 }
-::selection { background: var(--amber); color: var(--bg); }
+::selection { background: var(--sel-bg, var(--amber)); color: var(--sel-fg, var(--bg)); }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #222; }
+::-webkit-scrollbar-thumb { background: var(--scroll-thumb, #222); }
+::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover, var(--amber)); }
 
 button {
   font-family: var(--font-mono);
@@ -84,7 +114,7 @@ button {
 }
 button:hover { color: var(--text); border-color: var(--amber); background: var(--amber-dim); }
 button:focus-visible { outline: 1px solid var(--amber); outline-offset: 2px; }
-button.primary { color: var(--bg); background: var(--amber); border-color: var(--amber); }
+button.primary { color: var(--accent-contrast, var(--bg)); background: var(--amber); border-color: var(--amber); }
 button.primary:hover { background: var(--amber-hot); }
 button.danger { color: var(--danger); border-color: var(--danger-dim); }
 button.danger:hover { border-color: var(--danger); background: rgba(196,92,74,0.08); }
@@ -164,11 +194,12 @@ label.field {
 }
 .titlebar .win-btns button:hover { background: var(--row-hover); color: var(--text); }
 .titlebar .win-btns .close:hover { background: var(--danger); color: #fff; }
+/* V11.3 — traffic lights are monochrome until used; only close earns the signal red. */
 .traffic { display: flex; gap: 7px; padding: 0 10px 0 4px; }
-.traffic span { width: 10px; height: 10px; border-radius: 50%; background: #2a2a2a; }
-.traffic .c { background: #6b4a3a; }
-.traffic .m { background: #c9a66b; }
-.traffic .x { background: #4a5a3a; }
+.traffic span { width: 10px; height: 10px; border-radius: 50%; background: var(--glyph-off, #2a2a2a); }
+.traffic .c { background: var(--glyph-off, #2a2a2a); }
+.traffic .m { background: var(--text-mute); }
+.traffic .x { background: var(--amber); }
 
 .menubar {
   grid-area: menu;
@@ -278,27 +309,29 @@ label.field {
 
 .eta-module { display: flex; align-items: center; gap: 10px; }
 .eta-segments { display: flex; gap: 2px; }
-.eta-seg { width: 6px; height: 10px; background: #1c1c1c; border-radius: 1px; }
+.eta-seg { width: 6px; height: 10px; background: var(--seg-off, #1c1c1c); border-radius: 0; }
 .eta-seg.on { background: var(--amber); }
 .eta-seg.hot { background: var(--amber-hot); }
 .eta-readout { font-family: var(--font-mono); font-weight: 500; font-size: 12px; letter-spacing: 0.04em; min-width: 72px; text-align: right; color: var(--amber); }
 
 .canvas-wrap { position: relative; flex: 1; overflow: hidden; background: var(--bg); cursor: grab; }
 .canvas-wrap.panning { cursor: grabbing; }
+/* V11.3 — the canvas dot grid reads theme tokens (--dot-1 / --dot-2), so every palette
+   paints its own instrument-paper instead of the retired amber. */
 .canvas-grid {
   position: absolute; inset: 0;
   background-image:
-    radial-gradient(circle, rgba(201,166,107,0.08) 1px, transparent 1px),
-    radial-gradient(circle, rgba(201,166,107,0.12) 1px, transparent 1px);
+    radial-gradient(circle, var(--dot-1, rgba(241,241,241,0.05)) 1px, transparent 1px),
+    radial-gradient(circle, var(--dot-2, rgba(215,25,33,0.1)) 1px, transparent 1px);
   background-size: 22px 22px, 110px 110px;
 }
 .nodes-layer { position: absolute; inset: 0; transform-origin: 0 0; }
 .wires-layer { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
 .wire-hit { fill: none; stroke: transparent; stroke-width: 16; pointer-events: stroke; cursor: pointer; }
-.wire { fill: none; stroke: rgba(201,166,107,0.38); stroke-width: 1.6; }
-.wire.active { stroke: var(--amber); stroke-width: 2; stroke-dasharray: 9 8; animation: wireflow 0.8s linear infinite; }
-.wire.streaming { stroke: var(--amber-hot); stroke-dasharray: 6 10; animation: wireflow 0.55s linear infinite; }
-.wire.completed { stroke: rgba(201,166,107,0.7); }
+.wire { fill: none; stroke: var(--wire, rgba(241,241,241,0.32)); stroke-width: 1.6; }
+.wire.active { stroke: var(--wire-active, var(--amber)); stroke-width: 2; stroke-dasharray: 9 8; animation: wireflow 0.8s linear infinite; }
+.wire.streaming { stroke: var(--wire-hot, var(--amber-hot)); stroke-dasharray: 6 10; animation: wireflow 0.55s linear infinite; }
+.wire.completed { stroke: var(--wire-done, rgba(241,241,241,0.55)); }
 .wire.error { stroke: var(--danger); stroke-width: 2; }
 @keyframes wireflow { to { stroke-dashoffset: -100; } }
 
@@ -311,7 +344,7 @@ label.field {
 .canvas-toolbar button { height: 26px; min-width: 26px; padding: 0 8px; border-color: transparent; }
 .tb-sep { width: 1px; height: 16px; background: var(--border); margin: 0 3px; }
 
-.marquee-rect { position: absolute; border: 1px solid var(--amber); background: var(--amber-dim); pointer-events: none; z-index: 5; }
+.marquee-rect { position: absolute; border: 1px dashed var(--amber); background: var(--accent-dim, var(--amber-dim)); pointer-events: none; z-index: 5; }
 
 .node-card {
   position: absolute; width: 248px;
@@ -331,7 +364,7 @@ label.field {
   letter-spacing: 0.04em; text-transform: none; color: var(--text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.glyph-light { margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background: #2a2a2a; }
+.glyph-light { margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background: var(--glyph-off, #2a2a2a); }
 .glyph-light.on { background: var(--amber); }
 .glyph-light.err { background: var(--danger); }
 .glyph-light.done { background: var(--amber); }
@@ -364,7 +397,7 @@ label.field {
 .port-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 82px; }
 .port-anchor {
   position: absolute; top: 50%; width: 11px; height: 11px; border-radius: 50%;
-  background: var(--bg); border: 1.6px solid var(--amber);
+  background: var(--bg); border: 1.6px solid var(--port-edge, var(--amber));
   transform: translateY(-50%); z-index: 3; cursor: crosshair;
 }
 .port-row.input .port-anchor { left: 0; margin-left: -6px; }
@@ -386,7 +419,7 @@ label.field {
   box-shadow: none;
 }
 .canvas-empty { position: absolute; left: 50%; top: 42%; transform: translate(-50%,-50%); z-index: 20; text-align: center; }
-.canvas-empty .ce-mark { font-family: var(--font-doto); font-weight: 700; font-size: 54px; letter-spacing: 0.18em; color: #1c1c1c; }
+.canvas-empty .ce-mark { font-family: var(--font-doto); font-weight: 700; font-size: 54px; letter-spacing: 0.18em; color: var(--inset, #1c1c1c); }
 .canvas-empty .ce-title { font-family: var(--font-ui); font-weight: 600; font-size: 18px; letter-spacing: 0.04em; }
 .canvas-empty .ce-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text-mute); margin: 8px 0 18px; }
 
@@ -524,46 +557,33 @@ label.field {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   GLOBAL MICRO-INTERACTIONS & MOTION DESIGN
+   GLOBAL MICRO-INTERACTIONS & MOTION DESIGN — V11.3 mechanical pass
+   Percussive, not fluid: no scale, no lift, no glow, no spring curves. State
+   changes read through borders, colour and opacity only, on the fast ease-out
+   the Inscribed system declares. (Click, not swoosh.)
    ══════════════════════════════════════════════════════════════════════════ */
 @keyframes mj-pop {
-  0% { transform: scale(0.96); opacity: 0; }
-  60% { transform: scale(1.02); opacity: 0.95; }
-  100% { transform: scale(1); opacity: 1; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes mj-enter-fade {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes mj-glow-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(215, 25, 33, 0.35); }
-  50% { box-shadow: 0 0 14px 4px rgba(215, 25, 33, 0.65); }
-}
-
-@keyframes mj-beacon {
-  0% { transform: scale(0.9); opacity: 0.95; }
-  50% { transform: scale(1.4); opacity: 0.35; }
-  100% { transform: scale(0.9); opacity: 0.95; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 button, .tab, .pill, .lib-item, input, select, textarea {
-  transition: transform 0.14s cubic-bezier(0.16, 1, 0.3, 1),
-              background 0.14s ease,
-              border-color 0.14s ease,
-              color 0.14s ease,
-              box-shadow 0.14s ease;
+  transition: background var(--t-fast, 120ms linear),
+              border-color var(--t-fast, 120ms linear),
+              color var(--t-fast, 120ms linear),
+              opacity var(--t-fast, 120ms linear);
 }
 
-button:active {
-  transform: scale(0.96);
-}
+/* a pressed control reads as pressed through its border, not its size */
+button:active { border-color: var(--amber); }
 
 .card {
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.18s ease,
-              box-shadow 0.18s ease;
+  transition: border-color var(--t-med, 180ms linear);
 }
 
 .card:hover {
@@ -571,19 +591,11 @@ button:active {
 }
 
 .card.selected {
-  animation: mj-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 0 0 1px var(--amber), 0 4px 18px rgba(0, 0, 0, 0.25);
-}
-
-.tab:hover {
-  transform: translateY(-1px);
-}
-
-.pill:hover {
-  transform: scale(1.04);
+  animation: mj-pop 0.18s cubic-bezier(0.2, 0, 0, 1) both;
+  box-shadow: inset 2px 0 0 var(--amber);
 }
 
 .animate-enter {
-  animation: mj-enter-fade 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: mj-enter-fade 0.2s cubic-bezier(0.2, 0, 0, 1) both;
 }
 

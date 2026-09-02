@@ -1,4 +1,4 @@
-# MJ 11.2 — LOCAL WORKLIST
+# MJ 11.3 — LOCAL WORKLIST
 
 Read this top to bottom. Items are ordered by priority. Everything here is either already verified
 (it says so, with the command that verified it) or needs your machine because it needs a Tauri
@@ -184,3 +184,17 @@ mj/
   src-tauri/               Rust, 1,751 lines — item 1
   evolution-service/       Python — item 4
 ```
+
+---
+
+## V11.3 addendum — logged, not hidden
+
+- **Rust `unwrap()` density in `control_mcp.rs`** (13 sites): every one is a panic path
+  in principle. V11.3 did not touch them — the machine that produced V11.3 has no
+  cargo/GTK toolchain, and editing Rust without a compiler violates the honesty rules.
+  First laptop/CI session with cargo available: convert to `map_err`-style errors and
+  add the case to `probe/controlPlane.test.ts` if it is reachable from the frontend.
+- **Visual pass in the three real webviews** (WebView2 / WKWebView / WebKitGTK): the
+  V11.3 dot system (mechanical checkboxes, range thumbs, pill dots) is CSS-verified and
+  build-verified only. Open Settings → Appearance on each platform once and confirm the
+  toggle travel and dot rendering.
