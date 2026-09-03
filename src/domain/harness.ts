@@ -2,8 +2,28 @@
  * Local coding-agent harnesses MJ wraps as real agent nodes.
  * These are the actual CLIs on the user's machine — not Zapier steps.
  *
- * Install any of: Claude Code, Codex, OpenCode, Cursor Agent, Grok, Cline, Kilo.
- * MJ detects them, then execs them with the composed role+purpose prompt.
+ * V11.6 (the Connector pass) grows the registry to the full 2026 landscape and adds
+ * CUSTOM harnesses: a user can register any binary they want (name + argv template
+ * with $PROMPT), and it becomes a first-class citizen in the Teams seat picker.
+ *
+ * Every entry's argv/install line is researched, not guessed — the source is named in
+ * src/mission/agentCapabilities.ts, which grades each claim (binary / docs / community /
+ * unverified). Research notes checked 2026-09:
+ *   - Claude Code   npm i -g @anthropic-ai/claude-code; `claude -p`
+ *   - Codex CLI     npm i -g @openai/codex; `codex exec`
+ *   - OpenCode      npm i -g opencode-ai; `opencode run` (75+ providers)
+ *   - OpenClaude    npm i -g @gitlawb/openclaude; Claude-Code-shaped open CLI for
+ *                   OpenAI-compatible/Gemini/Ollama backends (github.com/Gitlawb/openclaude)
+ *   - Grok Build    curl -fsSL https://x.ai/cli/install.sh | bash; `grok exec` headless,
+ *                   GROK_CODE_XAI_API_KEY for non-interactive auth (xAI, May 2026)
+ *   - Copilot CLI   npm i -g @github/copilot; `copilot -p` (-s silent) — GitHub Docs
+ *   - Gemini CLI    npm i -g @google/gemini-cli; `gemini -p`
+ *   - Antigravity   Google's successor CLI for unpaid tiers (cutover 2026-06-18)
+ *   - Amp           Sourcegraph's agent; `amp` on PATH
+ *   - Crush         Charm's TUI agent; `crush` on PATH
+ *   - OpenHands     open-source autonomous agent; `openhands` on PATH
+ *   - Kilo Code     `kilo run` headless (500+ models via Kilo Gateway / BYOK / local)
+ *   - Cline         VS Code extension needs the CLI binary on PATH to be spawnable
  */
 
 export type HarnessId =
@@ -12,12 +32,18 @@ export type HarnessId =
   | "claude"
   | "codex"
   | "opencode"
+  | "openclaude"
+  | "copilot"
   | "cursor"
   | "grok"
   | "cline"
   | "kilo"
   | "aider"
   | "gemini"
+  | "antigravity"
+  | "amp"
+  | "crush"
+  | "openhands"
   | "goose"
   | "qwen"
   | "amazonq"
@@ -31,6 +57,8 @@ export interface HarnessSpec {
   argv: string[];
   install: string;
   notes: string;
+  /** Where the claim was checked, so a wrong flag can be re-traced. */
+  source?: string;
 }
 
 export const HARNESSES: HarnessSpec[] = [
@@ -40,7 +68,8 @@ export const HARNESSES: HarnessSpec[] = [
     bins: ["claude-code-acp"],
     argv: ["--stdio"],
     install: "Set MJ_ACP_BIN to any ACP-compliant agent (e.g. claude-code-acp, or gemini --experimental-acp). npm i -g @zed-industries/claude-code-acp bridges Claude Code.",
-    notes: "Agent Client Protocol (Zed + JetBrains): JSON-RPC over stdio with streaming, tool-call events and permission requests. One adapter instead of one parser per CLI.",
+    notes: "Agent Client Protocol (Zed + JetBrains): JSON-RPC over stdio with streaming, tool-call events and permission requests. One adapter instead of one parser per CLI. Grok Build also speaks ACP natively.",
+    source: "agentclientprotocol.com; exercised by probe/acp.test.ts",
   },
   {
     id: "hermes",
@@ -56,7 +85,8 @@ export const HARNESSES: HarnessSpec[] = [
     bins: ["claude"],
     argv: ["-p", "$PROMPT", "--output-format", "text"],
     install: "npm install -g @anthropic-ai/claude-code   then   claude  (login)",
-    notes: "Native Anthropic coding agent. Uses your Claude Code subscription.",
+    notes: "Native Anthropic coding agent. Uses your Claude Code subscription (Pro/Max).",
+    source: "docs.anthropic.com — checked 2026-09",
   },
   {
     id: "codex",
@@ -64,7 +94,8 @@ export const HARNESSES: HarnessSpec[] = [
     bins: ["codex"],
     argv: ["exec", "--skip-git-repo-check", "$PROMPT"],
     install: "npm install -g @openai/codex   then   codex login",
-    notes: "OpenAI Codex harness. Uses your ChatGPT/Codex auth.",
+    notes: "OpenAI Codex harness. Uses your ChatGPT/Codex auth; --oss runs local Ollama models.",
+    source: "github.com/openai/codex — checked 2026-09",
   },
   {
     id: "opencode",
@@ -72,7 +103,26 @@ export const HARNESSES: HarnessSpec[] = [
     bins: ["opencode"],
     argv: ["run", "$PROMPT"],
     install: "npm install -g opencode-ai   then   opencode",
-    notes: "Open-source coding agent. Bring your own model keys.",
+    notes: "Open-source coding agent. 75+ providers, bring your own keys, fully offline. Plan/Build agent modes map onto MJ's read/write policies.",
+    source: "opencode.ai docs — checked 2026-09",
+  },
+  {
+    id: "openclaude",
+    name: "OpenClaude",
+    bins: ["openclaude"],
+    argv: ["-p", "$PROMPT"],
+    install: "npm install -g @gitlawb/openclaude@latest   then   openclaude   (/provider to set up a backend)",
+    notes: "Open-source Claude-Code-shaped CLI that runs on OpenAI-compatible APIs, Gemini, GitHub Models, Codex OAuth or local Ollama — no Claude subscription needed. Config lives in ~/.openclaude, never reads ~/.claude.",
+    source: "github.com/Gitlawb/openclaude — checked 2026-09 (30.9k stars; -p headless is community-verified, --bg for detached runs)",
+  },
+  {
+    id: "copilot",
+    name: "GitHub Copilot CLI",
+    bins: ["copilot"],
+    argv: ["-p", "$PROMPT", "-s"],
+    install: "npm install -g @github/copilot   (or winget install GitHub.Copilot / brew install --cask copilot-cli)   then   copilot login",
+    notes: "GitHub's terminal-first Copilot agent. -p runs one prompt non-interactively; -s prints only the response. Uses Copilot plan credits; COPILOT_GITHUB_TOKEN authenticates headless CI.",
+    source: "docs.github.com/en/copilot/get-started/cli-quickstart — checked 2026-09",
   },
   {
     id: "cursor",
@@ -81,6 +131,33 @@ export const HARNESSES: HarnessSpec[] = [
     argv: ["-p", "$PROMPT"],
     install: "Install Cursor, then enable the agent CLI (cursor-agent on PATH)",
     notes: "Cursor's agent CLI. Uses Cursor auth.",
+  },
+  {
+    id: "grok",
+    name: "Grok Build (xAI)",
+    bins: ["grok"],
+    argv: ["exec", "$PROMPT"],
+    install: "curl -fsSL https://x.ai/cli/install.sh | bash   (Windows: irm https://x.ai/cli/install.ps1 | iex)   then   grok   (SuperGrok Heavy login, or GROK_CODE_XAI_API_KEY for headless)",
+    notes: "xAI's terminal coding agent: up to 8 parallel subagents, Plan Mode, ACP support, AGENTS.md/hooks/skills compatibility. `grok exec` is the documented non-interactive mode; `-p` also runs headless.",
+    source: "x.ai/build + docs.x.ai — checked 2026-09 (Grok 4.6 default since 2026-08-12)",
+  },
+  {
+    id: "cline",
+    name: "Cline",
+    bins: ["cline"],
+    argv: ["$PROMPT"],
+    install: "Install the Cline CLI binary on PATH (the VS Code extension alone cannot be spawned from MJ)",
+    notes: "Cline's autonomous plan/act agent. BYO model. Only the CLI binary is spawnable; the VS Code extension is not.",
+    source: "cline.bot — CLI availability is community-reported",
+  },
+  {
+    id: "kilo",
+    name: "Kilo Code",
+    bins: ["kilo"],
+    argv: ["run", "$PROMPT"],
+    install: "Install Kilo Code CLI (npm i -g kilocode-cli or from kilo.ai)   then   kilo",
+    notes: "Kilo CLI: 500+ models via Kilo Gateway, direct provider keys, BYOK and local/offline models. `kilo run` is the headless one-shot mode; `kilo serve` exposes it as a service.",
+    source: "kilo.ai/docs — checked 2026-09",
   },
   {
     id: "aider",
@@ -95,8 +172,45 @@ export const HARNESSES: HarnessSpec[] = [
     name: "Google Gemini CLI",
     bins: ["gemini"],
     argv: ["-p", "$PROMPT"],
-    install: "npm install -g @google/gemini-cli   or   gemini auth",
-    notes: "Google Gemini Code Assist CLI with 1M token context window.",
+    install: "npm install -g @google/gemini-cli   then   gemini   (Google account auth)",
+    notes: "Gemini 3.x with 1M-token context. Paid/Code Assist tiers keep Gemini CLI after the Antigravity cutover (2026-06-18); unpaid tiers move to Antigravity.",
+    source: "github.com/google-gemini/gemini-cli — checked 2026-09",
+  },
+  {
+    id: "antigravity",
+    name: "Google Antigravity CLI (agy)",
+    bins: ["agy"],
+    argv: ["-p", "$PROMPT"],
+    install: "curl -fsSL https://antigravity.google/cli/install.sh | bash   (Windows: irm https://antigravity.google/cli/install.ps1 | iex)",
+    notes: "V11.6.1: the shipped binary is `agy` — a closed-source Go executable from Antigravity 2.0 (2026-05-19), not `antigravity`. Individual-tier replacement for Gemini CLI since the 2026-06-18 cutover; paid Code Assist keeps `gemini`. Headless prompt flag is community-graded (Gemini heritage) — `agy --help` decides.",
+    source: "antigravity.google/docs/gcli-migration + 2026 cutover coverage (checked 2026-09); binary verified, flags community-graded",
+  },
+  {
+    id: "amp",
+    name: "Amp (Sourcegraph)",
+    bins: ["amp"],
+    argv: ["-x", "$PROMPT"],
+    install: "npm install -g @sourcegraph/amp   then   amp login",
+    notes: "V11.6.1: execute mode is `amp -x \"<prompt>\"` — the documented non-interactive single-shot mode (ampcode.com/docs/cli/execute-mode). Piping `command | amp` also works. The old `--headless` mapping conflated runner mode (`--no-tui`) with execute mode.",
+    source: "ampcode.com/docs + sourcegraph/amp-examples-and-guides CLI guide (checked 2026-09)",
+  },
+  {
+    id: "crush",
+    name: "Crush (Charm)",
+    bins: ["crush"],
+    argv: ["run", "$PROMPT"],
+    install: "npm install -g @charmbracelet/crush   (or brew install charmbracelet/crush/crush)   then   crush",
+    notes: "Charm's beautiful TUI coding agent, LSP-aware, multi-provider. `crush run` executes a prompt non-interactively.",
+    source: "github.com/charmbracelet/crush — community-graded flags",
+  },
+  {
+    id: "openhands",
+    name: "OpenHands",
+    bins: ["openhands"],
+    argv: ["--headless", "-t", "$PROMPT"],
+    install: "pip install openhands   then   openhands login   (or configure any LLM)",
+    notes: "V11.6.1: the V1 CLI headless mode is `openhands --headless -t \"<task>\"` (pypi.org/project/openhands, docs.openhands.dev). `--json` streams JSONL events; `-f` takes a task file. The old `solve` mapping was a pre-V1 design.",
+    source: "github.com/All-Hands-AI/OpenHands — checked 2026-09",
   },
   {
     id: "goose",
@@ -107,44 +221,21 @@ export const HARNESSES: HarnessSpec[] = [
     notes: "Block's open-source extensible AI developer agent with 70+ MCP extensions.",
   },
   {
+    id: "qwen",
+    name: "Qwen Code",
+    bins: ["qwen"],
+    argv: ["-p", "$PROMPT"],
+    install: "npm install -g @qwen-ai/qwen-code   then   qwen   (API key or Coding Plan)",
+    notes: "Alibaba Qwen3-Coder terminal agent: OpenAI-compatible endpoints, Anthropic, Gemini, Ollama, vLLM. Note: the free OAuth tier ended 2026-04-15.",
+    source: "github.com/QwenLM/qwen-code — checked 2026-09",
+  },
+  {
     id: "amazonq",
     name: "Amazon Q / Kiro CLI",
     bins: ["kiro-cli", "q"],
     argv: ["chat", "--no-interactive", "$PROMPT"],
     install: "Install Amazon Q Developer CLI via Homebrew/WinGet or AWS CLI",
     notes: "AWS enterprise terminal coding agent with Bedrock model routing.",
-  },
-  {
-    id: "grok",
-    name: "Grok CLI",
-    bins: ["grok"],
-    argv: ["-p", "$PROMPT"],
-    install: "Install xAI Grok CLI and authenticate",
-    notes: "xAI Grok coding CLI.",
-  },
-  {
-    id: "cline",
-    name: "Cline",
-    bins: ["cline"],
-    argv: ["$PROMPT"],
-    install: "Install Cline CLI if you have it on PATH (VS Code extension is not enough)",
-    notes: "Only the CLI binary. The VS Code extension cannot be spawned from MJ.",
-  },
-  {
-    id: "qwen",
-    name: "Qwen Code",
-    bins: ["qwen"],
-    argv: ["-p", "$PROMPT"],
-    install: "npm install -g @qwen/code-cli   then   qwen login",
-    notes: "Alibaba Qwen3-Coder terminal agent for open multi-model coding.",
-  },
-  {
-    id: "kilo",
-    name: "Kilo Code",
-    bins: ["kilo"],
-    argv: ["$PROMPT"],
-    install: "Install Kilo Code CLI on PATH",
-    notes: "Kilo Code CLI harness.",
   },
   {
     id: "llm",
@@ -167,3 +258,94 @@ export function defaultHarness(): HarnessId {
 }
 
 export const HARNESS_OPTIONS = HARNESSES.map((h) => h.id);
+
+// ═════════════════════════════════════════════════════════════════════════════
+// V11.6 — CUSTOM HARNESSES
+//
+// A custom harness is the user's own binary: a name, an executable, and an argv
+// template containing $PROMPT exactly once. It is validated here (TypeScript) and
+// re-validated in Rust before cli_invoke will run it — the webview can never make
+// MJ execute a program the user has not explicitly registered.
+// ═════════════════════════════════════════════════════════════════════════════
+
+export interface CustomHarnessSpec {
+  /** `custom:<slug>` — the id seats reference. */
+  id: string;
+  name: string;
+  /** The executable to run, as typed (resolved via PATH + the usual install dirs in Rust). */
+  bin: string;
+  /** argv after the binary; $PROMPT is replaced with the composed prompt. */
+  argv: string[];
+  /** Free-form note the user writes for themselves. */
+  notes: string;
+  createdAt: string;
+}
+
+export function customHarnessId(name: string): string {
+  const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
+  return `custom:${slug || "harness"}`;
+}
+
+export interface CustomHarnessValidationError {
+  field: "name" | "bin" | "argv";
+  message: string;
+}
+
+/**
+ * Validate a custom harness before it is ever saved or run.
+ * The rules are strict on purpose: this is the boundary between "my own tool" and
+ * "arbitrary code execution from a text field".
+ *   - the binary must be a plain name or path: no spaces-only, no shell metacharacters,
+ *     no path traversal above the arguments (../ inside argv is fine for paths, but the
+ *     BIN itself cannot contain ; | & $ ` > < " ' newlines)
+ *   - the argv template must reference $PROMPT exactly once (zero means the prompt never
+ *     reaches the agent; two means a confusing double-send)
+ *   - no argument may itself be a shell metacharacter soup — MJ execs WITHOUT a shell,
+ *     so this is defence in depth, not the primary control
+ */
+export function validateCustomHarness(spec: { name: string; bin: string; argv: string[] }): CustomHarnessValidationError[] {
+  const errors: CustomHarnessValidationError[] = [];
+  if (!spec.name.trim()) errors.push({ field: "name", message: "Give the harness a name." });
+  if (spec.name.length > 64) errors.push({ field: "name", message: "Name is too long (64 chars max)." });
+  const bin = spec.bin.trim();
+  if (!bin) errors.push({ field: "bin", message: "The binary to run is required." });
+  else {
+    if (/[\r\n]/.test(bin)) errors.push({ field: "bin", message: "The binary cannot contain newlines." });
+    if (/[;&|`$><]/.test(bin)) {
+      errors.push({ field: "bin", message: "The binary cannot contain shell characters (; & | ` $ > <). MJ execs it directly — pass arguments in the argv field." });
+    }
+    if (/\s/.test(bin)) errors.push({ field: "bin", message: "The binary must be a single command or path (no spaces). Quote nothing; arguments go in the argv field." });
+    if (bin.includes("..")) errors.push({ field: "bin", message: "The binary cannot contain '..'." });
+  }
+  const promptSlots = spec.argv.filter((a) => a === "$PROMPT").length;
+  if (promptSlots === 0) errors.push({ field: "argv", message: "The arguments must include $PROMPT once — that is where the task goes." });
+  if (promptSlots > 1) errors.push({ field: "argv", message: "$PROMPT appears more than once. It should mark exactly one position." });
+  if (spec.argv.some((a) => /[\r\n]/.test(a))) errors.push({ field: "argv", message: "Arguments cannot contain newlines." });
+  return errors;
+}
+
+/** True when a seat's harness reference points at a user-registered custom harness. */
+export function isCustomHarness(id: string): boolean {
+  return id.startsWith("custom:");
+}
+
+/**
+ * In-memory mirror of the user's custom-harness registry, hydrated from
+ * ipc.customHarnessList() by the Teams page (and any runtime entry point).
+ * Sync lookups — composeSeatArgv, the session layer — read this mirror; the Rust
+ * side stays authoritative for what actually executes.
+ */
+const customRegistry = new Map<string, CustomHarnessSpec>();
+
+export function setCustomHarnesses(list: CustomHarnessSpec[]): void {
+  customRegistry.clear();
+  for (const h of list) customRegistry.set(h.id, h);
+}
+
+export function getCustomHarness(id: string): CustomHarnessSpec | undefined {
+  return customRegistry.get(id);
+}
+
+export function listCustomHarnesses(): CustomHarnessSpec[] {
+  return [...customRegistry.values()];
+}

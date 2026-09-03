@@ -16,7 +16,7 @@
 
 import type { HarnessId } from "../domain/harness";
 import type { RiskClass } from "./types";
-import { AGENT_CAPABILITIES, enforcedReadOnly, unverifiedClaims } from "./agentCapabilities";
+import { resolveCaps, enforcedReadOnly, unverifiedClaims } from "./agentCapabilities";
 import { sessionArgv, sessionIdKind } from "./sessions";
 
 export type TeamRole = "planner" | "architect" | "coder" | "tester" | "reviewer" | "security" | "synthesizer" | "debugger";
@@ -180,7 +180,22 @@ export function composeSeatArgv(
   teamSeat: TeamSeat,
   ctx: { prompt: string; cwd: string; readOnly: boolean; sessionId?: string; turn?: number },
 ): ComposedInvocation {
-  const caps = AGENT_CAPABILITIES[teamSeat.harness];
+  // V11.6.1: ONE resolver (see agentCapabilities.resolveCaps). A custom seat compiles from
+  // the user's registered spec via the same synthetic entry the executor now uses, so the
+  // composer and the executor can never disagree about what a custom harness is.
+  // The Rust side re-expands $PROMPT from its own registry at execution time.
+  const resolved = resolveCaps(teamSeat.harness);
+  const caps = resolved.registered ? resolved.caps : null;
+  if (!caps) {
+    return {
+      bin: "",
+      argv: [],
+      env: {},
+      files: [],
+      claims: { readOnlyEnforced: false, costKind: "none" },
+      warnings: [`Custom harness "${teamSeat.harness}" is not registered (anymore). Add it in Teams -> Connect, then recompile.`],
+    };
+  }
   const warnings: string[] = [];
   const vars: Record<string, string> = {
     $PROMPT: ctx.prompt,
@@ -320,7 +335,8 @@ export function validateTeam(team: CliAgentTeam): TeamFinding[] {
       out.push({ severity: "error", code: "cannot_write", message: `Seat "${s.id}" is a direct LLM which cannot modify files.`, seatId: s.id });
     }
     if (!enforcedReadOnly(s.harness) && !s.mayWrite) {
-      out.push({ severity: "warning", code: "advisory_readonly", message: `${AGENT_CAPABILITIES[s.harness].name} has no verified read-only enforcement, so "${s.id}" is advisory: it can still modify files despite being a ${s.role}.`, seatId: s.id });
+      const name = resolveCaps(s.harness).caps.name;
+      out.push({ severity: "warning", code: "advisory_readonly", message: `${name} has no verified read-only enforcement, so "${s.id}" is advisory: it can still modify files despite being a ${s.role}.`, seatId: s.id });
     }
     if (s.timeoutSecs < 30) {
       out.push({ severity: "warning", code: "short_timeout", message: `${s.timeoutSecs}s is below the 30s floor for a coding agent; expect a timeout on any real edit.`, seatId: s.id });
@@ -400,7 +416,9 @@ export function parseTeam(raw: string): ParseResult {
       const err = `Seat "${s.id ?? "?"}" has no id or an unknown role "${s.role}".`;
       return { ok: false, team: null, error: err, errors: [err], findings: [] };
     }
-    if (!(s.harness in AGENT_CAPABILITIES)) {
+    // V11.6.1: registered customs resolve here too — only an unregistered custom (or a
+    // genuinely unknown id) is rejected, with the same honest message as before.
+    if (!resolveCaps(s.harness).registered) {
       const err = `Seat "${s.id}" names an unknown harness "${s.harness}".`;
       return { ok: false, team: null, error: err, errors: [err], findings: [] };
     }

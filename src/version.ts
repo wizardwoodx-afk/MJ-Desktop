@@ -11,7 +11,7 @@
  * says the same thing. Renaming a release is then one edit plus a check that fails loudly if any
  * manifest was missed.
  */
-export const MJ_VERSION = "11.4.1";
+export const MJ_VERSION = "11.7.0";
 
 /** Short form for compact UI labels ("MJ 9.0"). */
 export const MJ_VERSION_SHORT = MJ_VERSION.split(".").slice(0, 2).join(".");

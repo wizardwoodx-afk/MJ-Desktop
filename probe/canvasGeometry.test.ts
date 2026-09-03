@@ -10,7 +10,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { NODE_W, bezier, nodeH, portPos, zoomAt, type NodeMetrics } from "../src/canvas/geometry";
+import { NODE_W, bezier, distToSegment, edgeMidpoint, isPointNearPath, nodeH, nodeHitRect, portPos, zoomAt, type NodeMetrics } from "../src/canvas/geometry";
 import { getMetricsVersion, measurePort, portRegistry, registerPortAnchor, subscribePortMetrics } from "../src/canvas/ports";
 import type { NodeInstance, PortDef } from "../src/domain/types";
 
@@ -263,6 +263,56 @@ console.log("\n== the Canvas component uses the fixes, not just the helpers ==\n
   ok(/useSyncExternalStore\(subscribePortMetrics, getMetricsVersion\)/.test(src), "the wire layer re-renders when the DOM invalidates");
   ok(/new ResizeObserver\(\(\) => invalidatePortMetrics\(\)\)/.test(src), "card reflow re-measures the wires");
   ok(/onHoverPort\(/ .test(src), "the ghost wire snaps to a hovered valid input");
+}
+
+/* ── §V11.5: the Meridian hit geometry ──────────────────────────────────────
+   Node rects come in exactly two sizes (normal 46×32, small 28×20) and the minimap
+   draws THOSE, so the map and the canvas agree. Edges are grabbable within 14px of
+   their control segment. The wire midpoint is on the bezier, not on the chord. */
+console.log("\n== V11.5: normal/small node rects, 14px edge corridor, on-curve midpoints ==\n");
+{
+  const small = nodeHitRect(node("n1", [], [], "control.split"), true);
+  const normal = nodeHitRect(node("n2", [], [], "agent.coder"), false);
+  near(small.w, 28, "small rect width is 28");
+  near(small.h, 20, "small rect height is 20");
+  near(normal.w, 46, "normal rect width is 46");
+  near(normal.h, 32, "normal rect height is 32");
+  // The default picks small for control nodes, normal for everything else.
+  const autoSmall = nodeHitRect(node("n3", [], [], "control.loop"));
+  const autoNormal = nodeHitRect(node("n4", [], [], "agent.tester"));
+  near(autoSmall.w, 28, "control nodes default to the small rect");
+  near(autoNormal.w, 46, "agent nodes default to the normal rect");
+}
+{
+  const a = { x: 100, y: 100 };
+  const b = { x: 500, y: 140 };
+  // The control segment spans (a.x+dx, a.y) → (b.x−dx, b.y) with dx = max(60, 45% of |Δx|).
+  const dx = Math.max(60, Math.abs(b.x - a.x) * 0.45);
+  ok(isPointNearPath({ x: (a.x + dx + b.x - dx) / 2, y: 120 }, a, b), "a point on the control corridor is a hit");
+  ok(!isPointNearPath({ x: 300, y: 400 }, a, b), "a point 280px off the wire is not a hit");
+  // A horizontal wire keeps the corridor maths legible: control segment y = 100, x ∈ [280, 320].
+  const ha = { x: 100, y: 100 };
+  const hb = { x: 500, y: 100 };
+  ok(isPointNearPath({ x: 300, y: 114 }, ha, hb), "14px off the segment still hits (the corridor)");
+  ok(!isPointNearPath({ x: 300, y: 115 }, ha, hb), "beyond 14px the corridor ends");
+  near(distToSegment({ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 10 }), 0, "degenerate segment: distance to the single point");
+  near(distToSegment({ x: 5, y: 0 }, { x: 0, y: 0 }, { x: 10, y: 0 }), 0, "point ON the segment has zero distance");
+  near(distToSegment({ x: 5, y: 3 }, { x: 0, y: 0 }, { x: 10, y: 0 }), 3, "perpendicular distance is exact");
+}
+{
+  const mid = edgeMidpoint({ x: 0, y: 0 }, { x: 400, y: 0 });
+  near(mid.x, 200, "midpoint of a straight wire is its middle");
+  const midBowed = edgeMidpoint({ x: 0, y: 0 }, { x: 200, y: 100 });
+  ok(Math.abs(midBowed.y - 50) < 26, `the bowed midpoint stays near the vertical middle (got ${midBowed.y.toFixed(1)})`);
+  ok(midBowed.x > 0 && midBowed.x < 200, "the bowed midpoint stays inside the span");
+}
+{
+  const src = fs.readFileSync(path.join(process.cwd(), "src/canvas/Canvas.tsx"), "utf8");
+  ok(/nodeHitRect\(n, n\.definitionId\.startsWith\("control\."\)\)\.w \* s/.test(src), "the minimap draws nodeHitRect widths (owner rule: normal/small)");
+  ok(/nodeHitRect\(n, n\.definitionId\.startsWith\("control\."\)\)\.h \* s/.test(src), "the minimap draws nodeHitRect heights");
+  ok(/onDoubleClick=\{\(\) => useGraphStore\.getState\(\)\.openDetails\(node\.id\)\}/.test(src), "details open on DOUBLE-click (owner rule)");
+  ok(/edgeMidpoint\(a, b\)/.test(src), "wires compute their midpoint on the curve");
+  ok(/openDetails: /.test(fs.readFileSync(path.join(process.cwd(), "src/graph/store.ts"), "utf8")), "the store owns openDetails");
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

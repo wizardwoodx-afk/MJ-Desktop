@@ -1,4 +1,4 @@
-# MJ 11.4 — agent organization runtime
+# MJ 11.7 — agent organization runtime
 
 Product name **MJ**. A **Tauri v2** desktop app.
 
@@ -15,6 +15,9 @@ the OS keychain. Hermes skills are `SKILL.md`. Official MCP servers run over **s
 
 | Document | What it covers |
 |---|---|
+| **`MJ-11.6-UPGRADE.md`** | What V11.6 adds: the Connector release — the 2026 CLI-agent registry (19 detectable bins, researched install/argv), the Teams Connect tab (live detect · install · smoke-test), user-defined custom harnesses (name + bin + argv, validated in TS and re-validated in Rust, persisted). **11.6.1:** custom harnesses first-class in the team executor (total `resolveCaps` resolver, proven by a real custom-seat run in the probe), Antigravity `agy` / Amp `-x` / OpenHands `--headless -t` mappings corrected. **11.6.2:** ONE HARNESS TRUTH — the policy layer derives its argv from the capability registry (drift structurally impossible), every registry CLI has a mission adapter (19 profiles + custom harnesses via the resolver; `llm` deliberately excluded). **11.6.3:** documentation truth (the registry is 21 ids, pinned by probe; historical version lines labelled) and the session layer joins the resolver. **11.7.0:** THE VACUOUS-GATE FIX — suite #39's ok() had reversed arguments so every 11.6.x check passed without asserting; the helper now matches the call sites, five hidden failures were found and fixed, the doc-truth check is claim-precise, and a mutation test proves the gate fails when it should |
+| **`MJ-11.7-UPGRADE.md`** | What V11.7 fixes: the vacuous probe gate (reversed ok() arguments since 11.6.0 — every harness-suite check passed tautologically; now real, 189/0, mutation-tested), five latent assertion defects corrected, claim-precise documentation checks |
+| **`MJ-11.5-UPGRADE.md`** | What V11.5 adds: the Meridian release — honest surfaces (details on double-click, minimap normal/small rects — owner rules), the Meridian icon grammar, node-method contracts, the Assist redesign, the aurora palette, generous hit targets |
 | **`MJ-11.4-UPGRADE.md`** | What V11.4 adds: the Teams loop audit (two real feedback-loop bugs fixed, probe grown to 45 assertions), the signal diet (red → interrupt-only), three new palettes (hazard · orchid · porcelain), theme/view/lamp animations, version-string cleanup |
 | **`MJ-11.3-UPGRADE.md`** | What V11.3 adds: the Inscription pass — failing probe fixed, base CSS de-ambered onto tokens, fonts really declared, the dot system, mechanical motion |
 | **`DESKTOP-NATIVE.md`** | Native install per OS, toolchain, and the risk → sandbox mapping for each coding CLI |
@@ -34,7 +37,7 @@ cd mj && npm ci
 
 # V11.4.1: the official test command — esbuild's JS API, no shell, no bin resolution,
 # identical on linux / macOS / windows. This is the line CI runs too.
-npm test                                            # 37 suites, 0 failed
+npm test                                            # 39 suites, 0 failed
 
 for f in versionDrift acceptance harnessPolicy checkRunner realExecution engine replayEvals reviewVisibility theme; do
   ./node_modules/.bin/esbuild probe/$f.test.ts --bundle --platform=node --format=esm \
@@ -52,7 +55,7 @@ done
 ./node_modules/.bin/vite build                      # exit 0
 ```
 
-**Last run against this tree (V11.4.1):** `tsc --noEmit` exit 0; `npm test` 37/37 (teamEvolution 45 assertions); `vite build` exit 0 — on a fresh `npm ci`, Linux x64 sandbox, Node 22. Recorded by the release session itself — a record, not a third-party certification. Rust and GitHub CI end-to-end remain unverified on that machine (no cargo toolchain); CI's Probes step runs the same `npm test`.
+**Last run against this tree (V11.7.0):** `tsc --noEmit` exit 0; `npm test` 39/39 (harnesses 189 REAL assertions — see the vacuous-gate fix in `MJ-11.7-UPGRADE.md`; mutation-tested; meridian 43; theme 44; canvasGeometry 82); `vite build` exit 0 — on a fresh `npm ci`, Linux x64 sandbox, Node 22. Recorded by the release session itself — a record, not a third-party certification. Rust and GitHub CI end-to-end remain unverified on that machine (no cargo toolchain); CI's Probes step runs the same `npm test`.
 
 The Rust side is tested too, because the parsers are plain `std` and `include!`d into the Tauri file —
 so the code that ships is the code that was compiled:
@@ -95,7 +98,7 @@ npm run tauri:build      # nsis / dmg / appimage / deb
 
 ## License & Copyright
 
-MJ Desktop v11.4.1 — Copyright © 2024-2026 Sree Harshen / MJ Project. All Rights Reserved.
+MJ Desktop v11.7.0 — Copyright © 2024-2026 Sree Harshen / MJ Project. All Rights Reserved.
 
 This software is **PROPRIETARY** and protected by copyright, trademark, and trade secret laws. **No license is granted** to copy, modify, redistribute, sublicense, sell, or use this software for commercial purposes or for AI/ML training without express written permission from the Owner.
 

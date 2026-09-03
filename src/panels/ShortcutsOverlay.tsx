@@ -16,6 +16,10 @@ export function ShortcutsOverlay({ onClose }: { onClose: () => void }) {
     ["Ctrl+,", "Settings"],
     ["Ctrl+B", "Toggle sidebar"],
     ["Ctrl+`", "Toggle console"],
+    ["Ctrl+J", "Toggle Assist panel"],
+    ["Ctrl+Shift+L", "Auto layout"],
+    ["R / F", "Run / Fit view"],
+    ["Double-click", "Open node details"],
     ["F11", "Fullscreen"],
     ["Esc", "Close overlays"],
   ];
@@ -26,7 +30,7 @@ export function ShortcutsOverlay({ onClose }: { onClose: () => void }) {
         <div className="muted" style={{ marginBottom: 12 }}>Primary chords are Ctrl. ⌘ is accepted on macOS hosts.</div>
         <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: 8 }}>
           {rows.map(([k, v]) => (
-            <><span className="kbd" key={k}>{k}</span><span className="muted" key={v}>{v}</span></>
+            <div key={k} style={{ display: "contents" }}><span className="kbd">{k}</span><span className="muted">{v}</span></div>
           ))}
         </div>
         <div className="actions"><button onClick={onClose}>Close</button></div>

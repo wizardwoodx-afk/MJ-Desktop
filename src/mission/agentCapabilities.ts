@@ -19,7 +19,7 @@
  * enforcement rather than off whether a flag merely exists.
  */
 
-import type { HarnessId } from "../domain/harness";
+import { getCustomHarness, isCustomHarness, type CustomHarnessSpec, type HarnessId } from "../domain/harness";
 
 /**
  * How much weight a claim deserves.
@@ -63,7 +63,7 @@ export interface AgentCapabilities {
   /** How the prompt is passed. For several CLIs this carries the subcommand, so it must come first. */
   prompt: Capability;
   /** Structured output. `kind` distinguishes a single JSON object from an NDJSON stream. */
-  json: (Capability & { kind?: "json" | "ndjson" }) | null;
+  json: (Capability & { kind?: "json" | "ndjson" | "text" }) | null;
   /** Refuse to modify files. */
   readOnly: Capability | null;
   /** Explicitly permit writes. null means the default agent already writes. */
@@ -236,7 +236,9 @@ export const AGENT_CAPABILITIES: Record<HarnessId, AgentCapabilities> = {
     name: "Grok Build",
     bins: ["grok"],
     install: "curl -fsSL https://x.ai/cli/install.sh | bash    (Windows: irm https://x.ai/cli/install.ps1 | iex)",
-    prompt: { argv: ["-p", "$PROMPT"], confidence: "docs", source: "-p, --single" },
+    // V11.6: `grok exec` is the documented one-shot mode (developersdigest/x.ai guides,
+    // 2026-09); -p also runs headless but exec is the canonical scripting surface.
+    prompt: { argv: ["exec", "$PROMPT"], confidence: "docs", source: "docs.x.ai — grok exec is non-interactive; -p is the headless alias" },
     json: { argv: ["--output-format", "json"], kind: "json", confidence: "docs", source: "plain|json|streaming-json" },
     readOnly: { argv: ["--permission-mode", "plan", "--sandbox", "read-only"], confidence: "docs", source: "permission vocabulary is deliberately Claude-compatible" },
     write: { argv: ["--permission-mode", "acceptEdits", "--sandbox", "workspace"], confidence: "docs", source: "sandbox off|workspace|read-only|strict|devbox" },
@@ -327,7 +329,7 @@ export const AGENT_CAPABILITIES: Record<HarnessId, AgentCapabilities> = {
     id: "kilo",
     name: "Kilo Code",
     bins: ["kilo"],
-    install: "npm install -g @kilo/cli   then   kilo",
+    install: "npm install -g kilocode-cli   then   kilo   (kilo.ai)",
     prompt: { argv: ["run", "$PROMPT"], confidence: "docs", source: "kilo run" },
     json: { argv: ["--format", "json"], kind: "ndjson", confidence: "docs", source: "--format json" },
     // Read-only is per-AGENT only, expressed in .kilo/agents/*.md. There is no flag, so MJ has to
@@ -503,6 +505,188 @@ export const AGENT_CAPABILITIES: Record<HarnessId, AgentCapabilities> = {
     gotchas: ["AWS developer CLI transitioning to Kiro CLI; enterprise Bedrock integration."],
   },
 
+  openclaude: {
+    id: "openclaude",
+    name: "OpenClaude",
+    bins: ["openclaude"],
+    install: "npm install -g @gitlawb/openclaude@latest   then   openclaude   (/provider for guided setup)",
+    // Claude-Code-shaped CLI (github.com/Gitlawb/openclaude, 30.9k stars, checked 2026-09).
+    prompt: { argv: ["-p", "$PROMPT"], confidence: "community", source: "Claude-Code-compatible surface; --bg exists for detached runs. -p is reported by users, not yet by vendor docs." },
+    json: { argv: null, kind: "text", confidence: "unverified", source: "no documented --output-format flag" },
+    readOnly: { argv: null, confidence: "unverified", source: "no documented read-only flag; treat as advisory" },
+    write: { argv: null, confidence: "unverified", source: "writes via its file tools; no flag to gate them" },
+    fullAuto: { argv: null, confidence: "unverified", source: "not documented" },
+    maxTurns: { argv: null, confidence: "unverified", source: "not documented" },
+    timeout: { argv: null, confidence: "unverified", source: "MJ enforces its own wall clock" },
+    outputSchema: { argv: null, confidence: "unverified", source: "not documented" },
+    worktree: { argv: null, confidence: "unverified", source: "not documented" },
+    cwd: { argv: null, confidence: "unverified", source: "run it from the repo directory (MJ sets cwd on the process)" },
+    model: { argv: null, confidence: "docs", source: "OPENAI_MODEL / OPENAI_BASE_URL env or /provider profiles — config is env/profile driven, not argv" },
+    resume: { argv: ["--resume", "$SESSION"], confidence: "docs", source: "github README: --resume <id>, --continue for latest" },
+    sessionStart: { argv: null, confidence: "unverified", source: "not documented" },
+    noAutoUpdate: { argv: null, confidence: "unverified", source: "not documented" },
+    filters: null,
+    cost: null,
+    enforcedReadOnly: false,
+    gotchas: [
+      "Open-source Claude-Code-shaped CLI for OpenAI-compatible/Gemini/Ollama backends — no Claude subscription needed.",
+      "Config lives in ~/.openclaude and ~/.openclaude-profile.json; it deliberately never reads ~/.claude.",
+      "Background sessions (--bg) return immediately — MJ needs the synchronous -p shape, so -p is the registered invocation.",
+      "No verified read-only mode: an OpenClaude seat marked no-write is advisory, not enforced.",
+    ],
+  },
+
+  copilot: {
+    id: "copilot",
+    name: "GitHub Copilot CLI",
+    bins: ["copilot"],
+    install: "npm install -g @github/copilot   (winget install GitHub.Copilot / brew install --cask copilot-cli)   then   copilot login",
+    // GitHub Docs, checked 2026-09: -p is the documented programmatic prompt; -s silences usage info.
+    prompt: { argv: ["-p", "$PROMPT", "-s"], confidence: "docs", source: "docs.github.com/en/copilot/get-started/cli-quickstart — 'pass a prompt to the CLI with the -p flag'; -s outputs only the response" },
+    json: { argv: null, kind: "text", confidence: "unverified", source: "no documented JSON output flag" },
+    readOnly: { argv: ["--available-tools", "read"], confidence: "docs", source: "--available-tools=LIST exposes only selected tools; --deny-tool wins over --allow-tool" },
+    write: { argv: ["--allow-tool", "edit"], confidence: "docs", source: "permission patterns: --allow-tool / --deny-tool / --add-dir" },
+    fullAuto: { argv: ["--allow-all"], confidence: "docs", source: "--allow-all (tools+paths+urls); the docs themselves call the yolo posture high-risk" },
+    maxTurns: { argv: null, confidence: "unverified", source: "no documented turn flag" },
+    timeout: { argv: null, confidence: "unverified", source: "MJ enforces its own wall clock" },
+    outputSchema: { argv: null, confidence: "unverified", source: "not documented" },
+    worktree: { argv: null, confidence: "unverified", source: "not documented" },
+    cwd: { argv: ["-C", "$CWD"], confidence: "docs", source: "-C DIRECTORY changes directory before startup" },
+    model: { argv: ["--model", "$MODEL"], confidence: "docs", source: "--model=MODEL or auto; default was Claude Sonnet 4.5 as of mid-2026" },
+    resume: { argv: ["--resume"], confidence: "docs", source: "-r/--resume[=VALUE] by ID, prefix or name; --continue resumes newest" },
+    sessionStart: { argv: ["--session-id", "$ID"], confidence: "docs", source: "--session-id ID addresses or creates an exact session UUID" },
+    noAutoUpdate: { argv: null, confidence: "unverified", source: "not documented" },
+    filters: { allowFlag: "--allow-tool", denyFlag: "--deny-tool", confidence: "docs", source: "deny rules win over allow rules; also --allow-url/--deny-url and --add-dir PATH" },
+    cost: { kind: "tokens-only", confidence: "unverified", source: "consumes GitHub AI Credits; no per-run USD figure reported" },
+    enforcedReadOnly: true,
+    gotchas: [
+      "Uses Copilot plan credits; COPILOT_GITHUB_TOKEN (fine-grained PAT) authenticates headless/CI runs.",
+      "-s matters in scripts: without it the response is wrapped in usage information.",
+      "Read-only is real when constructed via --available-tools read + --deny-tool write families — but deny patterns must actually cover the write tools.",
+    ],
+  },
+
+  antigravity: {
+    id: "antigravity",
+    name: "Antigravity CLI (agy)",
+    bins: ["agy"],
+    install: "curl -fsSL https://antigravity.google/cli/install.sh | bash   (Windows: irm https://antigravity.google/cli/install.ps1 | iex)",
+    // V11.6.1 correction: the shipped binary is `agy` — a closed-source Go executable that
+    // came with Antigravity 2.0 (2026-05-19), NOT an `antigravity` binary. The headless
+    // prompt flag is still community-graded (Gemini-CLI heritage); `agy --help` decides.
+    prompt: { argv: ["-p", "$PROMPT"], confidence: "community", source: "binary `agy` verified (antigravity.google/docs/gcli-migration, 2026 cutover coverage); headless flag not vendor-documented" },
+    json: { argv: null, kind: "text", confidence: "unverified", source: "not re-verified for Antigravity" },
+    readOnly: { argv: ["--approval-mode", "plan"], confidence: "community", source: "inherited Gemini vocabulary; re-verify on the shipped binary" },
+    write: { argv: null, confidence: "unverified", source: "not re-verified" },
+    fullAuto: { argv: null, confidence: "unverified", source: "not documented" },
+    maxTurns: { argv: null, confidence: "unverified", source: "not documented" },
+    timeout: { argv: null, confidence: "unverified", source: "MJ enforces its own wall clock" },
+    outputSchema: { argv: null, confidence: "unverified", source: "not documented" },
+    worktree: { argv: null, confidence: "unverified", source: "not documented" },
+    cwd: { argv: null, confidence: "unverified", source: "MJ sets cwd on the process" },
+    model: { argv: ["-m", "$MODEL"], confidence: "community", source: "Gemini-lineage -m flag" },
+    resume: { argv: null, confidence: "unverified", source: "not re-verified" },
+    sessionStart: { argv: null, confidence: "unverified", source: "not documented" },
+    noAutoUpdate: { argv: null, confidence: "unverified", source: "not documented" },
+    filters: null,
+    cost: null,
+    enforcedReadOnly: false,
+    gotchas: [
+      "Google moved unpaid-tier and Google One users from Gemini CLI to Antigravity CLI on 2026-06-18; paid Code Assist tiers keep `gemini`.",
+      "Everything here is community-graded: the cutover was recent and the binary disagrees with guides sometimes. Run the Teams test before relying on a flag.",
+    ],
+  },
+
+  amp: {
+    id: "amp",
+    name: "Amp (Sourcegraph)",
+    bins: ["amp"],
+    install: "npm install -g @sourcegraph/amp   then   amp login",
+    // V11.6.1 correction: execute mode is `amp -x "<prompt>"` (non-interactive single-shot),
+    // documented in Sourcegraph's own CLI guide. The old `--headless` mapping was wrong —
+    // that conflated runner mode (`--no-tui`) with execute mode.
+    prompt: { argv: ["-x", "$PROMPT"], confidence: "docs", source: "ampcode.com/docs/cli/execute-mode + sourcegraph/amp-examples-and-guides — execute mode is documented" },
+    json: { argv: null, kind: "text", confidence: "unverified", source: "not documented" },
+    readOnly: { argv: null, confidence: "unverified", source: "no documented read-only flag" },
+    write: { argv: null, confidence: "unverified", source: "not documented" },
+    fullAuto: { argv: null, confidence: "unverified", source: "not documented" },
+    maxTurns: { argv: null, confidence: "unverified", source: "not documented" },
+    timeout: { argv: null, confidence: "unverified", source: "MJ enforces its own wall clock" },
+    outputSchema: { argv: null, confidence: "unverified", source: "not documented" },
+    worktree: { argv: null, confidence: "unverified", source: "not documented" },
+    cwd: { argv: null, confidence: "unverified", source: "MJ sets cwd on the process" },
+    model: { argv: ["--model", "$MODEL"], confidence: "community", source: "model selection reported in amp config rather than argv" },
+    resume: { argv: null, confidence: "unverified", source: "not documented" },
+    sessionStart: { argv: null, confidence: "unverified", source: "not documented" },
+    noAutoUpdate: { argv: null, confidence: "unverified", source: "not documented" },
+    filters: null,
+    cost: null,
+    enforcedReadOnly: false,
+    gotchas: [
+      "Sourcegraph's agent; strongest when your repo is indexed by Sourcegraph.",
+      "No verified read-only enforcement: an Amp seat marked no-write is advisory.",
+    ],
+  },
+
+  crush: {
+    id: "crush",
+    name: "Crush (Charm)",
+    bins: ["crush"],
+    install: "npm install -g @charmbracelet/crush   (or brew install charmbracelet/crush/crush)   then   crush",
+    prompt: { argv: ["run", "$PROMPT"], confidence: "community", source: "crush run executes a prompt non-interactively; verify on the shipped binary" },
+    json: { argv: null, kind: "text", confidence: "unverified", source: "not documented" },
+    readOnly: { argv: null, confidence: "unverified", source: "no documented read-only flag" },
+    write: { argv: null, confidence: "unverified", source: "not documented" },
+    fullAuto: { argv: null, confidence: "unverified", source: "not documented" },
+    maxTurns: { argv: null, confidence: "unverified", source: "not documented" },
+    timeout: { argv: null, confidence: "unverified", source: "MJ enforces its own wall clock" },
+    outputSchema: { argv: null, confidence: "unverified", source: "not documented" },
+    worktree: { argv: null, confidence: "unverified", source: "not documented" },
+    cwd: { argv: null, confidence: "unverified", source: "MJ sets cwd on the process" },
+    model: { argv: ["-m", "$MODEL"], confidence: "community", source: "Charm's config-driven model selection" },
+    resume: { argv: null, confidence: "unverified", source: "not documented" },
+    sessionStart: { argv: null, confidence: "unverified", source: "not documented" },
+    noAutoUpdate: { argv: null, confidence: "unverified", source: "not documented" },
+    filters: null,
+    cost: null,
+    enforcedReadOnly: false,
+    gotchas: [
+      "Charm's TUI agent — LSP-aware, multi-provider.",
+      "No verified read-only enforcement: a Crush seat marked no-write is advisory.",
+    ],
+  },
+
+  openhands: {
+    id: "openhands",
+    name: "OpenHands",
+    bins: ["openhands"],
+    // V11.6.1 correction: the V1 CLI's headless mode is `openhands --headless -t "<task>"`
+    // (documented on PyPI + docs.openhands.dev); the earlier `solve` subcommand was a
+    // pre-V1 design. --json streams JSONL events; -f takes a task file.
+    install: "pip install openhands   then   openhands login   (or configure any LLM)",
+    prompt: { argv: ["--headless", "-t", "$PROMPT"], confidence: "docs", source: "pypi.org/project/openhands + docs.openhands.dev — headless mode documented" },
+    json: { argv: ["--json"], kind: "ndjson", confidence: "docs", source: "docs.openhands.dev CLI headless — JSONL event stream" },
+    readOnly: { argv: null, confidence: "unverified", source: "sandboxing is config-level (docker/local), not an argv flag" },
+    write: { argv: null, confidence: "unverified", source: "writes via its own tools inside its runtime" },
+    fullAuto: { argv: null, confidence: "unverified", source: "it is autonomous by design; containment is the sandbox config" },
+    maxTurns: { argv: null, confidence: "unverified", source: "not documented as argv" },
+    timeout: { argv: null, confidence: "unverified", source: "MJ enforces its own wall clock" },
+    outputSchema: { argv: null, confidence: "unverified", source: "not documented" },
+    worktree: { argv: null, confidence: "unverified", source: "workspace config, not argv" },
+    cwd: { argv: null, confidence: "unverified", source: "MJ sets cwd on the process" },
+    model: { argv: null, confidence: "unverified", source: "LLM config file, not argv" },
+    resume: { argv: null, confidence: "unverified", source: "not documented as argv" },
+    sessionStart: { argv: null, confidence: "unverified", source: "not documented" },
+    noAutoUpdate: { argv: null, confidence: "unverified", source: "not documented" },
+    filters: null,
+    cost: null,
+    enforcedReadOnly: false,
+    gotchas: [
+      "Formerly OpenDevin. The open-source autonomous software engineer.",
+      "Containment comes from its runtime sandbox config, not from an argv flag MJ can pass — treat read-only seats as advisory.",
+    ],
+  },
+
   llm: {
     id: "llm",
     name: "Direct LLM",
@@ -529,9 +713,76 @@ export const AGENT_CAPABILITIES: Record<HarnessId, AgentCapabilities> = {
   },
 };
 
-/** Is read-only actually enforced by the CLI, or only requested? */
-export function enforcedReadOnly(id: HarnessId): boolean {
-  return AGENT_CAPABILITIES[id].enforcedReadOnly;
+/* ─────────────────────────────────────────────────────────────────────────────
+ * §V11.6.1 — ONE RESOLVER FOR EVERY HARNESS REFERENCE.
+ *
+ * The 11.6.0 review found the hole this closes: custom ids (`custom:<slug>`) were smuggled
+ * through `as HarnessId` casts, and `teamExecutor` looked them up directly in
+ * AGENT_CAPABILITIES — which is undefined for them, and the executor dereferenced it.
+ * Every consumer now goes through resolveCaps(), which is TOTAL: a builtin entry, a
+ * registered custom's synthetic entry, or an honest unregistered-custom entry. It never
+ * returns undefined caps, so no execution path can crash on a custom seat again.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+export interface ResolvedHarness {
+  caps: AgentCapabilities;
+  /** True when the id is a `custom:<slug>` reference. */
+  custom: boolean;
+  /** False for an unregistered custom (or an unknown id): the seat cannot run. */
+  registered: boolean;
+}
+
+/** Synthetic capability entry for a REGISTERED custom harness: unknown-by-definition. */
+export function syntheticCustomCaps(id: string, spec: CustomHarnessSpec): AgentCapabilities {
+  return {
+    id: id as HarnessId,
+    name: `${spec.name} (custom)`,
+    bins: [spec.bin],
+    install: "Teams -> Connect -> Custom harnesses",
+    prompt: { argv: spec.argv, confidence: "community", source: "user-registered harness — MJ verified none of its flags" },
+    json: null, readOnly: null, write: null, fullAuto: null, maxTurns: null, timeout: null,
+    outputSchema: null, worktree: null, cwd: null, model: null, resume: null, sessionStart: null,
+    noAutoUpdate: null, filters: null, cost: null,
+    enforcedReadOnly: false,
+    gotchas: ["User-registered harness: MJ verified none of its flags. Read-only is advisory."],
+  } as AgentCapabilities;
+}
+
+/** The honest entry for a custom id (or unknown id) with no registered spec. */
+function unregisteredCustomCaps(id: string): AgentCapabilities {
+  return {
+    id: id as HarnessId,
+    name: `Custom harness "${id}"`,
+    bins: [],
+    install: "Teams -> Connect -> Custom harnesses (re-add it, then recompile)",
+    prompt: { argv: [], confidence: "unverified", source: "not registered (anymore)" },
+    json: null, readOnly: null, write: null, fullAuto: null, maxTurns: null, timeout: null,
+    outputSchema: null, worktree: null, cwd: null, model: null, resume: null, sessionStart: null,
+    noAutoUpdate: null, filters: null, cost: null,
+    enforcedReadOnly: false,
+    gotchas: ["This harness is not registered (anymore); it cannot run until re-added in Teams -> Connect."],
+  } as AgentCapabilities;
+}
+
+/** TOTAL harness resolver — builtin, registered custom, or honest unregistered. Never undefined. */
+export function resolveCaps(harness: string): ResolvedHarness {
+  if (isCustomHarness(harness)) {
+    const spec = getCustomHarness(harness);
+    return spec
+      ? { caps: syntheticCustomCaps(harness, spec), custom: true, registered: true }
+      : { caps: unregisteredCustomCaps(harness), custom: true, registered: false };
+  }
+  const caps = AGENT_CAPABILITIES[harness as HarnessId];
+  return caps
+    ? { caps, custom: false, registered: true }
+    : { caps: unregisteredCustomCaps(harness), custom: false, registered: false };
+}
+
+/** Is read-only actually enforced by the CLI, or only requested?
+ *  Custom harnesses (custom:*) are advisory-only by definition: MJ did not verify them. */
+export function enforcedReadOnly(id: HarnessId | string): boolean {
+  const caps = AGENT_CAPABILITIES[id as HarnessId];
+  return caps ? caps.enforcedReadOnly : false;
 }
 
 /**
@@ -540,8 +791,11 @@ export function enforcedReadOnly(id: HarnessId): boolean {
  * A flag that came from a forum post is not the same as one that came from `--help`, and the UI has
  * to be able to say which is which.
  */
-export function unverifiedClaims(id: HarnessId): string[] {
-  const caps = AGENT_CAPABILITIES[id];
+export function unverifiedClaims(id: HarnessId | string): string[] {
+  const caps = AGENT_CAPABILITIES[id as HarnessId];
+  if (!caps) {
+    return ["Custom harness: every flag is the user's own — MJ verified none of it. Read-only is advisory."];
+  }
   const out: string[] = [];
   const check = (name: string, cap: Capability | null) => {
     if (cap?.argv && cap.confidence === "community") {

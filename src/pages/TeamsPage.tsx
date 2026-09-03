@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AGENT_FRAMEWORKS } from "../domain/frameworks";
-import { HARNESSES, type HarnessId } from "../domain/harness";
+import {
+  HARNESSES,
+  customHarnessId,
+  setCustomHarnesses as mirrorCustomHarnesses,
+  validateCustomHarness,
+  type CustomHarnessSpec,
+  type HarnessId,
+} from "../domain/harness";
+import type { CliProviderEntry, CustomHarnessEntry } from "../domain/types";
 import {
   instantiateTeam,
   loadTeamsLocal,
@@ -19,7 +27,7 @@ import {
   type TeamRole,
   type TeamSeat,
 } from "../mission/agentTeam";
-import { AGENT_CAPABILITIES } from "../mission/agentCapabilities";
+import { resolveCaps } from "../mission/agentCapabilities";
 import { planWorktrees, type WorktreePlan } from "../mission/collaboration";
 import { CapLedger } from "../mission/caps";
 import { executeTeam, type SeatRecord, type TeamRunReport, type TeamRunnerDeps } from "../mission/teamExecutor";
@@ -75,7 +83,7 @@ import { ipc, useTauri } from "../ipc/client";
 import { toast } from "../panels/Toast";
 import { uid } from "../app/id";
 
-type ActiveTab = "crews" | "channel" | "arena" | "astmerge" | "consensus" | "chaos" | "memory" | "failure" | "provenance" | "matrix" | "mockbridge" | "runner" | "evolve" | "builder" | "frameworks";
+type ActiveTab = "connect" | "crews" | "channel" | "arena" | "astmerge" | "consensus" | "chaos" | "memory" | "failure" | "provenance" | "matrix" | "mockbridge" | "runner" | "evolve" | "builder" | "frameworks";
 
 const ALL_ROLES: TeamRole[] = [
   "planner",
@@ -101,6 +109,12 @@ const HARNESS_BADGES: Record<HarnessId, { label: string; color: string; bg: stri
   qwen: { label: "Qwen Code", color: "#0284c7", bg: "rgba(2, 132, 199, 0.14)" },
   amazonq: { label: "Amazon Q / Kiro", color: "#ea580c", bg: "rgba(234, 88, 12, 0.14)" },
   kilo: { label: "Kilo Code", color: "#06b6d4", bg: "rgba(6, 182, 212, 0.14)" },
+  openclaude: { label: "OpenClaude", color: "#f97316", bg: "rgba(249, 115, 22, 0.14)" },
+  copilot: { label: "Copilot CLI", color: "#22c55e", bg: "rgba(34, 197, 94, 0.14)" },
+  antigravity: { label: "Antigravity", color: "#a3e635", bg: "rgba(163, 230, 53, 0.14)" },
+  amp: { label: "Amp", color: "#f43f5e", bg: "rgba(244, 63, 94, 0.14)" },
+  crush: { label: "Crush", color: "#e879f9", bg: "rgba(232, 121, 249, 0.14)" },
+  openhands: { label: "OpenHands", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.14)" },
   hermes: { label: "Hermes Agent", color: "#eab308", bg: "rgba(234, 179, 8, 0.14)" },
   acp: { label: "ACP Protocol", color: "#14b8a6", bg: "rgba(20, 184, 166, 0.14)" },
   llm: { label: "Direct LLM", color: "#94a3b8", bg: "rgba(148, 163, 184, 0.14)" },
@@ -125,6 +139,14 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
   });
   const [selectedTeamId, setSelectedTeamId] = useState<string>(cliTeams[0]?.id ?? "team.powerhouse");
   const [cliStatus, setCliStatus] = useState<Record<string, boolean>>({});
+
+  // V11.6 Connect tab: full detection detail, the custom-harness registry, per-harness
+  // smoke-test results, and the add-custom form.
+  const [connectDetect, setConnectDetect] = useState<CliProviderEntry[]>([]);
+  const [customList, setCustomList] = useState<CustomHarnessSpec[]>([]);
+  const [connectTest, setConnectTest] = useState<Record<string, { status: "busy" | "ok" | "err"; text: string }>>({});
+  const [customForm, setCustomForm] = useState({ name: "", bin: "", argv: "$PROMPT", notes: "" });
+  const [customErrors, setCustomErrors] = useState<string[]>([]);
 
   // Canvas workspace teams state
   const [canvasTeams, setCanvasTeams] = useState<TeamWorkspace[]>(() => loadTeamsLocal());
@@ -224,16 +246,83 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
     chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: "smooth" });
   }, [channelMessages, activeTab]);
 
-  // Detect installed CLI tools on load
-  useEffect(() => {
+  // Detect installed CLI tools on load — and hydrate the Connect tab + the custom registry.
+  const [customStatus, setCustomStatus] = useState<Record<string, boolean>>({});
+  const refreshConnect = () => {
     void ipc.cliProvidersDetect().then((list) => {
+      setConnectDetect(list);
       const map: Record<string, boolean> = {};
       for (const item of list) {
         map[item.id] = Boolean(item.installed);
       }
       setCliStatus(map);
     });
+    void ipc.customHarnessList().then((list) => {
+      const entries = list.map((h) => ({ ...h, installed: Boolean(h.installed), executable: h.executable ?? null }));
+      setCustomList(entries);
+      // The sync mirror powers composeSeatArgv/sessions for custom seats.
+      mirrorCustomHarnesses(entries);
+      const map: Record<string, boolean> = {};
+      for (const item of list) map[item.id] = Boolean(item.installed);
+      setCustomStatus(map);
+    });
+  };
+  useEffect(() => {
+    refreshConnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /** Smoke-test one harness: a one-word prompt, 45s ceiling, result inline. */
+  const testHarness = async (id: string) => {
+    setConnectTest((m) => ({ ...m, [id]: { status: "busy", text: "" } }));
+    try {
+      const r = (await ipc.cliInvoke(id, "Reply with exactly one word: CONNECTED", undefined, 45)) as {
+        stdout?: string;
+        stderr?: string;
+        code?: number | null;
+      };
+      const text = String(r.stdout || r.stderr || "").trim();
+      if (!text) throw new Error(`empty output (exit code ${r.code ?? "?"}) — is the CLI authenticated?`);
+      setConnectTest((m) => ({ ...m, [id]: { status: "ok", text: text.slice(0, 300) } }));
+    } catch (e) {
+      setConnectTest((m) => ({ ...m, [id]: { status: "err", text: (e instanceof Error ? e.message : String(e)).slice(0, 400) } }));
+    }
+  };
+
+  /** Save the add-custom form. Validated here for UX, re-validated in Rust before anything runs. */
+  const saveCustomHarness = () => {
+    const spec = {
+      name: customForm.name.trim(),
+      bin: customForm.bin.trim(),
+      argv: customForm.argv.trim().split(/\s+/).filter(Boolean),
+    };
+    const errs = validateCustomHarness(spec);
+    if (errs.length > 0) {
+      setCustomErrors(errs.map((e) => `${e.field}: ${e.message}`));
+      return;
+    }
+    const entry: CustomHarnessEntry = {
+      id: customHarnessId(spec.name),
+      name: spec.name,
+      bin: spec.bin,
+      argv: spec.argv,
+      notes: customForm.notes.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    setCustomErrors([]);
+    ipc
+      .customHarnessSave(entry)
+      .then(() => {
+        setCustomForm({ name: "", bin: "", argv: "$PROMPT", notes: "" });
+        refreshConnect();
+        toast(`Custom harness "${spec.name}" connected. Bind it to any seat.`, "ok");
+      })
+      .catch((e) => setCustomErrors([e instanceof Error ? e.message : String(e)]));
+  };
+
+  const deleteCustomHarness = (id: string) => {
+    void ipc.customHarnessDelete(id).then(() => refreshConnect());
+  };
 
   const saveCliTeams = (updated: CliAgentTeam[]) => {
     setCliTeams(updated);
@@ -724,6 +813,12 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
       {/* Main Tabs */}
       <div className="row" style={{ gap: 6, marginBottom: 20, borderBottom: "1px solid var(--border)", paddingBottom: 10, flexWrap: "wrap" }}>
         <button
+          className={activeTab === "connect" ? "primary" : ""}
+          onClick={() => setActiveTab("connect")}
+        >
+          Connect Harnesses
+        </button>
+        <button
           className={activeTab === "crews" ? "primary" : ""}
           onClick={() => setActiveTab("crews")}
         >
@@ -816,6 +911,204 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
       </div>
 
       {/* ── TAB 1: CLI AGENT CREWS ────────────────────────────────────────── */}
+      {/* ═════════════════ V11.6 — CONNECT YOUR HARNESSES ═════════════════ */}
+      {activeTab === "connect" && (
+        <div>
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
+            <div>
+              <h3 style={{ margin: 0, fontFamily: "var(--font-ui)", fontSize: 16 }}>Connect your harnesses</h3>
+              <div className="muted" style={{ maxWidth: 720, marginTop: 4 }}>
+                MJ runs the real coding-agent CLIs on this machine — the agents you already use, with the
+                subscriptions and keys you already have. Install a CLI, re-scan, smoke-test it, then bind it to
+                any seat in a team. Anything not on this list can be registered as a custom harness below.
+              </div>
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              <span className="pill ok">{connectDetect.filter((d) => d.installed).length} detected</span>
+              <button onClick={refreshConnect}>Re-scan</button>
+            </div>
+          </div>
+
+          {!useTauri() && (
+            <div className="card" style={{ borderColor: "var(--amber)", marginBottom: 12 }}>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>You are in the web preview.</div>
+              <div className="muted">
+                A browser cannot see your PATH and cannot spawn processes, so nothing can be detected or run here.
+                The Connect center is fully usable in the native MJ app (Tauri) — that is where harnesses actually
+                execute. Manage the custom list here if you like; it will be there in the native app.
+              </div>
+            </div>
+          )}
+
+          <div className="grid-2">
+            {HARNESSES.filter((h) => h.id !== "llm").map((h) => {
+              const det = connectDetect.find((d) => d.id === h.id || d.invocation === h.bins[0] || d.id === h.bins[0]);
+              const installed = Boolean(det?.installed);
+              const t = connectTest[h.id];
+              const badge = HARNESS_BADGES[h.id] ?? { label: h.name, color: "var(--text-dim)", bg: "var(--bg-panel)" };
+              return (
+                <div className="card" key={h.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ padding: "2px 8px", borderRadius: 2, fontSize: 10, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", color: badge.color, background: badge.bg }}>
+                      {h.name}
+                    </span>
+                    {installed ? <span className="pill ok">installed</span> : <span className="pill">not found</span>}
+                    {det?.executable && (
+                      <span className="muted mono" style={{ fontSize: 9, wordBreak: "break-all" }} title={det.executable}>
+                        {det.executable}
+                      </span>
+                    )}
+                  </div>
+                  <div className="muted" style={{ fontSize: 11, lineHeight: 1.55 }}>{h.notes}</div>
+                  <div className="mono" style={{ fontSize: 10, color: "var(--text-dim)", background: "var(--bg)", border: "1px solid var(--border)", padding: "6px 8px", wordBreak: "break-all", borderRadius: 2 }}>
+                    $ {h.install}
+                  </div>
+                  <div className="row" style={{ gap: 8, marginTop: "auto" }}>
+                    <button
+                      disabled={!installed || t?.status === "busy"}
+                      onClick={() => void testHarness(h.id)}
+                      title={installed ? "Run a one-word smoke prompt through this CLI" : "Install it first, then re-scan"}
+                    >
+                      {t?.status === "busy" ? "Testing…" : "Test"}
+                    </button>
+                    <button
+                      className="ghost"
+                      onClick={() => void navigator.clipboard?.writeText(h.install)}
+                      title="Copy the install command"
+                    >
+                      Copy install
+                    </button>
+                  </div>
+                  {t && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontFamily: "var(--font-mono)",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        color: t.status === "ok" ? "var(--text-dim)" : "var(--danger)",
+                        border: "1px solid var(--border)",
+                        background: "var(--bg)",
+                        padding: "6px 8px",
+                        borderRadius: 2,
+                        maxHeight: 120,
+                        overflow: "auto",
+                      }}
+                    >
+                      {t.status === "busy"
+                        ? "running the smoke prompt (45s ceiling)…"
+                        : t.status === "ok"
+                          ? `OK — replied: ${t.text.slice(0, 160)}`
+                          : t.text}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="card" style={{ marginTop: 16 }}>
+            <div className="card-title">Direct LLM (no CLI)</div>
+            <div className="muted" style={{ marginTop: 4 }}>
+              The one non-CLI option: MJ calls the chat API directly with the composed agent prompt, using a
+              provider key from MJ → Providers or a local Ollama. Useful for reasoning and synthesis seats;
+              it cannot edit files.
+            </div>
+          </div>
+
+          {/* ── custom harnesses ─────────────────────────────────────────────── */}
+          <h3 style={{ margin: "26px 0 6px", fontFamily: "var(--font-ui)", fontSize: 16 }}>Your own harnesses</h3>
+          <div className="muted" style={{ marginBottom: 12, maxWidth: 720 }}>
+            Register any binary as a harness: a name, the executable, and an arguments template where
+            <span className="mono"> $PROMPT </span>marks where the task goes (exactly once). Example:
+            <span className="mono"> bin </span>=<span className="mono">opencode</span>,
+            <span className="mono"> argv </span>=<span className="mono">run --format json $PROMPT</span>.
+            Everything is validated on both sides — TypeScript for the form, Rust again before anything runs —
+            and <span className="mono">cli_invoke</span> only ever executes a built-in allowlisted binary or one
+            you registered here.
+          </div>
+
+          {customList.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+              {customList.map((c) => {
+                const t = connectTest[c.id];
+                const installed = customStatus[c.id] ?? false;
+                return (
+                  <div className="card" key={c.id} style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 0 }}>
+                    <span style={{ padding: "2px 8px", borderRadius: 2, fontSize: 10, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--amber)", background: "var(--amber-dim)" }}>
+                      {c.name}
+                    </span>
+                    <span className="mono" style={{ fontSize: 11, wordBreak: "break-all" }}>
+                      {c.bin} {c.argv.join(" ")}
+                    </span>
+                    {installed ? <span className="pill ok">on PATH</span> : <span className="pill err">binary not found</span>}
+                    <span className="row" style={{ gap: 6, marginLeft: "auto" }}>
+                      <button disabled={!installed || t?.status === "busy"} onClick={() => void testHarness(c.id)}>
+                        {t?.status === "busy" ? "Testing…" : "Test"}
+                      </button>
+                      <button className="danger" onClick={() => deleteCustomHarness(c.id)}>
+                        Remove
+                      </button>
+                    </span>
+                    {t && t.status !== "busy" && (
+                      <div
+                        style={{
+                          width: "100%",
+                          fontSize: 11,
+                          fontFamily: "var(--font-mono)",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          color: t.status === "ok" ? "var(--text-dim)" : "var(--danger)",
+                        }}
+                      >
+                        {t.status === "ok" ? `OK — replied: ${t.text.slice(0, 160)}` : t.text}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="card">
+            <div className="card-title">Add a custom harness</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginTop: 10 }}>
+              <label className="field">
+                Name
+                <input type="text" value={customForm.name} placeholder="My internal agent" onChange={(e) => setCustomForm({ ...customForm, name: e.target.value })} />
+              </label>
+              <label className="field">
+                Binary (on PATH)
+                <input type="text" className="mono" value={customForm.bin} placeholder="my-agent" onChange={(e) => setCustomForm({ ...customForm, bin: e.target.value })} />
+              </label>
+              <label className="field" style={{ gridColumn: "1 / -1" }}>
+                Arguments ($PROMPT marks the task)
+                <input type="text" className="mono" value={customForm.argv} placeholder="--headless $PROMPT --format text" onChange={(e) => setCustomForm({ ...customForm, argv: e.target.value })} />
+              </label>
+              <label className="field" style={{ gridColumn: "1 / -1" }}>
+                Notes (for yourself)
+                <input type="text" value={customForm.notes} placeholder="Auth via ~/.my-agent/config" onChange={(e) => setCustomForm({ ...customForm, notes: e.target.value })} />
+              </label>
+            </div>
+            {customErrors.length > 0 && (
+              <div style={{ marginTop: 10, color: "var(--danger)", fontSize: 11, fontFamily: "var(--font-mono)" }}>
+                {customErrors.map((e) => (
+                  <div key={e}>{e}</div>
+                ))}
+              </div>
+            )}
+            <div className="row" style={{ marginTop: 12 }}>
+              <button className="primary" onClick={saveCustomHarness}>
+                Connect harness
+              </button>
+              <span className="muted" style={{ fontSize: 11 }}>
+                Saved {customList.length > 0 ? `· ${customList.length} registered` : "locally in the app data dir"}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === "crews" && (
         <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: 20 }}>
           {/* Left Column: Team List */}
@@ -920,7 +1213,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {selectedTeam.seats.map((seat, index) => {
                     const badge = HARNESS_BADGES[seat.harness] ?? { label: seat.harness, color: "var(--text)", bg: "var(--bg-panel)" };
-                    const cap = AGENT_CAPABILITIES[seat.harness];
+                    const cap = resolveCaps(seat.harness).caps;
                     const installed = cliStatus[seat.harness] ?? cliStatus[cap?.bins[0] ?? ""] ?? false;
 
                     return (
@@ -2122,6 +2415,9 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
                   {HARNESSES.map((h) => (
                     <option key={h.id} value={h.id}>{h.name}</option>
                   ))}
+                  {customList.length > 0 && customList.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name} (custom)</option>
+                  ))}
                 </select>
 
                 <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, cursor: "pointer" }}>
@@ -2254,7 +2550,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
 
             {(() => {
               const composed = composeSeatArgv(inspectSeat, { prompt: "<objective>", cwd: "/workspace", readOnly: !inspectSeat.mayWrite });
-              const cap = AGENT_CAPABILITIES[inspectSeat.harness];
+              const cap = resolveCaps(inspectSeat.harness).caps;
               return (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 12 }}>
                   <div>

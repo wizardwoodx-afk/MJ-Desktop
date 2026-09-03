@@ -23,7 +23,7 @@
  */
 
 import type { HarnessId } from "../domain/harness";
-import { AGENT_CAPABILITIES } from "./agentCapabilities";
+import { resolveCaps } from "./agentCapabilities";
 
 export interface SessionKey {
   /** Which seat owns the conversation. */
@@ -173,10 +173,21 @@ export type SessionIdKind = "mj-chosen" | "cli-chosen";
  * would make a reviewer forget its own objections and approve on the second pass.
  */
 export function sessionArgv(
-  harness: HarnessId,
+  harness: HarnessId | string,
   opts: { kind: TurnKind; idKind: SessionIdKind; sessionId: string },
 ): { argv: string[]; continuity: "session" | "continue-latest" | "none"; warning: string | null } {
-  const caps = AGENT_CAPABILITIES[harness];
+  // V11.6.3: session resolution consumes the SAME resolved-harness abstraction as every
+  // other layer (the "one harness truth" pass, completed). A custom harness — registered
+  // or not — has no documented resume shape by definition: the synthetic entry carries
+  // none, so the turn is honestly stateless.
+  const rc = resolveCaps(harness);
+  if (rc.custom) {
+    return { argv: [], continuity: "none", warning: "Custom harness: no session continuity — every turn is stateless." };
+  }
+  if (!rc.registered) {
+    return { argv: [], continuity: "none", warning: `Harness "${harness}" is not registered (anymore); this turn is stateless.` };
+  }
+  const caps = rc.caps;
 
   // Turn one on a CLI that names its own sessions: emit nothing, then capture the id from the output.
   // This is not a limitation to apologise for — it is the only correct behaviour, because passing an id
@@ -216,8 +227,11 @@ export function sessionArgv(
 }
 
 /** Does this CLI let MJ choose the session id, or does it assign its own? */
-export function sessionIdKind(harness: HarnessId): SessionIdKind {
-  return AGENT_CAPABILITIES[harness].sessionStart?.argv ? "mj-chosen" : "cli-chosen";
+export function sessionIdKind(harness: HarnessId | string): SessionIdKind {
+  // V11.6.3: through the resolver — a custom harness never names its own session id.
+  const rc = resolveCaps(harness);
+  if (rc.custom) return "cli-chosen";
+  return rc.caps.sessionStart?.argv ? "mj-chosen" : "cli-chosen";
 }
 
 /* ------------------------------------------------------------------ reading the id back */

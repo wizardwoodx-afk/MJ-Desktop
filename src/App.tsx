@@ -182,9 +182,10 @@ export function App() {
     return () => window.removeEventListener("mj:add-node", onAdd);
   }, [store]);
 
+  /* V11.5: the Inspector opens on DOUBLE-click (store.openDetails), not on selection. */
   useEffect(() => {
-    if (store.selectedNodeId) setInspectorOpen(true);
-  }, [store.selectedNodeId]);
+    if (store.inspectorId) setInspectorOpen(true);
+  }, [store.inspectorId]);
 
   const openWorkflow = useCallback(async (id: string) => {
     await useGraphStore.getState().save();
@@ -270,6 +271,7 @@ export function App() {
         case "openHome": setPage("home"); break;
         case "toggleSidebar": setRailCollapsed((v) => !v); break;
         case "toggleConsole": setConsoleOpen((v) => !v); break;
+        case "toggleAssistant": setAssistantOpen((v) => !v); break;
         case "zoomIn": window.__mjCanvas?.zoomIn(); break;
         case "zoomOut": window.__mjCanvas?.zoomOut(); break;
         case "nextWorkflow":
@@ -468,7 +470,7 @@ export function App() {
           </button>
         ))}
         <div className="spacer" />
-        <button title="Assistant" onClick={() => setAssistantOpen(true)}>{iconFor("spark")}</button>
+        <button title="Assist · one custom node (Ctrl+J)" onClick={() => setAssistantOpen((o) => !o)}>{iconFor("spark")}</button>
       </aside>
 
       <main className="main">
@@ -528,6 +530,7 @@ export function App() {
         <span>{store.dirty ? "unsaved" : store.lastSavedAt ? `saved ${new Date(store.lastSavedAt).toLocaleTimeString()}` : "ready"}</span>
         <span>{store.graph.nodes.length} nodes · {store.graph.connections.length} wires</span>
         <span className="live">{host === "tauri" ? "native · stdio" : "webview host"}</span>
+        <span className="muted">MJ {MJ_VERSION_SHORT}</span>
         {validationMsg && <span className="err">{validationMsg}</span>}
         <span className="push">Ctrl+K palette{store.selectedNodeId ? " · del removes" : ""}</span>
       </footer>

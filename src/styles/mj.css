@@ -653,3 +653,64 @@ button:active { border-color: var(--amber); }
   .statusbar .live::before,
   .glyph-light.on { animation: none !important; }
 }
+
+/* ── §V11.5 MERIDIAN ─────────────────────────────────────────────────────────
+   The Meridian pass: honest hit targets, the Assist redesign, and the node-method
+   contract line. Everything here reads theme tokens — no hex outside themes.css.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* Wire hit target: the whole 14px corridor around a wire is clickable, not just the stroke. */
+.wire-hit { stroke: transparent; stroke-width: 14; fill: none; cursor: pointer; }
+
+/* Wire midpoint dot — the Meridian junction-dot, on wires. Pointer-events off: the dot
+   is a landmark, not a control; clicks within the corridor still hit the wire group. */
+.wire-mid { pointer-events: none; }
+
+/* Port anchors: a 12.5px hit halo around the 10px dot — fingers and fast cursors land links. */
+.port-anchor { position: relative; }
+.port-anchor::after { content: ""; position: absolute; inset: -12.5px; }
+
+/* Assist (V11.5 redesign): labelled provider, role rails, quick-starts, typing dots. */
+.asst-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.asst-lamp { width: 8px; height: 8px; background: var(--amber); flex: 0 0 auto; }
+.asst-title { display: flex; flex-direction: column; line-height: 1.15; flex: 1; min-width: 0; }
+.asst-word { font-family: var(--font-doto); font-weight: 700; letter-spacing: 0.22em; font-size: 13px; color: var(--text); }
+.asst-sub { font-size: 10px; color: var(--text-mute); letter-spacing: 0.06em; }
+.asst-prov { font-family: var(--font-mono); font-size: 10px; padding: 3px 7px; border: 1px solid var(--border-strong); color: var(--text-dim); white-space: nowrap; }
+.asst-prov.offline { color: var(--danger); border-color: var(--danger); }
+.asst-close { padding: 2px 8px; }
+.asst-msg { display: flex; flex-direction: column; gap: 4px; padding: 9px 11px; border: 1px solid transparent; margin: 7px 0; }
+.asst-msg.user { align-items: flex-end; }
+.asst-msg.user .asst-body { border: 1px solid var(--border-strong); background: var(--row-hover); }
+.asst-rail { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em; color: var(--text-mute); }
+.asst-msg.user .asst-rail { flex-direction: row-reverse; }
+.asst-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-mute); }
+.asst-msg.bot .asst-dot { background: var(--amber); }
+.asst-role { text-transform: uppercase; }
+.asst-via { font-family: var(--font-mono); font-size: 9px; padding: 1px 6px; border: 1px solid var(--border); color: var(--text-dim); }
+.asst-via.offline { color: var(--danger); border-color: var(--danger); }
+.asst-body { font-size: 12px; line-height: 1.5; color: var(--text); white-space: pre-wrap; }
+.asst-action { align-self: flex-start; font-size: 10px; padding: 3px 9px; border: 1px solid var(--border-strong); background: transparent; color: var(--text-dim); cursor: pointer; }
+.asst-action:hover { color: var(--accent-hot); border-color: var(--accent); }
+.asst-typing { display: inline-flex; gap: 4px; padding: 3px 0; }
+.asst-typing span { width: 5px; height: 5px; border-radius: 50%; background: var(--text-mute); animation: mj-asst-blink 1.2s infinite; }
+.asst-typing span:nth-child(2) { animation-delay: 0.2s; }
+.asst-typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes mj-asst-blink { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
+.asst-quick { display: flex; flex-direction: column; gap: 5px; padding: 8px 12px; border-top: 1px solid var(--border); }
+.asst-quick-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em; color: var(--text-mute); text-transform: uppercase; }
+.asst-chip { text-align: left; font-size: 11px; padding: 5px 9px; border: 1px dashed var(--border-strong); background: transparent; color: var(--text-dim); cursor: pointer; }
+.asst-chip:hover { color: var(--text); border-color: var(--accent); }
+.asst-send { white-space: nowrap; }
+.asst-foot { padding: 6px 12px; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em; color: var(--text-mute); border-top: 1px solid var(--border); }
+
+/* Inspector (V11.5): the node-method contract + field hints + assignment preview. */
+.method-contract { font-size: 10px; line-height: 1.5; padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text-mute); }
+.field-hint { display: block; font-family: var(--font-mono); font-size: 9px; color: var(--text-mute); margin-top: 2px; }
+.fold-tag { color: var(--text-mute); margin-left: 4px; }
+.assignment-preview { white-space: pre-wrap; font-size: 10px; line-height: 1.5; max-height: 180px; overflow: auto; padding: 8px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-dim); }
+
+/* reduced motion wins — no typing dots, no blinking */
+@media (prefers-reduced-motion: reduce) {
+  .asst-typing span { animation: none; }
+}

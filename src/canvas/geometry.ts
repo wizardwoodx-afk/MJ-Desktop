@@ -78,3 +78,58 @@ export function zoomAt(
   const k = zoom / vp.zoom;
   return { zoom, x: cursor.x - (cursor.x - vp.x) * k, y: cursor.y - (cursor.y - vp.y) * k };
 }
+
+/**
+ * §V11.5 hit geometry — generous, honest hit targets.
+ *
+ * The Meridian pass made the canvas FEEL right: edges are grabbable within 14px of their
+ * control segment (not just on the 2px stroke), node rects come in exactly two sizes
+ * (normal 46×32, small 28×20 — the minimap draws the same rects, so map and canvas agree),
+ * and the wire midpoint is computable so the dot lands on the curve, not on a chord.
+ */
+export const NODE_RECT = { normal: { w: 46, h: 32 }, small: { w: 28, h: 20 } };
+
+/** The node's hit rectangle. Control nodes draw small; everything else normal. */
+export function nodeHitRect(n: { definitionId: string }, small = n.definitionId.startsWith("control.")): { x: number; y: number; w: number; h: number } {
+  const { w, h } = small ? NODE_RECT.small : NODE_RECT.normal;
+  return { x: 0, y: 0, w, h };
+}
+
+/** Point-to-segment distance, the primitive under the edge hit test. */
+export function distToSegment(p: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
+  const ex = a.x + t * dx;
+  const ey = a.y + t * dy;
+  return Math.hypot(p.x - ex, p.y - ey);
+}
+
+/**
+ * Is the point within `radius` (default 14) of the wire's control segment?
+ * The bezier bows horizontally, so its straight-ish middle — the control segment between
+ * (a.x+dx, a.y) and (b.x−dx, b.y) — is what the hand aims at. That is what we hit-test.
+ */
+export function isPointNearPath(
+  p: { x: number; y: number },
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  radius = 14,
+): boolean {
+  const dx = Math.max(60, Math.abs(b.x - a.x) * 0.45);
+  return distToSegment(p, { x: a.x + dx, y: a.y }, { x: b.x - dx, y: b.y }) <= radius;
+}
+
+/** The visual midpoint of a wire's bezier (t = 0.5) — where the midpoint dot is drawn. */
+export function edgeMidpoint(a: { x: number; y: number }, b: { x: number; y: number }): { x: number; y: number } {
+  const dx = Math.max(60, Math.abs(b.x - a.x) * 0.45);
+  const c1 = { x: a.x + dx, y: a.y };
+  const c2 = { x: b.x - dx, y: b.y };
+  const t = 0.5;
+  const mt = 1 - t;
+  return {
+    x: mt * mt * mt * a.x + 3 * mt * mt * t * c1.x + 3 * mt * t * t * c2.x + t * t * t * b.x,
+    y: mt * mt * mt * a.y + 3 * mt * mt * t * c1.y + 3 * mt * t * t * c2.y + t * t * t * b.y,
+  };
+}

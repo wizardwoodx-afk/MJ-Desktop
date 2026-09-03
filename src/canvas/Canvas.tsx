@@ -3,7 +3,7 @@ import { DATA_TYPE_COLORS } from "../domain/dataTypes";
 import { DEFINITIONS_BY_ID } from "../domain/nodeLibrary";
 import { getEditorPrefs, useGraphStore, useNodeRuntimeOutput, useNodeRuntimeStatus } from "../graph/store";
 import { iconFor } from "./icons";
-import { bezier, NODE_W, nodeH as geomNodeH, portPos as geomPortPos, zoomAt, type NodeMetrics } from "./geometry";
+import { bezier, edgeMidpoint, NODE_W, nodeH as geomNodeH, nodeHitRect, portPos as geomPortPos, zoomAt, type NodeMetrics } from "./geometry";
 import { getMetricsVersion, invalidatePortMetrics, measureCardHeight, measurePort, registerPortAnchor, subscribePortMetrics, type PortPoint } from "./ports";
 import type { NodeInstance } from "../domain/types";
 
@@ -254,8 +254,9 @@ export function Canvas({ onOpenLibrary }: { onOpenLibrary: () => void }) {
       if (!sn || !tn) return null;
       const a = geomPortPos(sn, c.sourcePortId, "out", metrics);
       const b = geomPortPos(tn, c.targetPortId, "in", metrics);
-      return { c, d: bezier(a, b), color: DATA_TYPE_COLORS[c.dataType] ?? "#aaa" };
-    }).filter(Boolean) as Array<{ c: (typeof store.graph.connections)[0]; d: string; color: string }>;
+      const mid = edgeMidpoint(a, b);
+      return { c, d: bezier(a, b), mid, color: DATA_TYPE_COLORS[c.dataType] ?? "#aaa" };
+    }).filter(Boolean) as Array<{ c: (typeof store.graph.connections)[0]; d: string; mid: { x: number; y: number }; color: string }>;
   }, [store.graph, metrics]);
 
   return (
@@ -277,10 +278,12 @@ export function Canvas({ onOpenLibrary }: { onOpenLibrary: () => void }) {
         <defs>
           <filter id="mj-glow"><feGaussianBlur stdDeviation="2.2" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
         </defs>
-        {wires.map(({ c, d, color }) => (
+        {wires.map(({ c, d, mid, color }) => (
           <g key={c.id} className="wire-group" onClick={() => store.disconnect(c.id)}>
             <path className="wire-hit" d={d} />
             <path className={`wire ${c.status}`} d={d} style={{ stroke: color }} />
+            {/* V11.5: a midpoint dot on the curve — the Meridian junction-dot, on wires too. */}
+            <circle className="wire-mid" cx={mid.x} cy={mid.y} r="2.6" fill={color} stroke="none" />
           </g>
         ))}
         {link && (() => {
@@ -450,6 +453,7 @@ function NodeCard({
       style={{ left: node.x, top: node.y, width: cat === "control" ? undefined : NODE_W }}
       onPointerDown={onDragStart}
       onClick={() => useGraphStore.getState().selectNode(node.id)}
+      onDoubleClick={() => useGraphStore.getState().openDetails(node.id)}
       onContextMenu={onContext}
     >
       <div className="head">
@@ -518,8 +522,10 @@ function Minimap() {
           position: "absolute",
           left: 8 + (n.x - minX) * s,
           top: 16 + (n.y - minY) * s,
-          width: Math.max(6, NODE_W * s),
-          height: Math.max(4, 40 * s),
+          /* V11.5 owner rule: minimap rects are the normal/small node-rect sizes
+             (46×32 / 28×20, from geometry.nodeHitRect) — not squashed card ghosts. */
+          width: Math.max(3, nodeHitRect(n, n.definitionId.startsWith("control.")).w * s),
+          height: Math.max(2, nodeHitRect(n, n.definitionId.startsWith("control.")).h * s),
           // Theme tokens, not hardcoded hex — this used to paint default-theme amber in every theme.
           background: n.definitionId.startsWith("agent.") ? "var(--amber)" : "var(--text-4)",
           opacity: 0.7,

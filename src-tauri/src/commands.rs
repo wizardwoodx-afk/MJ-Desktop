@@ -897,17 +897,28 @@ pub async fn browser_console(session_id: String) -> Value {
 
 #[tauri::command]
 pub fn cli_providers_detect() -> Value {
+    // V11.6 (the Connector pass): the full 2026 registry, kept in step with
+    // src/domain/harness.ts (probe/harnesses.test.ts cross-checks the two lists).
     let names = [
         ("hermes", "Hermes Agent", "hermes"),
         ("claude", "Claude Code", "claude"),
         ("codex", "OpenAI Codex CLI", "codex"),
         ("opencode", "OpenCode", "opencode"),
+        ("openclaude", "OpenClaude", "openclaude"),
+        ("copilot", "GitHub Copilot CLI", "copilot"),
         ("cursor", "Cursor Agent", "cursor-agent"),
-        ("grok", "Grok CLI", "grok"),
+        ("grok", "Grok Build (xAI)", "grok"),
         ("cline", "Cline", "cline"),
         ("kilo", "Kilo Code", "kilo"),
-        ("qwen", "Qwen Code", "qwen"),
+        ("aider", "Aider", "aider"),
         ("gemini", "Gemini CLI", "gemini"),
+        ("antigravity", "Antigravity CLI (agy)", "agy"),
+        ("amp", "Amp (Sourcegraph)", "amp"),
+        ("crush", "Crush (Charm)", "crush"),
+        ("openhands", "OpenHands", "openhands"),
+        ("qwen", "Qwen Code", "qwen"),
+        ("goose", "Goose (Block)", "goose"),
+        ("amazonq", "Amazon Q / Kiro CLI", "kiro-cli"),
     ];
     Value::Array(names.into_iter().map(|(id, name, bin)| {
         let resolved = which_bin(bin).or_else(|| which_bin(id));
@@ -1044,9 +1055,17 @@ fn harness_argv(id: &str, prompt: &str) -> (String, Vec<String>) {
         "codex" => ("codex".into(), vec!["exec".into(), "--skip-git-repo-check".into(), prompt.into()]),
         "opencode" => ("opencode".into(), vec!["run".into(), prompt.into()]),
         "cursor" => ("cursor-agent".into(), vec!["-p".into(), prompt.into()]),
-        "grok" => ("grok".into(), vec!["-p".into(), prompt.into()]),
+        // V11.6: grok exec is the documented non-interactive mode (x.ai, 2026-09).
+        "grok" => ("grok".into(), vec!["exec".into(), prompt.into()]),
         "cline" => ("cline".into(), vec![prompt.into()]),
-        "kilo" => ("kilo".into(), vec![prompt.into()]),
+        // V11.6: kilo run is the headless one-shot mode (kilo.ai docs).
+        "kilo" => ("kilo".into(), vec!["run".into(), prompt.into()]),
+        "openclaude" => ("openclaude".into(), vec!["-p".into(), prompt.into()]),
+        "copilot" => ("copilot".into(), vec!["-p".into(), prompt.into(), "-s".into()]),
+        "antigravity" => ("agy".into(), vec!["-p".into(), prompt.into()]), // V11.6.1: the shipped binary is agy
+        "amp" => ("amp".into(), vec!["-x".into(), prompt.into()]), // V11.6.1: execute mode, not runner mode
+        "crush" => ("crush".into(), vec!["run".into(), prompt.into()]),
+        "openhands" => ("openhands".into(), vec!["--headless".into(), "-t".into(), prompt.into()]), // V11.6.1: documented headless mode
         "qwen" => ("qwen".into(), vec!["-p".into(), prompt.into()]),
         "gemini" => ("gemini".into(), vec!["-p".into(), prompt.into()]),
         "aider" => ("aider".into(), vec!["--message".into(), prompt.into(), "--yes".into(), "--no-auto-commits".into()]),
@@ -1111,24 +1130,142 @@ fn run_timeout(mut cmd: std::process::Command, secs: u64) -> Result<(String, Str
 /// risk -> sandbox mapping lives in one typed TypeScript module, `src/mission/harnessPolicy.ts`),
 /// but it may not make MJ execute an arbitrary program.
 const ALLOWED_CLI_BINS: &[&str] = &[
-    "hermes", "claude", "codex", "opencode", "cursor-agent", "agent",
+    "hermes", "claude", "codex", "opencode", "openclaude", "copilot", "cursor-agent", "agent",
     "grok", "cline", "kilo", "qwen", "gemini", "aider", "goose", "amazonq",
-    "kiro-cli", "q",
+    "kiro-cli", "q", "agy", "amp", "crush", "openhands",
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// V11.6 — CUSTOM HARNESSES (the Connector pass)
+//
+// A user can register their own binary as a harness: a name, an executable, and an
+// argv template containing $PROMPT exactly once. The webview can never make MJ run
+// a program that was not explicitly registered here — cli_invoke only accepts a
+// custom bin that exists in this saved registry, and saving re-validates everything
+// (plain bin name, no shell metacharacters, no newlines, exactly one $PROMPT).
+// Persisted as JSON in the app data dir, next to the database.
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomHarness {
+    pub id: String,
+    pub name: String,
+    pub bin: String,
+    pub argv: Vec<String>,
+    #[serde(default)]
+    pub notes: String,
+    #[serde(default)]
+    pub created_at: String,
+}
+
+fn custom_harness_path(state: &AppState) -> std::path::PathBuf {
+    state.data_dir.join("custom-harnesses.json")
+}
+
+fn custom_harness_load(state: &AppState) -> Vec<CustomHarness> {
+    std::fs::read_to_string(custom_harness_path(state))
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_default()
+}
+
+fn custom_harness_store(state: &AppState, list: &[CustomHarness]) -> Result<(), String> {
+    let path = custom_harness_path(state);
+    let json = serde_json::to_string_pretty(list).map_err(|e| e.to_string())?;
+    std::fs::write(&path, json).map_err(|e| format!("write {}: {e}", path.display()))
+}
+
+/// Server-side validation, mirroring validateCustomHarness() in src/domain/harness.ts.
+/// The webview validates for UX; this is the boundary that actually matters.
+fn custom_harness_validate(h: &CustomHarness) -> Result<(), String> {
+    if h.name.trim().is_empty() { return Err("name is required".into()); }
+    if h.name.chars().count() > 64 { return Err("name is too long (64 chars max)".into()); }
+    if !h.id.starts_with("custom:") || h.id.len() > 48 { return Err("id must be custom:<slug>".into()); }
+    let bin = h.bin.trim();
+    if bin.is_empty() { return Err("bin is required".into()); }
+    if bin.chars().any(|c| c.is_whitespace()) { return Err("bin must be a single command or path".into()); }
+    if bin.contains("..") { return Err("bin cannot contain '..'".into()); }
+    if bin.chars().any(|c| ";|&`$><\"'".contains(c)) {
+        return Err("bin cannot contain shell characters. MJ execs it directly; arguments go in argv".into());
+    }
+    let prompt_slots = h.argv.iter().filter(|a| *a == "$PROMPT").count();
+    if prompt_slots != 1 { return Err("argv must contain $PROMPT exactly once".into()); }
+    if h.argv.iter().any(|a| a.contains('\n') || a.contains('\r')) {
+        return Err("argv cannot contain newlines".into());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn custom_harness_list(state: State<Arc<AppState>>) -> Value {
+    let list = custom_harness_load(&state);
+    // Detection for custom harnesses rides along: is the saved bin actually on this machine?
+    let rows: Vec<Value> = list.into_iter().map(|h| {
+        let resolved = which_bin(&h.bin);
+        json!({
+            "id": h.id, "name": h.name, "bin": h.bin, "argv": h.argv,
+            "notes": h.notes, "createdAt": h.created_at,
+            "installed": resolved.is_some(),
+            "executable": resolved.map(Value::String).unwrap_or(Value::Null),
+        })
+    }).collect();
+    Value::Array(rows)
+}
+
+#[tauri::command]
+pub fn custom_harness_save(state: State<Arc<AppState>>, harness: CustomHarness) -> Result<Value, String> {
+    custom_harness_validate(&harness)?;
+    let mut list = custom_harness_load(&state);
+    let mut created = false;
+    match list.iter().position(|h| h.id == harness.id) {
+        Some(i) => list[i] = harness,
+        None => { created = true; list.push(harness); }
+    }
+    custom_harness_store(&state, &list)?;
+    Ok(json!({ "saved": true, "created": created, "count": list.len() }))
+}
+
+#[tauri::command]
+pub fn custom_harness_delete(state: State<Arc<AppState>>, id: String) -> Result<Value, String> {
+    let mut list = custom_harness_load(&state);
+    let before = list.len();
+    list.retain(|h| h.id != id);
+    custom_harness_store(&state, &list)?;
+    Ok(json!({ "deleted": before != list.len(), "count": list.len() }))
+}
 
 #[tauri::command]
 pub fn cli_invoke(
+    state: State<Arc<AppState>>,
     provider_id: String,
     prompt: String,
     cwd: Option<String>,
     timeout_secs: Option<u64>,
     argv: Option<Vec<String>>,
 ) -> Result<Value, String> {
-    let (bin, args) = match argv {
-        Some(a) if !a.is_empty() => (provider_id.clone(), a),
-        _ => harness_argv(&provider_id, &prompt),
+    // V11.6 custom harnesses: "custom:<slug>" resolves against the user's saved registry —
+    // the ONLY way a non-allowlisted binary can run, and only after server-side validation.
+    let (bin, args) = if provider_id.starts_with("custom:") {
+        let saved = custom_harness_load(&state);
+        let spec = saved.iter().find(|h| h.id == provider_id)
+            .ok_or_else(|| format!("unknown custom harness '{provider_id}': register it in Teams first"))?;
+        let mut a: Vec<String> = spec.argv.clone();
+        match a.iter().position(|x| x == "$PROMPT") {
+            Some(i) => a[i] = prompt.clone(),
+            None => a.push(prompt.clone()),
+        }
+        (spec.bin.clone(), a)
+    } else {
+        match argv {
+            Some(a) if !a.is_empty() => (provider_id.clone(), a),
+            _ => harness_argv(&provider_id, &prompt),
+        }
     };
-    if !ALLOWED_CLI_BINS.contains(&bin.as_str()) {
+    let allowed = ALLOWED_CLI_BINS.contains(&bin.as_str())
+        || (provider_id.starts_with("custom:")
+            && custom_harness_load(&state).iter().any(|h| h.id == provider_id && h.bin == bin));
+    if !allowed {
         return Err(format!("refusing to run '{bin}': not a known coding-agent binary"));
     }
     let resolved = which_bin(&bin).ok_or_else(|| {
@@ -1150,8 +1287,10 @@ pub fn cli_invoke(
 pub fn cli_env() -> Value {
     let bins = [
         ("hermes", "hermes"), ("claude", "claude"), ("codex", "codex"), ("opencode", "opencode"),
+        ("openclaude", "openclaude"), ("copilot", "copilot"),
         ("cursor", "cursor-agent"), ("grok", "grok"), ("cline", "cline"), ("kilo", "kilo"),
         ("qwen", "qwen"), ("gemini", "gemini"), ("aider", "aider"), ("goose", "goose"),
+        ("antigravity", "agy"), ("amp", "amp"), ("crush", "crush"), ("openhands", "openhands"),
         ("amazonq", "amazonq"),
     ];
     let rows: Vec<Value> = bins.into_iter().map(|(id, bin)| {

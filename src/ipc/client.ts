@@ -1,5 +1,6 @@
 import type {
   CliProviderEntry,
+  CustomHarnessEntry,
   Connection,
   ExecutionEventRecord,
   ExecutionRecord,
@@ -499,12 +500,18 @@ export const ipc = {
 
   cliProvidersDetect: async (): Promise<CliProviderEntry[]> => {
     if (useTauri()) return tauriInvoke("cli_providers_detect");
+    // Web preview: honest empty state — a browser cannot see your PATH. The native app
+    // runs the real detection (which_bin over PATH + the usual install directories).
     return [
       { id: "claude", name: "Claude Code", executable: null, installed: false, version: null, auth_state: "unknown", capabilities: ["agent"], invocation: "claude" },
       { id: "codex", name: "OpenAI Codex CLI", executable: null, installed: false, version: null, auth_state: "unknown", capabilities: ["agent"], invocation: "codex" },
       { id: "opencode", name: "OpenCode", executable: null, installed: false, version: null, auth_state: "unknown", capabilities: ["agent"], invocation: "opencode" },
-      { id: "qwen", name: "Qwen Code", executable: null, installed: false, version: null, auth_state: "unknown", capabilities: ["agent"], invocation: "qwen" },
+      { id: "openclaude", name: "OpenClaude", executable: null, installed: false, version: null, auth_state: "unknown", capabilities: ["agent"], invocation: "openclaude" },
+      { id: "copilot", name: "GitHub Copilot CLI", executable: null, installed: false, version: null, auth_state: "unknown", capabilities: ["agent"], invocation: "copilot" },
+      { id: "grok", name: "Grok Build (xAI)", executable: null, installed: false, version: null, auth_state: "unknown", capabilities: ["agent"], invocation: "grok" },
+      { id: "kilo", name: "Kilo Code", executable: null, installed: false, version: null, auth_state: "unknown", capabilities: ["agent"], invocation: "kilo" },
       { id: "gemini", name: "Gemini CLI", executable: null, installed: false, version: null, auth_state: "unknown", capabilities: ["agent"], invocation: "gemini" },
+      { id: "qwen", name: "Qwen Code", executable: null, installed: false, version: null, auth_state: "unknown", capabilities: ["agent"], invocation: "qwen" },
     ];
   },
   /**
@@ -526,6 +533,39 @@ export const ipc = {
   cliInvoke: async (providerId: string, prompt: string, cwd?: string, timeoutSecs = 600, argv?: string[]) => {
     if (useTauri()) return tauriInvoke("cli_invoke", { providerId, prompt, cwd, timeoutSecs, argv: argv ?? null });
     throw new Error("CLI providers require the native desktop build.");
+  },
+
+  /* -------------------------------------------- custom harnesses (V11.6)
+   * User-registered harnesses: name + binary + argv template ($PROMPT). In the native
+   * app the Rust side owns the registry (custom-harnesses.json in the app data dir)
+   * and re-validates every save — cli_invoke only ever runs a bin that is either in
+   * the built-in allowlist or in this saved registry. In the web preview the list
+   * lives in localStorage so the Teams connect panel stays manageable; running
+   * still requires the native build (a browser cannot spawn processes).
+   */
+  customHarnessList: async (): Promise<CustomHarnessEntry[]> => {
+    if (useTauri()) return tauriInvoke("custom_harness_list");
+    try {
+      const raw = JSON.parse(localStorage.getItem("mj.customHarnesses") ?? "[]");
+      return Array.isArray(raw) ? raw : [];
+    } catch {
+      return [];
+    }
+  },
+  customHarnessSave: async (harness: CustomHarnessEntry) => {
+    if (useTauri()) return tauriInvoke("custom_harness_save", { harness });
+    const list = await ipc.customHarnessList();
+    const i = list.findIndex((h) => h.id === harness.id);
+    if (i >= 0) list[i] = harness;
+    else list.push(harness);
+    localStorage.setItem("mj.customHarnesses", JSON.stringify(list));
+    return { saved: true, created: i < 0, count: list.length };
+  },
+  customHarnessDelete: async (id: string) => {
+    if (useTauri()) return tauriInvoke("custom_harness_delete", { id });
+    const list = (await ipc.customHarnessList()).filter((h) => h.id !== id);
+    localStorage.setItem("mj.customHarnesses", JSON.stringify(list));
+    return { deleted: true, count: list.length };
   },
 
   /* -------------------------------------------------------------- git

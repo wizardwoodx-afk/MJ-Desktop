@@ -74,7 +74,7 @@ ok("SettingsPage declares its theme row as a const array", row !== null, "the ([
 const THEMES = row
   ? (row[1].split(",").map((t) => t.trim().replace(/^"|"$/g, "")) as string[])
   : ["inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain"];
-ok(`the advertised set is the nine-palette INSCRIBED set (${THEMES.length} themes)`, THEMES.length === 9, THEMES.join(","));
+ok(`the advertised set is the ten-palette INSCRIBED set (${THEMES.length} themes)`, THEMES.length === 10, THEMES.join(","));
 ok(`themes.css has the expected token block count (got ${THEMES.filter((t) => !themesCss.includes(`[data-theme="${t}"]`)).length} missing)`,
   THEMES.every((t) => themesCss.includes(`[data-theme="${t}"]`)),
   THEMES.filter((t) => !themesCss.includes(`[data-theme="${t}"]`)).join(", ") || "all present");
@@ -100,7 +100,7 @@ section("1. the INSCRIBED design tokens are real");
 ok("inscribed carries the true OLED black canvas", /\[data-theme="inscribed"\]\s*\{[\s\S]*?--bg: #000000/.test(themesCss), "missing #000000 background");
 ok("the #1B1B1D Nothing surface gray survives", themesCss.includes("#1b1b1d"), "missing #1B1B1D");
 ok("signal red #D71921 accent", /#d71921/i.test(themesCss), "missing #D71921");
-ok("all palettes define an accent signal (--accent)", (themesCss.match(/--accent: /g) ?? []).length >= 9, `got ${(themesCss.match(/--accent: /g) ?? []).length}`);
+ok("all palettes define an accent signal (--accent)", (themesCss.match(/--accent: /g) ?? []).length >= 10, `got ${(themesCss.match(/--accent: /g) ?? []).length}`);
 ok("dot-matrix display font is wired via --font-doto", /--font-doto: "Doto"/.test(themesCss), "--font-doto never names Doto");
 ok("display surfaces read --font-doto (titlebar wordmark)", /\.titlebar \.logo \{\n  font-family: var\(--font-doto\)/.test(css), "titlebar wordmark not on --font-doto");
 ok("themes.css is imported by mj.css", /@import "\.\/themes\.css";/.test(css), "missing import");
@@ -122,6 +122,40 @@ ok("App.tsx imports the version from the single source of truth",
 ok("no hardcoded vX.Y host pill in App.tsx", !/v\d+\.\d+/.test(app), (app.match(/v\d+\.\d+/) ?? [""])[0]);
 ok(`the version.ts release is well formed (${MJ_VERSION})`, /^\d+\.\d+\.\d+$/.test(MJ_VERSION), MJ_VERSION);
 ok(`the release notes for MJ ${MJ_VERSION_SHORT} exist`, fs.existsSync(path.join(root, `MJ-${MJ_VERSION_SHORT}-UPGRADE.md`)), "missing");
+
+/* ── §V11.5: AURORA — the tenth palette, and the Meridian feel ───────────── */
+section("4. V11.5 aurora — the tenth palette, honestly dark");
+const auroraBlock = themesCss.match(/\[data-theme="aurora"\] \{[\s\S]*?\n\}/)?.[0] ?? "";
+const lum = (hex: string): number => {
+  const m = hex.replace("#", "");
+  const r = parseInt(m.slice(0, 2), 16) / 255;
+  const g = parseInt(m.slice(2, 4), 16) / 255;
+  const b = parseInt(m.slice(4, 6), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const tok = (name: string): string => auroraBlock.match(new RegExp(`--${name}: (#[0-9a-fA-F]{6})`))?.[1] ?? "";
+ok("the aurora token block exists", auroraBlock.length > 400, `block is ${auroraBlock.length} chars`);
+ok("aurora carries the deep blue-teal night ground (#060a12)", tok("bg") === "#060a12", tok("bg"));
+ok("aurora's signal is ice blue (#7dd3fc)", tok("accent") === "#7dd3fc", tok("accent"));
+ok("aurora ink is readable ice (#bfe8ff)", tok("text") === "#bfe8ff", tok("text"));
+ok("aurora ok/warn hues are distinct (#34d399 / #f87171)", tok("ok") === "#34d399" && tok("danger") === "#f87171", `${tok("ok")} / ${tok("danger")}`);
+ok("aurora selection inverts (ice fill, night text)", tok("sel-bg") === "#7dd3fc" && tok("sel-fg") === "#060a12", `${tok("sel-bg")} / ${tok("sel-fg")}`);
+ok("aurora active wires carry the signal", tok("wire-active") === "#7dd3fc", tok("wire-active"));
+ok("aurora joins every shared selector group (not a bolt-on)", (themesCss.match(/\[data-theme="aurora"\]/g) ?? []).length >= 100, `only ${(themesCss.match(/\[data-theme="aurora"\]/g) ?? []).length} mentions`);
+ok("Settings copy names aurora's character", /aurora · deep blue-teal night, ice signal/.test(settings), "missing descriptor");
+ok("aurora is genuinely dark (bg luminance < 0.12)", lum(tok("bg")) < 0.12, String(lum(tok("bg"))));
+ok("aurora text is genuinely bright (luminance > 0.55)", lum(tok("text")) > 0.55, String(lum(tok("text"))));
+ok("aurora contrast token is the night ground", tok("accent-contrast") === "#060a12", tok("accent-contrast"));
+ok("aurora uses no gradients (flat instrument panel)", !/gradient\(/i.test(auroraBlock), "gradient found");
+
+section("5. V11.5 Meridian feel — transitions, lamps, generous hit targets");
+ok("palette changes cross-fade (.theme-xing on <html>)", /\.theme-xing/.test(css), "no cross-fade class");
+ok("breathing lamp keyframes exist (mj-lamp)", /@keyframes mj-lamp/.test(css), "no lamp animation");
+ok("reduced-motion wins over the lamp", /prefers-reduced-motion[\s\S]*?mj-lamp[\s\S]*?animation: none/.test(css), "lamp ignores reduced motion");
+ok("port anchors carry a 12.5px hit halo", /\.port-anchor::after \{[^}]*inset: -12\.5px/.test(css), "no halo");
+ok("wires are clickable across a 14px corridor", /\.wire-hit \{[^}]*stroke-width: 14/.test(css), "no corridor");
+ok("wires carry a Meridian midpoint dot (.wire-mid)", /\.wire-mid/.test(css), "no midpoint dot");
+ok("the Assist redesign styles exist (asst-*)", ["asst-prov", "asst-rail", "asst-quick", "asst-typing", "asst-foot"].every((c) => css.includes(`.${c}`)), "missing asst-* classes");
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) {

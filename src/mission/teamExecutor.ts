@@ -32,7 +32,7 @@
 import * as path from "node:path";
 
 import type { HarnessId } from "../domain/harness";
-import { AGENT_CAPABILITIES } from "./agentCapabilities";
+import { resolveCaps } from "./agentCapabilities";
 import { composeSeatArgv, type CliAgentTeam, type TeamSeat } from "./agentTeam";
 import { gitApi, type GitRunner } from "./git";
 import { parseReportedUsage, type CapLedger, type ReportedUsage, withDeadline } from "./caps";
@@ -405,11 +405,20 @@ export async function executeTeam(req: TeamRunRequest, deps: TeamRunnerDeps, ses
   // Pre-flight: find out which binaries exist BEFORE spending anything.
   const waves = waveGroups(req.assignments);
   const runnable = new Map<string, boolean>();
-  const binPaths = new Map<HarnessId, string>();
+  const binPaths = new Map<string, string>();
   for (const w of waves) {
     for (const a of w) {
       if (runnable.has(a.seat.id)) continue;
-      const caps = AGENT_CAPABILITIES[a.seat.harness];
+      // V11.6.1: the resolver is total — a custom seat gets its synthetic entry (registered)
+      // or an honest unregistered entry, never undefined. The executor can no longer crash
+      // on a `custom:<slug>` seat.
+      const rc = resolveCaps(a.seat.harness);
+      const caps = rc.caps;
+      if (rc.custom && !rc.registered) {
+        runnable.set(a.seat.id, false);
+        notRun.push({ seatId: a.seat.id, reason: `Custom harness "${a.seat.harness}" is not registered (anymore). Add it in Teams -> Connect, then recompile.` });
+        continue;
+      }
       let resolved: string | null = null;
       for (const b of caps.bins) {
         const r = await deps.resolveBin(b);
@@ -665,7 +674,8 @@ async function runSeat(
   briefings: ContextFile[],
   now: () => number,
 ): Promise<SeatRecord> {
-  const caps = AGENT_CAPABILITIES[a.seat.harness];
+  // V11.6.1: resolver — never undefined, custom seats included.
+  const caps = resolveCaps(a.seat.harness).caps;
   const readOnly = a.readOnly || !a.seat.mayWrite;
   const cwd = wt?.path ?? req.repoRoot;
   // A deferred read-only seat reviews the snapshot; anything else works on its own branch.
@@ -1023,7 +1033,8 @@ function tail(s: string, n = OUTPUT_TAIL_CHARS): string {
 }
 
 function unrunRecord(a: SeatAssignment, wt: WorktreePlan | null, outcome: SeatOutcome, reason: string): SeatRecord {
-  const caps = AGENT_CAPABILITIES[a.seat.harness];
+  // V11.6.1: resolver — never undefined, custom seats included.
+  const caps = resolveCaps(a.seat.harness).caps;
   return {
     seatId: a.seat.id,
     role: a.seat.role,

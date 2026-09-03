@@ -28,19 +28,46 @@
 
 import type { HarnessId } from "../domain/harness";
 import type { RiskClass } from "./types";
-import { enforcedReadOnly } from "./agentCapabilities";
+import { AGENT_CAPABILITIES, enforcedReadOnly } from "./agentCapabilities";
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * §V11.6.2 — ONE SOURCE OF TRUTH FOR THE BASE INVOCATION.
+ *
+ * The 11.6.1 review found the policy layer still carrying the OLD invocation shapes for
+ * Amp (`--headless`) and OpenHands (`solve`) after the capability registry had been
+ * corrected — two layers, two answers. The rule from here on: the capability registry
+ * (agentCapabilities.ts) owns WHAT a CLI's base invocation is; this file owns the RISK
+ * POLICY (which class a harness may run under, and the honest grant text). Where a policy
+ * shape is just "the registry's prompt argv + the permission flags", it is DERIVED via
+ * registryArgv() — it cannot drift again. Only claude/codex/opencode/aider keep
+ * hand-tuned compositions (they add --tools/--output-format/--skip-git-repo-check flags
+ * the registry models as separate capabilities), and cline/kilo/hermes keep conservative
+ * shapes (see the inline notes). probe/harnesses.test.ts §7 pins the agreement.
+ * ───────────────────────────────────────────────────────────────────────────── */
+function registryArgv(id: HarnessId, kind: "readOnly" | "write"): string[] {
+  const caps = AGENT_CAPABILITIES[id];
+  const base = caps?.prompt?.argv?.length ? [...caps.prompt.argv] : ["$PROMPT"];
+  const extra = kind === "readOnly" ? caps?.readOnly?.argv : caps?.write?.argv;
+  return extra && extra.length > 0 ? [...base, ...extra] : base;
+}
 
 export const ENFORCED_SANDBOX: Record<HarnessId, boolean> = {
   acp: enforcedReadOnly("acp"),
   claude: enforcedReadOnly("claude"),
   codex: enforcedReadOnly("codex"),
   opencode: enforcedReadOnly("opencode"),
+  openclaude: enforcedReadOnly("openclaude"),
+  copilot: enforcedReadOnly("copilot"),
   cursor: enforcedReadOnly("cursor"),
   grok: enforcedReadOnly("grok"),
   cline: enforcedReadOnly("cline"),
   kilo: enforcedReadOnly("kilo"),
   aider: enforcedReadOnly("aider"),
   gemini: false,
+  antigravity: false,
+  amp: false,
+  crush: false,
+  openhands: false,
   goose: false,
   qwen: false,
   amazonq: false,
@@ -75,37 +102,62 @@ export interface HarnessPolicy {
   outputFormat: "text" | "json" | "ndjson";
 }
 
-/** Read-only shapes per harness: no filesystem writes, no shell. */
-const READ_ONLY: Partial<Record<HarnessId, string[]>> = {
+/**
+ * Read-only shapes per harness: no filesystem writes, no shell.
+ * claude/codex/opencode/aider are hand-tuned compositions (they add --tools "",
+ * --output-format json, --skip-git-repo-check, --no-auto-commits — flags the capability
+ * registry models as separate capabilities); cline keeps the bare prompt (its caps
+ * "-p" is a prompt-flag artifact, not a permission flag) and kilo keeps the plain run
+ * shape (--agent mj-readonly is not a policy-verifiable kilo flag). Everything else —
+ * including every V11.6 harness — is DERIVED from the registry via registryArgv(), so
+ * the policy layer can never again disagree with the capability registry about what a
+ * CLI's invocation looks like.
+ */
+export const READ_ONLY: Partial<Record<HarnessId, string[]>> = {
   claude: ["-p", "$PROMPT", "--permission-mode", "plan", "--tools", "", "--output-format", "json"],
   codex: ["exec", "--sandbox", "read-only", "--skip-git-repo-check", "--json", "$PROMPT"],
   opencode: ["run", "--agent", "plan", "--format", "json", "$PROMPT"],
-  cursor: ["-p", "$PROMPT"],
-  grok: ["-p", "$PROMPT"],
+  cursor: registryArgv("cursor", "readOnly"),
+  grok: registryArgv("grok", "readOnly"),
   cline: ["$PROMPT"],
-  kilo: ["$PROMPT"],
+  kilo: ["run", "$PROMPT"],
   aider: ["--message", "$PROMPT", "--yes", "--no-auto-commits", "--read-only"],
-  gemini: ["-p", "$PROMPT", "--approval-mode", "plan"],
-  goose: ["run", "--text", "$PROMPT", "--plan"],
-  qwen: ["-p", "$PROMPT", "--read-only"],
-  amazonq: ["chat", "--no-interactive", "$PROMPT", "--read-only"],
+  gemini: registryArgv("gemini", "readOnly"),
+  antigravity: registryArgv("antigravity", "readOnly"),
+  amp: registryArgv("amp", "readOnly"),
+  crush: registryArgv("crush", "readOnly"),
+  openhands: registryArgv("openhands", "readOnly"),
+  openclaude: registryArgv("openclaude", "readOnly"),
+  copilot: registryArgv("copilot", "readOnly"),
+  goose: registryArgv("goose", "readOnly"),
+  qwen: registryArgv("qwen", "readOnly"),
+  amazonq: registryArgv("amazonq", "readOnly"),
+  // Hand-tuned (CLI-shim shape): the in-process Hermes runtime takes the bare prompt;
+  // the spawned CLI takes --print. The registry models the runtime; policy models the shim.
   hermes: ["--print", "$PROMPT"],
 };
 
 /** Workspace-write shapes per harness. */
-const WRITE: Partial<Record<HarnessId, string[]>> = {
+export const WRITE: Partial<Record<HarnessId, string[]>> = {
   claude: ["-p", "$PROMPT", "--permission-mode", "acceptEdits", "--output-format", "json"],
   codex: ["exec", "--sandbox", "workspace-write", "--skip-git-repo-check", "--json", "$PROMPT"],
   opencode: ["run", "--agent", "build", "--format", "json", "$PROMPT"],
-  cursor: ["-p", "$PROMPT"],
-  grok: ["-p", "$PROMPT"],
+  cursor: registryArgv("cursor", "write"),
+  grok: registryArgv("grok", "write"),
   cline: ["$PROMPT"],
-  kilo: ["$PROMPT"],
+  kilo: ["run", "$PROMPT"],
   aider: ["--message", "$PROMPT", "--yes", "--no-auto-commits"],
-  gemini: ["-p", "$PROMPT"],
-  goose: ["run", "--text", "$PROMPT"],
-  qwen: ["-p", "$PROMPT"],
-  amazonq: ["chat", "--no-interactive", "$PROMPT"],
+  gemini: registryArgv("gemini", "write"),
+  antigravity: registryArgv("antigravity", "write"),
+  amp: registryArgv("amp", "write"),
+  crush: registryArgv("crush", "write"),
+  openhands: registryArgv("openhands", "write"),
+  openclaude: registryArgv("openclaude", "write"),
+  copilot: registryArgv("copilot", "write"),
+  goose: registryArgv("goose", "write"),
+  qwen: registryArgv("qwen", "write"),
+  amazonq: registryArgv("amazonq", "write"),
+  // Hand-tuned (CLI-shim shape): see the READ_ONLY note.
   hermes: ["--print", "$PROMPT"],
 };
 

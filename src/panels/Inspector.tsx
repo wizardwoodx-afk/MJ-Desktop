@@ -5,6 +5,8 @@ import { ipc, nodeKeyOf } from "../ipc/client";
 import { toast } from "./Toast";
 import { iconFor } from "../canvas/icons";
 import { composeNodePrompt } from "../domain/composer";
+import { composeAssignment, methodFor, NODE_FIELDS } from "../domain/nodeMethods";
+import { HARNESSES, listCustomHarnesses } from "../domain/harness";
 import type { EvolutionMode, FeedbackLoop } from "../domain/types";
 
 const ROLE_KEYS: Array<keyof ReturnType<typeof identityKeys>> = [
@@ -32,8 +34,9 @@ export function Inspector({ onClose }: { onClose: () => void }) {
     purpose: true, harness: true, role: false, config: true, policy: true, contract: false, permissions: false, runtime: true, why: false,
   });
   const out = useNodeRuntimeOutput(node?.id ?? "");
+  const def = node ? DEFINITIONS_BY_ID.get(node.definitionId) : undefined;
+  const cat = def?.category ?? "agent";
   if (!node) return null;
-  const def = DEFINITIONS_BY_ID.get(node.definitionId);
   const toggle = (k: string) => setOpen((s) => ({ ...s, [k]: !s[k] }));
   const composed = composeNodePrompt(node, {});
 
@@ -48,6 +51,12 @@ export function Inspector({ onClose }: { onClose: () => void }) {
         <button className="ghost" onClick={onClose}>Close</button>
       </div>
 
+      {/* V11.5: the node's METHOD is in-built and non-changeable (owner rule). Shown as a
+          read-only contract — the user edits what/where inputs, never the verb. */}
+      <div className="method-contract mono" title="Method — built in, not editable">
+        {methodFor(def ?? ({ category: cat } as never))}
+      </div>
+
       <Section k="purpose" title="Purpose · this run" open={open} toggle={toggle}>
         <div className="muted">Purpose is the job. It is not identity. Role prompt stays durable.</div>
         <textarea
@@ -60,21 +69,18 @@ export function Inspector({ onClose }: { onClose: () => void }) {
 
       {node.definitionId.startsWith("agent.") && (
         <Section k="harness" title="Real agent harness" open={open} toggle={toggle}>
-          <div className="muted">This node is a coding agent, not an n8n step. It execs a local CLI (Claude Code, Codex, OpenCode, Cursor, Grok, Cline, Kilo) or a direct LLM.</div>
+          <div className="muted">This node is a coding agent, not an n8n step. It execs a local CLI from the V11.6 registry (Connect tab in Teams installs and smoke-tests them) or a direct LLM.</div>
           <label className="field">Harness
             <select
               value={String(node.config.harness ?? "claude")}
               onChange={(e) => store.updateNode(node.id, { config: { ...node.config, harness: e.target.value } })}
             >
-              <option value="hermes">Hermes (this node is a Hermes agent)</option>
-              <option value="claude">Claude Code</option>
-              <option value="codex">OpenAI Codex</option>
-              <option value="opencode">OpenCode</option>
-              <option value="cursor">Cursor Agent</option>
-              <option value="grok">Grok CLI</option>
-              <option value="cline">Cline CLI</option>
-              <option value="kilo">Kilo Code</option>
-              <option value="llm">Direct LLM / Ollama</option>
+              {HARNESSES.map((h) => (
+                <option key={h.id} value={h.id}>{h.name}</option>
+              ))}
+              {listCustomHarnesses().map((c) => (
+                <option key={c.id} value={c.id}>{"Custom · " + c.name}</option>
+              ))}
             </select>
           </label>
         </Section>
@@ -84,7 +90,8 @@ export function Inspector({ onClose }: { onClose: () => void }) {
         <Section k="config" title="Config" open={open} toggle={toggle}>
           {def.configSchema.map((c) => (
             <label key={c.key} className="field">
-              {c.label}
+              {c.label}{NODE_FIELDS[c.key]?.fold ? <span className="fold-tag" title="config key that predates V11.5">·</span> : null}
+              {NODE_FIELDS[c.key]?.def ? <span className="field-hint">{NODE_FIELDS[c.key].def}</span> : null}
               {c.type === "textarea" ? (
                 <textarea value={String(node.config[c.key] ?? "")} onChange={(e) => store.updateNodeLive(node.id, { config: { ...node.config, [c.key]: e.target.value } })} />
               ) : c.type === "boolean" ? (
@@ -164,6 +171,8 @@ export function Inspector({ onClose }: { onClose: () => void }) {
           Composer attaches role, purpose, skills, memory, contract, and permissions as separate blocks.
           Last compose length: {composed.system.length + composed.user.length} chars.
         </div>
+        <div className="muted" style={{ marginTop: 8 }}>Assignment as the runtime sees it:</div>
+        <pre className="mono assignment-preview">{composeAssignment(def ?? ({ id: node.definitionId, title: node.title, description: node.purpose ?? "", category: cat } as never), node.config)}</pre>
       </Section>
 
       <Section k="runtime" title="Last output" open={open} toggle={toggle}>

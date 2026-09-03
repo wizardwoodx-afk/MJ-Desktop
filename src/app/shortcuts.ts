@@ -22,7 +22,8 @@ export type ShortcutAction =
   | "toggleSidebar"
   | "toggleConsole"
   | "zoomIn"
-  | "zoomOut";
+  | "zoomOut"
+  | "toggleAssistant";
 
 export interface ShortcutCtx {
   typing: boolean;
@@ -66,6 +67,7 @@ export function resolveShortcut(
   if (mod && (key === "l" || key === "L") && e.shiftKey) return "autoLayout";
   if (mod && (key === "b" || key === "B")) return "toggleSidebar";
   if (mod && (key === "`" || key === "~")) return "toggleConsole";
+  if (mod && (key === "j" || key === "J")) return "toggleAssistant";
   if (mod && (key === "=" || key === "+")) return "zoomIn";
   if (mod && key === "-") return "zoomOut";
   if (mod && key === "0") return "fitView";

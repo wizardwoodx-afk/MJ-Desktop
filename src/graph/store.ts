@@ -13,10 +13,10 @@ interface HistoryEntry {
   label: string;
 }
 
-export type ThemeId = "inscribed" | "chalk" | "carbon" | "bone" | "indigo" | "sage" | "hazard" | "orchid" | "porcelain";
+export type ThemeId = "inscribed" | "chalk" | "carbon" | "bone" | "indigo" | "sage" | "hazard" | "orchid" | "porcelain" | "aurora";
 
 /** One list of themes, owned here. SettingsPage renders it; the theme probe cross-checks CSS. */
-export const THEME_IDS: ThemeId[] = ["inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain"];
+export const THEME_IDS: ThemeId[] = ["inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain", "aurora"];
 
 export interface EditorPrefs {
   snap: number;
@@ -94,12 +94,15 @@ export interface GraphState {
   past: HistoryEntry[];
   future: HistoryEntry[];
   selectedNodeId: string | null;
+  /** V11.5: details open on DOUBLE-click only — this is the node the Inspector is pinned to. */
+  inspectorId: string | null;
   selectedIds: string[];
   lastSavedAt: string | null;
 
   loadWorkflow: (wf: { id: string; name: string; description: string; graph: WorkflowGraph }) => void;
   newWorkflow: (id: string, name: string) => void;
   selectNode: (id: string | null) => void;
+  openDetails: (id: string | null) => void;
   selectMany: (ids: string[]) => void;
 
   addNode: (definitionId: string, x: number, y: number) => string | null;
@@ -222,6 +225,7 @@ export const useGraphStore = create<GraphState>((set, get) => {
     past: [],
     future: [],
     selectedNodeId: null,
+    inspectorId: null,
     selectedIds: [],
     lastSavedAt: null,
 
@@ -235,6 +239,7 @@ export const useGraphStore = create<GraphState>((set, get) => {
         past: [],
         future: [],
         selectedNodeId: null,
+        inspectorId: null,
         selectedIds: [],
       }),
 
@@ -248,10 +253,14 @@ export const useGraphStore = create<GraphState>((set, get) => {
         past: [],
         future: [],
         selectedNodeId: null,
+        inspectorId: null,
         selectedIds: [],
       }),
 
-    selectNode: (id) => set({ selectedNodeId: id, selectedIds: id ? [id] : [] }),
+    selectNode: (id) =>
+      set(id ? { selectedNodeId: id, selectedIds: [id] } : { selectedNodeId: null, inspectorId: null, selectedIds: [] }),
+    /* V11.5 owner rule: single-click SELECTS, double-click OPENS DETAILS. */
+    openDetails: (id) => set(id ? { inspectorId: id, selectedNodeId: id, selectedIds: [id] } : { inspectorId: null }),
 
     selectMany: (ids) =>
       set({
