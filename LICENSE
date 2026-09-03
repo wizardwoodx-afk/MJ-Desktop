@@ -1,115 +1,91 @@
-PROPRIETARY SOFTWARE LICENSE AGREEMENT
+Required Notice: Copyright (c) 2024-2026 Sree Harshen / MJ Project (https://github.com/wizardwoodx-afk/MJ-Desktop)
+Required Notice: You may not use this software's source, outputs, or documentation as training data for any AI/ML or LLM system, including fine-tuning, distillation, RAG corpora, or benchmarking.
 
-MJ Desktop v11.8.5
-Copyright (c) 2024-2026 Sree Harshen / MJ Project. All Rights Reserved.
+# PolyForm Noncommercial License 1.0.0
 
-================================================================================
-                              TERMS AND CONDITIONS
-================================================================================
+<https://polyformproject.org/licenses/noncommercial/1.0.0>
 
-1. OWNERSHIP
-   This software, including all source code, object code, documentation,
-   designs, algorithms, interfaces, architecture, brand assets, and any
-   derivative works (collectively, the "Software"), is and shall remain the
-   sole and exclusive property of Sree Harshen / MJ Project (the "Owner").
-   The Software is protected by copyright, trademark, trade secret, and other
-   intellectual property laws of the United States and international treaties.
+## Acceptance
 
-2. NO GRANT OF RIGHTS — STRICT PROHIBITION ON COPYING
-   This Software is NOT open source. No license, permission, authorization, or
-   right of any kind is granted, expressed, or implied by this distribution,
-   whether by estoppel, implication, exhaustion, or otherwise, except as
-   explicitly set forth in a separate written agreement signed by the Owner.
+In order to get any license under these terms, you must agree to them as both strict obligations and conditions to all your licenses.
 
-   WITHOUT LIMITING THE FOREGOING, YOU MAY NOT, AND YOU SHALL NOT PERMIT ANY
-   THIRD PARTY TO:
-   a) Copy, reproduce, duplicate, or clone the Software, in whole or in part;
-   b) Modify, port, translate, adapt, reverse-engineer, decompile, or
-      disassemble the Software;
-   c) Distribute, sublicense, sell, rent, lease, lend, transfer, publish,
-      transmit, or otherwise make available the Software to any third party;
-   d) Use the Software for commercial purposes or generate revenue from it
-      without a written commercial license from the Owner;
-   e) Use the Software to train, fine-tune, evaluate, or benchmark any
-      artificial intelligence, machine learning, or large language model
-      system, including but not limited to generative AI, code models, or
-      autonomous agents;
-   f) Remove, alter, or obscure any copyright, trademark, or proprietary
-      notice contained in the Software;
-   g) Claim authorship or ownership of the Software, in whole or in part;
-   h) Create derivative works, competing products, or substantially similar
-      implementations based on the Software;
-   i) Use the Software in any manner that infringes the Owner's rights or
-      competes with the Owner's products or services.
+## Copyright License
 
-3. PERMITTED VIEWING
-   The source code in this repository is made visible on GitHub solely to:
-   (a) enable the Author and authorized collaborators to review and work on
-       the Software;
-   (b) demonstrate the Software's existence and capabilities to evaluators,
-       interviewers, and prospective employers or partners;
-   (c) serve as a portfolio artifact for the Author.
-   Such visibility does NOT constitute a license, a waiver, an implied
-   license, or any grant of rights to the public.
+The licensor grants you a copyright license for the software to do everything you might do with the software that would otherwise infringe the licensor's copyright in it for any permitted purpose. However, you may only distribute the software according to [Distribution License](#distribution-license) and make changes or new works based on the software according to [Changes and New Works License](#changes-and-new-works-license).
 
-4. AI / LLM TRAINING EXCLUSION (EXPRESS)
-   THE SOFTWARE, ITS SOURCE CODE, ITS DOCUMENTATION, ITS ARCHITECTURE, AND
-   ALL ASSOCIATED MATERIALS ARE EXPRESSLY EXCLUDED FROM USE IN:
-   - Training datasets for any AI, ML, or LLM system;
-   - Code-completion, code-synthesis, or code-generation model training;
-   - Embedding generation, retrieval-augmented generation (RAG) corpora, or
-     knowledge bases feeding AI systems;
-   - Benchmarking, evaluation, or fine-tuning of AI agents or assistants;
-   - Mining, scraping, or automated extraction for any ML pipeline.
-   Any such use is an explicit violation of this License and applicable law.
+## Distribution License
 
-5. TRADEMARKS
-   "MJ", "MJ Desktop", "MJ 11", and associated logos, wordmarks, and design
-   marks are trademarks of the Owner. No license or right to use these marks
-   is granted by this License.
+The licensor grants you an additional copyright license to distribute copies of the software. Your license to distribute covers distributing the software with changes and new works permitted by [Changes and New Works License](#changes-and-new-works-license).
 
-6. TRADE SECRETS
-   The Software contains trade secrets of the Owner, including but not limited
-   to proprietary algorithms, system architectures, and integration techniques.
-   You agree to hold such trade secrets in strict confidence and not disclose
-   them to any third party.
+## Notices
 
-7. RESERVATION OF RIGHTS
-   All rights not expressly granted herein are RESERVED by the Owner. The Owner
-   reserves the right to enforce its intellectual property rights to the
-   fullest extent of the law, including seeking injunctive relief, statutory
-   damages, attorney's fees, and any other remedy available.
+You must ensure that anyone who gets a copy of any part of the software from you also gets a copy of these terms or the URL for them above, as well as copies of any plain-text lines beginning with `Required Notice:` that the licensor provided with the software.
 
-8. TERMINATION
-   Any unauthorized use of the Software shall automatically terminate any
-   implied rights and may be subject to legal action.
+## Changes and New Works License
 
-9. NO WARRANTY
-   THE SOFTWARE IS PROVIDED "AS-IS" AND "WHERE-IS" WITHOUT ANY WARRANTY OF
-   ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF
-   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, OR NONINFRINGEMENT.
+The licensor grants you an additional copyright license to make changes and new works based on the software for any permitted purpose.
 
-10. LIMITATION OF LIABILITY
-    IN NO EVENT SHALL THE OWNER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING
-    FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-    DEALINGS IN THE SOFTWARE.
+## Patent License
 
-11. GOVERNING LAW AND JURISDICTION
-    This License shall be governed by and construed in accordance with the
-    laws of the United States and the State of California, without regard to
-    its conflict-of-law principles. The parties consent to the exclusive
-    jurisdiction of the state and federal courts located in California for
-    any disputes arising under this License.
+The licensor grants you a patent license for the software that covers patent claims the licensor can license, or becomes able to license, that you would infringe by using the software.
 
-12. ENFORCEMENT
-    Violation of any term of this License constitutes copyright infringement
-    under 17 U.S.C. § 101 et seq. and may also constitute a violation of
-    trademark, trade secret, contract, and other laws. The Owner aggressively
-    protects its intellectual property and will pursue all legal remedies
-    against violators.
+## Noncommercial Purposes
 
-================================================================================
-       FOR LICENSING INQUIRIES, CONTACT THE OWNER IN WRITING.
-       UNAUTHORIZED USE, COPYING, OR DISTRIBUTION IS STRICTLY PROHIBITED.
-================================================================================
+Any noncommercial purpose is a permitted purpose.
+
+## Personal Uses
+
+Personal use for research, experiment, and testing for the benefit of public knowledge, personal study, private entertainment, hobby projects, amateur pursuits, or religious observance, without any anticipated commercial application, is use for a permitted purpose.
+
+## Noncommercial Organizations
+
+Use by any charitable organization, educational institution, public research organization, public safety or health organization, environmental protection organization, or government institution is use for a permitted purpose regardless of the source of funding or obligations resulting from the funding.
+
+## Fair Use
+
+You may have "fair use" rights for the software under the law. These terms do not limit them.
+
+## No Other Rights
+
+These terms do not allow you to sublicense or transfer any of your licenses to anyone else, or prevent the licensor from granting licenses to anyone else. These terms do not imply any other licenses.
+
+## Patent Defense
+
+If you make any written claim that the software infringes or contributes to infringement of any patent, your patent license for the software granted under these terms ends immediately. If your company makes such a claim, your patent license ends immediately for work on behalf of your company.
+
+## Violations
+
+The first time you are notified in writing that you have violated any of these terms, or done anything with the software not covered by your licenses, your licenses can nonetheless continue if you come into full compliance with these terms, and take practical steps to correct past violations, within 32 days of receiving notice. Otherwise, all your licenses end immediately.
+
+## No Liability
+
+***As far as the law allows, the software comes as is, without any warranty or condition, and the licensor will not be liable to you for any damages arising out of these terms or the use or nature of the software, under any kind of legal claim.***
+
+## Definitions
+
+The **licensor** is the individual or entity offering these terms, and the **software** is the software the licensor makes available under these terms.
+
+**You** refers to the individual or entity agreeing to these terms.
+
+**Your company** is any legal entity, sole proprietorship, or other kind of organization that you work for, plus all organizations that have control over, are under the control of, or are under common control with that organization. **Control** means ownership of substantially all the assets of an entity, or the power to direct its management and policies by vote, contract, or otherwise. Control can be direct or indirect.
+
+**Your licenses** are all the licenses granted to you for the software under these terms.
+
+**Use** means anything you do with the software requiring one of your licenses.
+
+---
+
+## Commercial Licensing
+
+For any commercial use — including use in a product, service, or internal business tool — contact the licensor for a separate license:
+
+- Open an issue at https://github.com/wizardwoodx-afk/MJ-Desktop
+- Or email: sreeharshen [at] mj-desktop
+
+Source is available for review, learning, and noncommercial use. Commercial use without a separate agreement is not permitted.
+
+## Trademarks
+
+"MJ", "MJ Desktop" and associated marks are trademarks of Sree Harshen / MJ Project. No trademark license is granted.
+
+Third-party engines under `vendor/` remain under their own licenses (MIT / Apache-2.0) — see `NOTICE`.
