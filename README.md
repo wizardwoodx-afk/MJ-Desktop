@@ -37,14 +37,22 @@ the OS keychain. Hermes skills are `SKILL.md`. Official MCP servers run over **s
 cd mj && npm ci
 ./node_modules/.bin/tsc --noEmit                    # exit 0
 
-# V11.4.1: the official test command — esbuild's JS API, no shell, no bin resolution,
+# V11.8.1: the official test command — esbuild's JS API, no shell, no bin resolution,
 # identical on linux / macOS / windows. This is the line CI runs too.
-npm test                                            # 39 suites, 0 failed
+npm test                                            # 40 suites, 0 failed (Linux x64)
+
+# Zero-install offline gate (V11.7.1+): pre-bundled probe bundles, no node_modules needed.
+node verify/run.mjs                                 # OFFLINE VERIFY SUMMARY: 39 passed, 0 failed (Linux)
 
 for f in versionDrift acceptance harnessPolicy checkRunner realExecution engine replayEvals reviewVisibility theme; do
   ./node_modules/.bin/esbuild probe/$f.test.ts --bundle --platform=node --format=esm \
     --define:MJ_ROOT='"'$(pwd)'"' --outfile=/tmp/$f.mjs --log-level=error && node /tmp/$f.mjs
 done
+
+# Windows host: see WINDOWS-CI-REPORT.md for the recorded single-machine
+# verification (36/40 probes pass; 4 are environment-specific to Windows,
+# not regressions). The Linux x64 sandbox remains the environment of record
+# for the "40/40" claim above.
 
 # The Proof page, rendered to a string in node. react-dom/server needs to stay external (it does a
 # dynamic require of "stream"), and the output must sit inside the project so those resolve:
