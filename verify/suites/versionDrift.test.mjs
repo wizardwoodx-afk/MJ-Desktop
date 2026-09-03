@@ -5,7 +5,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 // src/version.ts
-var MJ_VERSION = "11.8.1";
+var MJ_VERSION = "11.8.5";
 var MJ_VERSION_SHORT = MJ_VERSION.split(".").slice(0, 2).join(".");
 var MJ_TITLE = `MJ ${MJ_VERSION_SHORT}`;
 
@@ -67,6 +67,37 @@ for (const doc of docs) {
 section("4. the archive name the user is given matches the release");
 var upgradeDoc = `MJ-${MJ_VERSION_SHORT}-UPGRADE.md`;
 ok(`${upgradeDoc} exists`, fs.existsSync(path.join(root, upgradeDoc)), "missing \u2014 the release notes for this version were never written");
+section("5. CI targets runners that still exist");
+var wfDir = path.join(root, ".github", "workflows");
+var workflowFiles = fs.existsSync(wfDir) ? fs.readdirSync(wfDir).filter((f) => /\.ya?ml$/.test(f)).sort() : [];
+ok(`workflows exist (${workflowFiles.length} file(s))`, workflowFiles.length > 0, ".github/workflows is empty or missing");
+var RETIRED_RUNNERS = ["macos-12", "macos-13", "macos-14", "ubuntu-20.04", "ubuntu-22.04"];
+var retiredHits = [];
+for (const wf of workflowFiles) {
+  const src = read(path.join(".github", "workflows", wf));
+  const executable = src.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n");
+  const labels = [];
+  for (const m of executable.matchAll(/runs-on:\s*(\S+)/g)) labels.push(m[1]);
+  for (const m of executable.matchAll(/^[\t ]*-[\t ]*os:[\t ]*(\S+)/gm)) labels.push(m[1]);
+  for (const raw of labels) {
+    const label = raw.replace(/["']/g, "");
+    if (RETIRED_RUNNERS.some((r) => label === r || label.startsWith(`${r}-`))) {
+      retiredHits.push(`${wf} -> ${label}`);
+    }
+  }
+}
+ok(
+  `no workflow targets a retired runner (${RETIRED_RUNNERS.length} banned labels)`,
+  retiredHits.length === 0,
+  retiredHits.join(" | ") || "all labels current"
+);
+var releaseWf = read(".github/workflows/release.yml");
+ok(`releaseBody names ${upgradeDoc}`, releaseWf.includes(upgradeDoc), "the release notes link to the wrong version");
+ok(
+  "the release gate runs the SAME suite CI runs (npm test, not a subset)",
+  /npm test/.test(releaseWf) && !/for f in versionDrift/.test(releaseWf),
+  "release.yml still gates on a hand-picked subset"
+);
 console.log(`
 ${passed} passed, ${failed} failed`);
 if (failed > 0) {

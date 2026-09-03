@@ -1,13 +1,11 @@
-MJ 11.8.1 — offline verification pack provenance
+MJ 11.8.5 — offline verification pack provenance
 =================================================
-
-Built and certified by the release session, 2026-09-03.
 
 Toolchain
   node          v20.20.2 (linux x64)
   esbuild       0.25.12
-  MJ            11.8.1 (package.json + package-lock.json / version.ts /
-                tauri.conf.json / Cargo.toml / Cargo.lock)
+  MJ            11.8.5 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml / Cargo.lock / LICENSE)
 
 The pack
   verify/suites/*.mjs   39 self-contained bundles — every probe suite except
@@ -16,56 +14,54 @@ The pack
   verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that built it
   verify/run.mjs        zero-dependency runner (node: builtins only)
 
-Gates run on the release tree (fresh npm ci — the 7th review's clean-env requirement)
+Gates run on this tree (fresh npm ci)
   tsc --noEmit          exit 0
   npm test              ALL PROBES SUMMARY: 40 passed, 0 failed.
-                        (suite #39 harnesses: 270 real assertions incl. §10
-                        registry<->policy turn-flag iff-agreement; suite #40: 15;
-                        checkRunner 45 — first direct testRunCheck unit tests;
-                        sandbox 26 — V11.8.1 unusable-wrapper regression)
-  vite build            ✓ built (exit 0)
+                          suite #39 harnesses  270 assertions (incl. §10
+                            registry<->policy turn-flag iff-agreement)
+                          suite #40 offlinePack 15 (byte-identity + manifest hash
+                            + executability)
+                          checkRunner 45 · sandbox 26 · meridian 43 · theme 44
+                          canvasGeometry 82 · agentsMd 19
+  vite build            exit 0
 
-Offline gate (reviewer simulation)
-  Environment: git archive extract — no node_modules, no .git, plain node
+Offline gate
   Command:     node verify/run.mjs
   Result:      OFFLINE VERIFY SUMMARY: 39 passed, 0 failed. (node v20.20.2), exit 0
 
-Mutation tests (fail loudly when flipped; green when reverted)
-  1. HARNESSES.length === 25 -> 26          suite #39: 239/1, count check named
-  2. one tampered byte in a bundle          suite #40: 13/2, the bundle named
-     (byte-identity + manifest hash)
-  3. SOURCE-LEVEL (V11.8.0): claude registry maxTurns argv -> null
-                                             suite #39: 268/2 — the docs-grade
-                                             restoration check and the
-                                             before-the-prompt composition check
-                                             both fail; revert -> green. Proves the
-                                             gate detects real registry drift, not
-                                             just probe-string drift.
-  4. SOURCE-LEVEL (V11.8.1-A): WRAPPER_UNAVAILABLE reverted to ENOENT-only
-                                             (the 11.8.0 code). sandbox probe:
-                                             21 passed, 5 failed — §2.5's synthetic
-                                             EACCES fixture (a present, readable,
-                                             non-executable wrapper) reproduces the
-                                             7th review's defect verbatim: the
-                                             failure detail shows enforced:true,
-                                             failedAsExpected:true on a canary that
-                                             never ran. Revert -> 26/0. Proves a
-                                             present-but-unexecutable wrapper can
-                                             never again certify enforcement.
-  5. SOURCE-LEVEL (V11.8.1-B): testRunCheck's verdict restored to the 11.8.0
-                                             any-match regex (fail|error|Traceback...
-                                             anywhere in the output). checkRunner
-                                             probe: 41 passed, 4 failed — including
-                                             the reviewer's exact case (exit 0,
-                                             "1 passed", ambient Traceback ->
-                                             falsely FAILED) and the "0 failed"
-                                             count false-fail. Revert -> 45/0.
-                                             Proves ambient stderr noise can never
-                                             veto a measured pass.
+  This pack was rebuilt from the 11.8.5 source immediately before the run above,
+  and suite #40 confirms every bundle is byte-identical to a fresh rebuild. That
+  matters: the 11.8.1 pack reported 39/39 while its bundles had been built from
+  pre-regression source. A green offline gate means nothing unless #40 is green
+  too — the two numbers are only honest read together.
 
-V11.8.1 in one line
-  The 7th review ran the shipped offline gate in its own environment (37/2);
-  both failures were environment-classification defects, both are fixed, and
-  both are now pinned by deterministic regressions (probe fixtures, not
-  environment luck): an unspawnable wrapper is UNMEASURED, and the exit code
-  is the verdict.
+What this pack does NOT prove
+  - It does not compile the Rust crate. No cargo toolchain was available in the
+    environment that built this pack, so `cargo check`, `cargo test` and
+    `cargo clippy -D warnings` are CI's report, not a claim made here.
+  - It does not run TypeScript type-checking or the production web build; both
+    need devDependencies (React types, the Tauri API surface), which is exactly
+    why this pack exists — the runtime gate does not.
+
+Mutation tests carried forward from 11.8.1 (each fails when flipped, green when reverted)
+  1. HARNESSES.length === 25 -> 26            suite #39: 239/1, count check named
+  2. one tampered byte in a bundle            suite #40: 13/2, the bundle named
+  3. claude registry maxTurns argv -> null    suite #39: 268/2 (docs-grade restoration
+                                              + before-the-prompt composition)
+  4. WRAPPER_UNAVAILABLE reverted to ENOENT-only
+                                              sandbox probe: 21 passed, 5 failed
+  5. testRunCheck verdict restored to the any-match regex
+                                              checkRunner probe: 41 passed, 4 failed
+  6. CI RUNNER CURRENCY (11.8.5): x86_64 macOS build re-pinned to the retired
+     macos-13 label (a debugging pass put it back deliberately).
+                                              versionDrift probe: 21 passed, 1 failed —
+                                                "no workflow targets a retired runner
+                                                 (5 banned labels) — release.yml ->
+                                                 macos-13". Revert -> 22/0. Proves §5
+                                                catches a pipeline GitHub would refuse
+                                                to start, which no other suite can see.
+  7. STALE RELEASE NOTES (11.8.5): releaseBody pointed back at MJ-11.0-UPGRADE.md.
+                                              versionDrift probe: 21 passed, 1 failed —
+                                                "releaseBody names MJ-11.8-UPGRADE.md —
+                                                 the release notes link to the wrong
+                                                 version". Revert -> 22/0.

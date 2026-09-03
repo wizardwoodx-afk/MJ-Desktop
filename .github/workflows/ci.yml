@@ -4,6 +4,16 @@ name: CI
 # three OSes with the real GTK/WebKit stack, every probe runs, the production bundle builds.
 # This workflow exists to retire the oldest line in the honesty ledger:
 #   "`cargo check` has never run on the full Tauri crate."
+#
+# MJ 11.8.5 — runner currency. A workflow that cannot allocate a runner verifies nothing, and
+# a CI badge nobody can reproduce is decoration. Runner images are retired on a published
+# schedule, so:
+#   macos-13       support ended 2025-12-04   -> was in release.yml, REMOVED
+#   macos-14       deprecated, unsupported 2026-11-02 -> moved to macos-15
+#   ubuntu-22.04   active support ends 2026-09-17      -> moved to ubuntu-24.04
+#   ubuntu-20.04   support ended 2025-04-15
+# probe/versionDrift.test.ts §5 fails the gate if any of those labels reappear, so this
+# cannot silently rot the way it did.
 
 on:
   push:
@@ -16,9 +26,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             name: linux
-          - os: macos-14
+          - os: macos-15
             name: macos
           - os: windows-latest
             name: windows
@@ -27,10 +37,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Node 20
+      # Node 20 reached end-of-life 2026-04-30. CI should not certify a release on a runtime
+      # that no longer receives security fixes.
+      - name: Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Rust stable

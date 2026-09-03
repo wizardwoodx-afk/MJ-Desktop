@@ -109,7 +109,7 @@ Stored in the OS keyring; if the keyring is unavailable MJ keeps them in memory 
 ## 4. Evolution service (optional)
 
 ```bash
-cd mj/evolution-service
+cd mj/vendor/evolution-service
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt     # dspy==2.5.43, dspy-gepa==0.1.4, pydantic==2.9.2, httpx==0.27.2
 python -m mj_evolution.stdio_server
@@ -182,7 +182,7 @@ mj/
     engine.test.ts         V5 regression — 41 assertions
     wiring.test.ts         V5 regression — declared wires vs wires that survive
   src-tauri/               Rust, 1,751 lines — item 1
-  evolution-service/       Python — item 4
+  vendor/evolution-service/  Python — item 4
 ```
 
 ---

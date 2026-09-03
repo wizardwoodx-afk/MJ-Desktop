@@ -96,6 +96,58 @@ section("4. the archive name the user is given matches the release");
 const upgradeDoc = `MJ-${MJ_VERSION_SHORT}-UPGRADE.md`;
 ok(`${upgradeDoc} exists`, fs.existsSync(path.join(root, upgradeDoc)), "missing — the release notes for this version were never written");
 
+/* ── 5. CI can still allocate a runner (MJ 11.8.5) ────────────────────────────
+ *
+ * A workflow that cannot allocate a runner verifies nothing, and a CI badge nobody can
+ * reproduce is decoration. Runner images retire on a published schedule and nothing else in
+ * this suite would notice: version strings would still agree, bundles would still be
+ * byte-identical, and every probe would still pass — on a pipeline GitHub refuses to start.
+ *
+ * Retirement status at the time of writing (2026-09-03):
+ *   macos-12       support ended 2024-12-03
+ *   macos-13       support ended 2025-12-04   <- was in release.yml until 11.8.5
+ *   macos-14       deprecated, brownouts 2026-10-29..31, unsupported 2026-11-02
+ *   ubuntu-20.04   support ended 2025-04-15
+ *   ubuntu-22.04   active support ends 2026-09-17
+ */
+section("5. CI targets runners that still exist");
+
+const wfDir = path.join(root, ".github", "workflows");
+const workflowFiles = fs.existsSync(wfDir)
+  ? fs.readdirSync(wfDir).filter((f) => /\.ya?ml$/.test(f)).sort()
+  : [];
+ok(`workflows exist (${workflowFiles.length} file(s))`, workflowFiles.length > 0, ".github/workflows is empty or missing");
+
+const RETIRED_RUNNERS = ["macos-12", "macos-13", "macos-14", "ubuntu-20.04", "ubuntu-22.04"];
+const retiredHits: string[] = [];
+for (const wf of workflowFiles) {
+  const src = read(path.join(".github", "workflows", wf));
+  // A comment may NAME a retired label to explain why it is banned — only executable lines count.
+  const executable = src.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n");
+  const labels: string[] = [];
+  for (const m of executable.matchAll(/runs-on:\s*(\S+)/g)) labels.push(m[1]);
+  for (const m of executable.matchAll(/^[\t ]*-[\t ]*os:[\t ]*(\S+)/gm)) labels.push(m[1]);
+  for (const raw of labels) {
+    const label = raw.replace(/["']/g, "");
+    if (RETIRED_RUNNERS.some((r) => label === r || label.startsWith(`${r}-`))) {
+      retiredHits.push(`${wf} -> ${label}`);
+    }
+  }
+}
+ok(
+  `no workflow targets a retired runner (${RETIRED_RUNNERS.length} banned labels)`,
+  retiredHits.length === 0,
+  retiredHits.join(" | ") || "all labels current",
+);
+
+const releaseWf = read(".github/workflows/release.yml");
+ok(`releaseBody names ${upgradeDoc}`, releaseWf.includes(upgradeDoc), "the release notes link to the wrong version");
+ok(
+  "the release gate runs the SAME suite CI runs (npm test, not a subset)",
+  /npm test/.test(releaseWf) && !/for f in versionDrift/.test(releaseWf),
+  "release.yml still gates on a hand-picked subset",
+);
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) {
   console.log("\nfailures:");

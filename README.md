@@ -1,119 +1,135 @@
 # MJ 11.8 — agent organization runtime
 
-Product name **MJ**. A **Tauri v2** desktop app.
+**MJ** is a **Tauri v2** desktop app for running agent organisations.
 
-**Thesis: a Mission is an outcome-oriented objective that owns a dynamically managed organization
-of agents.** MJ is not a workflow builder with AI nodes bolted on. You state an outcome; MJ plans
-it, forms an organization to deliver it, arbitrates which coding agent runs each task, detects and
-repairs failures while running, restructures the organization when the plan turns out to be wrong,
-and keeps an immutable record of every decision so you can answer *why does this artifact exist*.
+You state an outcome. MJ plans it, forms an organization to deliver it, arbitrates which coding
+agent runs each task, detects and repairs failures while running, restructures the organization when
+the plan turns out to be wrong, and keeps an immutable record of every decision — so you can answer
+*why does this artifact exist*.
 
-The graph is still the source of truth for a workflow. For a mission, the plan is. Secrets stay in
-the OS keychain. Hermes skills are `SKILL.md`. Official MCP servers run over **stdio**.
+The graph is the source of truth for a workflow. For a mission, the plan is. Secrets stay in the OS
+keychain. Hermes skills are `SKILL.md`. Official MCP servers run over **stdio**.
 
-## Start here
+Not a localhost product: production loads `frontendDist` inside the WebView, agents are child
+processes over stdin/stdout, and there is no HTTP sidecar. (Ollama at `127.0.0.1:11434` is *your*
+local model, not an MJ service.)
 
-| Document | What it covers |
-|---|---|
-| **`MJ-11.6-UPGRADE.md`** | What V11.6 adds: the Connector release — the 2026 CLI-agent registry (19 detectable bins, researched install/argv), the Teams Connect tab (live detect · install · smoke-test), user-defined custom harnesses (name + bin + argv, validated in TS and re-validated in Rust, persisted). **11.6.1:** custom harnesses first-class in the team executor (total `resolveCaps` resolver, proven by a real custom-seat run in the probe), Antigravity `agy` / Amp `-x` / OpenHands `--headless -t` mappings corrected. **11.6.2:** ONE HARNESS TRUTH — the policy layer derives its argv from the capability registry (drift structurally impossible), every registry CLI has a mission adapter (19 profiles + custom harnesses via the resolver; `llm` deliberately excluded). **11.6.3:** documentation truth (the registry is 21 ids — 25 since V11.7.1 — pinned by probe; historical version lines labelled) and the session layer joins the resolver. **11.7.0:** THE VACUOUS-GATE FIX — suite #39's ok() had reversed arguments so every 11.6.x check passed without asserting; the helper now matches the call sites, five hidden failures were found and fixed, the doc-truth check is claim-precise, and a mutation test proves the gate fails when it should |
-| **`MJ-11.8-UPGRADE.md`** | What V11.8.x fixes: V11.8.0 THE TURN-LIMIT TRUTH — the last registry↔policy split (caps said claude's `--max-turns` was verified absent while `withTurnLimit()` still emitted it); web evidence inverted the proposed remedy (the flag IS vendor-documented, print-mode only), so the registry was corrected at docs grade with the old scan recorded, `withTurnLimit()` is capability-driven (which also closed a second latent gap — grok's documented turn cap was ignored by the policy path), `--max-budget-usd` is deliberately not composed (the CapLedger is the spend authority), and probe §10 pins iff-agreement for every harness (270 real assertions). V11.8.1 THE ENVIRONMENT-HARDENING PATCH — the 7th review ran the shipped offline gate in its own env (37/2); both failures fixed: an unspawnable wrapper (EACCES/EPERM/ENOEXEC, not just ENOENT) is now UNMEASURED instead of falsely ENFORCED, and test-run verdicts are exit-code-first with runner-summary corroboration so ambient stderr noise can no longer flip a green run |
-| **`MJ-11.7.1-UPGRADE.md`** | What V11.7.1 adds: the Offline Gate + the September-2026 registry — the release ships its own verification (`node verify/run.mjs` from the extracted zip: zero install, zero network, ~25 s; byte-pinned by `verify/MANIFEST.json` and suite #40), and the registry grew from 21 to **25** ids (23 spawnable CLIs + hermes + llm): Droid `exec` (spec-mode read-only default — the first CLI whose headless mode is read-only by construction), Kimi Code `-p` (stream-json + session resume), Auggie `--print`, Warp `oz agent run --prompt` — all four VENDOR-documented |
-| **`MJ-11.7-UPGRADE.md`** | What V11.7 fixes: the vacuous probe gate (reversed ok() arguments since 11.6.0 — every harness-suite check passed tautologically; now real, 189/0, mutation-tested), five latent assertion defects corrected, claim-precise documentation checks |
-| **`MJ-11.5-UPGRADE.md`** | What V11.5 adds: the Meridian release — honest surfaces (details on double-click, minimap normal/small rects — owner rules), the Meridian icon grammar, node-method contracts, the Assist redesign, the aurora palette, generous hit targets |
-| **`MJ-11.4-UPGRADE.md`** | What V11.4 adds: the Teams loop audit (two real feedback-loop bugs fixed, probe grown to 45 assertions), the signal diet (red → interrupt-only), three new palettes (hazard · orchid · porcelain), theme/view/lamp animations, version-string cleanup |
-| **`MJ-11.3-UPGRADE.md`** | What V11.3 adds: the Inscription pass — failing probe fixed, base CSS de-ambered onto tokens, fonts really declared, the dot system, mechanical motion |
-| **`DESKTOP-NATIVE.md`** | Native install per OS, toolchain, and the risk → sandbox mapping for each coding CLI |
-| **`LOCAL-WORKLIST.md`** | Ordered checklist for a local Claude Code / OpenCode session: what to run, what is verified, what needs your machine |
-| **`MJ-10.1-UPGRADE.md`** | What V10.1 adds: the `nothing` theme (Nothing OS design language), the eleven-defect debugging pass, and the theme probe |
-| `MJ-10.0-UPGRADE.md` | What V10 adds: replay, evals, the git layer, and the Proof page — plus exactly what is and is not proven |
-| `MJ-9.0-UPGRADE.md` | What V9 fixes: version metadata, and the reviewer-visibility bug proven against a real CLI |
-| `MJ-7.0-UPGRADE.md` | What V7 adds over V6: real verification, and the debugging pass |
-| `MJ-6.0-UPGRADE.md` | What V6 adds over V5, section by section |
-| `WHAT-CHANGED.md`, `UPGRADE.md`, `VENDOR.md` | V5 heritage |
+---
 
-## Verify
+## Design invariants
 
-```bash
-cd mj && npm ci
-./node_modules/.bin/tsc --noEmit                    # exit 0
+Five rules the code enforces, not just documents. They are the reason MJ's numbers mean anything.
 
-# V11.8.1: the official test command — esbuild's JS API, no shell, no bin resolution,
-# identical on linux / macOS / windows. This is the line CI runs too.
-npm test                                            # 40 suites, 0 failed (Linux x64)
-
-# Zero-install offline gate (V11.7.1+): pre-bundled probe bundles, no node_modules needed.
-node verify/run.mjs                                 # OFFLINE VERIFY SUMMARY: 39 passed, 0 failed (Linux)
-
-for f in versionDrift acceptance harnessPolicy checkRunner realExecution engine replayEvals reviewVisibility theme; do
-  ./node_modules/.bin/esbuild probe/$f.test.ts --bundle --platform=node --format=esm \
-    --define:MJ_ROOT='"'$(pwd)'"' --outfile=/tmp/$f.mjs --log-level=error && node /tmp/$f.mjs
-done
-
-# Windows host: see WINDOWS-CI-REPORT.md for the recorded single-machine
-# verification (36/40 probes pass; 4 are environment-specific to Windows,
-# not regressions). The Linux x64 sandbox remains the environment of record
-# for the "40/40" claim above.
-
-# The Proof page, rendered to a string in node. react-dom/server needs to stay external (it does a
-# dynamic require of "stream"), and the output must sit inside the project so those resolve:
-./node_modules/.bin/esbuild probe/v10Page.test.tsx --bundle --platform=node --format=esm \
-  --define:MJ_ROOT='"'$(pwd)'"' --external:react --external:react-dom --external:react-dom/server \
-  --outfile=probe/.v10.mjs --log-level=error && node probe/.v10.mjs
-
-./node_modules/.bin/esbuild probe/wiring.test.ts --bundle --platform=node --format=esm \
-  --outfile=/tmp/w.mjs && node /tmp/w.mjs           # report: wires kept vs dropped
-./node_modules/.bin/vite build                      # exit 0
-```
-
-**Last run against this tree (V11.8.1):** `tsc --noEmit` exit 0; `npm test` 40/40 (harnesses 270 REAL assertions — §10 pins registry↔policy turn-flag agreement for every harness; suite #40 offline-pack 15; checkRunner 45 — the first direct testRunCheck unit tests, exit-code-first verdict rules; sandbox 26 — unusable-wrapper regression; meridian 43; theme 44; canvasGeometry 82); `vite build` exit 0 — on a fresh `npm ci`, Linux x64 sandbox, Node 20. Offline gate: `node verify/run.mjs` → 39/39 from a `git archive` extract (no `node_modules`, no `.git`, zero install). Recorded by the release session itself — a record, not a third-party certification. Rust and GitHub CI end-to-end remain unverified on that machine (no cargo toolchain); CI's Probes step runs the same `npm test`.
-
-The Rust side is tested too, because the parsers are plain `std` and `include!`d into the Tauri file —
-so the code that ships is the code that was compiled:
-
-```bash
-export PATH="$HOME/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin:$PATH"
-cd /tmp/gitship2   && cargo test   # git_core.rs
-cd /tmp/gitcompile && cargo test   # the shipped git.rs
-```
-
-`cargo check` on the full Tauri crate compiles clean on Windows with MSVC. See
-`MJ-10.0-UPGRADE.md` for the full build history.
-
-## This is not a localhost product
-
-- Production loads `frontendDist` inside the WebView. No Vite preview as the app.
-- Hermes, MCP and coding agents are child processes over stdin/stdout. No HTTP sidecar.
-- Ollama at `127.0.0.1:11434` is **your** local model, not an MJ service.
-
-## Honesty rules MJ holds itself to
-
-- **No fake success.** A mission that used the labelled `local-test` double returns `BLOCKED`, never
-  `COMPLETED`, and says why.
-- **No fake metrics.** Cost and token counts come from what the harness actually reported
-  (`total_cost_usd`, NDJSON usage events) or are recorded as unmeasured. Never `chars/4`.
-- **No self-certification.** An agent is never the sole authority on its own work; an unrun check is
+- **No fake success.** A mission that used the labelled `local-test` double returns `BLOCKED`,
+  never `COMPLETED`, and says why.
+- **No fake metrics.** Cost and tokens come from what the harness actually reported
+  (`total_cost_usd`, NDJSON usage events) or are recorded as unmeasured. Never `chars/4`. A zero
+  token total is *not* reported as `0` — "the CLI told us nothing" is not "the CLI measured nothing",
+  and conflating them would let a failed invocation look like a free successful one.
+- **No self-certification.** An agent is never the sole authority on its own work. An unrun check is
   `measured: false` and drags the score down.
 - **No silent mutation.** Every graph change is gated by policy → evaluation → regression, and
   refused mutations are recorded too.
 - **No single success number.** `scoreMission` returns six dimensions plus what could not be measured.
 
+## Harness registry
+
+MJ wraps **25** ids — 23 spawnable CLIs plus `hermes` and `llm`. Each entry carries a researched
+binary, argv template, install line and an **evidence grade** (binary-verified / vendor-documented /
+community-reported / unverified), so a flag that turns out to be wrong can be traced back to the
+claim it came from.
+
+The policy layer derives its argv from this registry rather than hardcoding per-agent special cases,
+so the two cannot drift apart. Suite #39 pins that agreement: for every harness, §10 asserts the
+policy composes a turn flag **if and only if** the registry says the CLI supports it — 270 assertions,
+including a source-level mutation test that fails the gate when a registry entry is changed.
+
+## Verify
+
+```bash
+npm ci
+npm run typecheck     # tsc --noEmit,            exit 0
+npm test              # 40 suites, 0 failed      — esbuild's JS API, no shell, identical on all three OSes
+npm run build         # vite production build,   exit 0
+
+# Zero-install offline gate: pre-bundled suites, no node_modules, no network, ~25 s.
+node verify/run.mjs   # OFFLINE VERIFY SUMMARY: 39 passed, 0 failed.
+```
+
+**Last run against this tree (11.8.5):** fresh `npm ci`, Linux x64, Node v20.20.2 — `tsc --noEmit`
+exit 0; `npm test` **40/40**; `vite build` exit 0; `node verify/run.mjs` **39/39**. Recorded by the
+release session itself, not certified by a third party.
+
+Read the two offline numbers together. `verify/run.mjs` runs pre-bundled suites, so it stays green
+even when the pack is stale; suite #40 is what proves every bundle is byte-identical to a fresh
+rebuild. A green 39/39 means nothing unless #40 is green too.
+
+Suite highlights: `harnesses` 270 assertions (§10 pins registry↔policy turn-flag agreement for all
+25 harnesses), `canvasGeometry` 82, `checkRunner` 45, `theme` 44, `meridian` 43, `sandbox` 26.
+
+**Rust** is covered by CI, not by the run above — no cargo toolchain was available in the
+environment that produced this release. `cargo check`, `cargo test` and `cargo clippy -D warnings`
+run on Linux, macOS and Windows in `.github/workflows/ci.yml`. The Rust parsers are plain `std` and
+`include!`d into the Tauri file, so the code that ships is the code that compiles.
+
 ## Build
 
 ```bash
-npm run tauri dev        # dev window
-npm run tauri:build      # nsis / dmg / appimage / deb
+npm run tauri dev       # dev window
+npm run tauri:build     # nsis / dmg / appimage / deb
 ```
+
+The installer is typically 5–10 MB because Tauri uses the OS webview instead of shipping Chromium.
+
+## Layout
+
+| Path | What it is |
+|---|---|
+| `src/mission/` | The mission runtime — plan, organization, arbitration, repair, verification |
+| `src/domain/` | Node library, 25-harness registry, role packs, frameworks, teams |
+| `src/engine/` | Workflow scheduler, control runtime, Hermes loop, provenance export |
+| `src-tauri/src/` | 92 Tauri commands, SQLite (14 tables), keyring, MCP/ACP/Hermes bridges, git |
+| `probe/` | 40 probe suites — the test suite |
+| `verify/` | Offline verification pack (39 bundles + zero-dependency runner) |
+| `vendor/` | Upstream engines MJ wraps, plus MJ's own Python evolution service |
+| `evolution-service/`→`vendor/` | DSPy/GEPA reflective optimiser (stdio, first-party) |
+
+## Documents
+
+| Read this | For |
+|---|---|
+| `MJ-11.8.5-UPGRADE.md` | What this release changes, and why the 11.8.1 approach was wrong |
+| `MJ-11.8-UPGRADE.md` | The turn-limit truth and environment hardening |
+| `MJ-11.7.1-UPGRADE.md` | The offline gate and the 25-harness registry |
+| `VENDOR.md` + `NOTICE` | What MJ wraps, and on what licence |
+| `VERIFICATION.md` | The three verification tiers and what each proves |
+| `DESKTOP-NATIVE.md` | Native install per OS, toolchain, CLI sandbox mapping |
+| `LOCAL-WORKLIST.md` | Ordered checklist for a local agent session |
+
+## Known limits
+
+Stated plainly, because the alternative is discovering them at runtime.
+
+- Browser/Chromium nodes are not fully wired and fail closed. MJ does not bundle a browser.
+- The WebView has no filesystem. `node:fs` / `node:os` calls throw with a stated reason rather than
+  returning an empty result; filesystem work belongs in the desktop build or behind the `fs_*` IPC
+  commands.
+- Evolution fitness is heuristic unless the Python bridge scores it (it does ship, under
+  `vendor/evolution-service`).
+- The frontend build stack is 1–2 majors behind current: React 18 → 19, Vite 6 → 8, TypeScript
+  5 → 7. Runtime dependencies (Tauri 2.11.5, `@tauri-apps/api` 2.11.1, zustand 5.0.15) are current.
+- `vendor/hermes-agent` ships pruned to the skill contract, hooks and `skill_utils`; it is not the
+  full upstream tree.
 
 ---
 
 ## License & Copyright
 
-MJ Desktop v11.8.1 — Copyright © 2024-2026 Sree Harshen / MJ Project. All Rights Reserved.
+MJ Desktop v11.8.5 — Copyright © 2024-2026 Sree Harshen / MJ Project. All Rights Reserved.
 
-This software is **PROPRIETARY** and protected by copyright, trademark, and trade secret laws. **No license is granted** to copy, modify, redistribute, sublicense, sell, or use this software for commercial purposes or for AI/ML training without express written permission from the Owner.
+This software is **PROPRIETARY**. The source is made visible on GitHub for the Author's review, for
+demonstration to evaluators and interviewers, and for portfolio purposes. **Visibility ≠ license.**
+See [`LICENSE`](LICENSE) for full terms.
 
-**STRICTLY PROHIBITED:** copying the source code, creating derivative works, using the software to train or fine-tune any AI/ML/LLM system, scraping the code for any ML pipeline, or claiming authorship.
-
-The source code is made visible on GitHub solely for the Author's review, demonstration to evaluators/interviewers, and portfolio purposes. Visibility ≠ license.
-
-See the [LICENSE](LICENSE) file for full terms. Unauthorized use is strictly prohibited and will be enforced to the fullest extent of the law.
+Third-party engines under `vendor/` remain under their own licences — MIT and Apache-2.0 — detailed
+in [`NOTICE`](NOTICE).
