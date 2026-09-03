@@ -15,6 +15,11 @@
  * binary has no such flag. It shipped `--dangerously-skip-permissions` for OpenCode, which does not
  * exist there at all. Both were found only by running the executable.
  *
+ * 2026-09 postscript: the --max-turns story grew a third act. The current vendor CLI reference
+ * documents it for print mode while --help still omits it, so the claude entry is docs-graded
+ * with the old scan recorded — and probe §10 now pins registry↔policy agreement on turn flags
+ * for every harness. The lesson is unchanged: state the evidence, and keep the layers agreeing.
+ *
  * So every entry states its confidence and its source, and `enforcedReadOnly()` is keyed off
  * enforcement rather than off whether a flag merely exists.
  */
@@ -144,10 +149,14 @@ export const AGENT_CAPABILITIES: Record<HarnessId, AgentCapabilities> = {
     readOnly: { argv: ["--permission-mode", "plan"], confidence: "binary", source: "VERIFIED against the real binary: claude 2.1.197; permission-mode choices acceptEdits|auto|bypassPermissions|default|dontAsk|plan" },
     write: { argv: ["--permission-mode", "acceptEdits"], confidence: "binary", source: "VERIFIED against the real binary: claude 2.1.197; acceptEdits is a real choice" },
     fullAuto: { argv: ["--dangerously-skip-permissions"], confidence: "binary", source: "VERIFIED against the real binary: claude 2.1.197 --help" },
-    // There is NO turn-cap flag. This was emitted from documentation until the real binary was
-    // checked: `--max-turns` has zero matches in 2.1.197's --help. MJ's own CapLedger is the only
-    // turn limit that exists.
-    maxTurns: { argv: null, confidence: "binary", source: "VERIFIED ABSENT against the real binary: claude 2.1.197 — `--max-turns` does not appear in --help. MJ was emitting it; corrected to null." },
+    // V11.8.0: the turn cap is real after all — but the story matters. The 2.1.197 --help scan
+    // (which once removed this flag) found no match, and the 11.7.x review then caught the
+    // registry and the policy layer DISAGREEING: caps said absent while policyFor still
+    // emitted it. The 2026 vendor CLI reference documents --max-turns for print mode (no
+    // default; exits with an error at the cap) and five independent 2026 sources cite it —
+    // so the flag is restored at DOCS grade, the old scan is recorded in the source line,
+    // and probe §10 pins registry↔policy agreement so the two layers can never split again.
+    maxTurns: { argv: ["--max-turns", "$N"], confidence: "docs", source: "code.claude.com CLI reference (2026): print-mode only, no default, exits with an error at the cap. Supersedes the 2.1.197 --help scan that found no match — the flag is not listed in --help." },
     timeout: { argv: null, confidence: "binary", source: "VERIFIED ABSENT against the real binary: claude 2.1.197 — no timeout flag; MJ enforces its own wall clock" },
     outputSchema: { argv: ["--json-schema"], confidence: "binary", source: "VERIFIED against the real binary: claude 2.1.197 --help" },
     worktree: { argv: ["-w"], confidence: "binary", source: "VERIFIED against the real binary: claude 2.1.197; -w, --worktree [name]" },
@@ -161,7 +170,7 @@ export const AGENT_CAPABILITIES: Record<HarnessId, AgentCapabilities> = {
     enforcedReadOnly: true,
     gotchas: [
       "--allowedTools pre-approves (skips the prompt) but does NOT restrict. --tools restricts which tools exist; --tools \"\" is pure text. Conflating them is the classic bug.",
-      "There is no turn-cap flag. Any turn ceiling MJ advertises is enforced by MJ's own ledger, never by the CLI.",
+      "--max-turns exists in print mode only (docs-graded; --help does not list it). The CapLedger stays the authoritative ceiling — the CLI-side cap is defence in depth that fails fast. The vendor also documents --max-budget-usd (print-mode spend cap); MJ deliberately does not compose it: the CapLedger is the spend authority.",
       "Without credentials it still exits 0 and returns a full result object with is_error:true and result:\"Not logged in · Please run /login\". Exit code alone would read that as success.",
     ],
   },
@@ -243,9 +252,12 @@ export const AGENT_CAPABILITIES: Record<HarnessId, AgentCapabilities> = {
     readOnly: { argv: ["--permission-mode", "plan", "--sandbox", "read-only"], confidence: "docs", source: "permission vocabulary is deliberately Claude-compatible" },
     write: { argv: ["--permission-mode", "acceptEdits", "--sandbox", "workspace"], confidence: "docs", source: "sandbox off|workspace|read-only|strict|devbox" },
     fullAuto: { argv: ["--permission-mode", "bypassPermissions", "--sandbox", "off"], confidence: "docs", source: "the documented escape hatch" },
-    // Unlike Claude, --max-turns IS a real flag here. Same name, different CLI, opposite answer — which
-    // is exactly why per-harness verification matters.
-    maxTurns: { argv: ["--max-turns", "$N"], confidence: "docs", source: "docs.x.ai — a real flag here, unlike Claude Code where it does not exist" },
+    // V11.8.0: --max-turns is real here AND in Claude Code's print mode (docs-graded there).
+    // Same name, two CLIs — graded differently, which is exactly why per-harness evidence
+    // matters. V11.8.0 also fixed the policy layer ignoring this flag (withTurnLimit
+    // special-cased claude only); it is capability-driven now, so grok seats get their
+    // documented turn cap on the policyFor path too.
+    maxTurns: { argv: ["--max-turns", "$N"], confidence: "docs", source: "docs.x.ai — a real flag here; Claude Code documents the same name for print mode (docs-graded, see the claude entry)" },
     timeout: { argv: null, confidence: "unverified", source: "MJ enforces its own wall clock" },
     outputSchema: { argv: null, confidence: "unverified", source: "not documented" },
     worktree: { argv: ["-w", "$NAME"], confidence: "docs", source: "--worktree [NAME], with --ref to choose the base" },
@@ -684,6 +696,134 @@ export const AGENT_CAPABILITIES: Record<HarnessId, AgentCapabilities> = {
     gotchas: [
       "Formerly OpenDevin. The open-source autonomous software engineer.",
       "Containment comes from its runtime sandbox config, not from an argv flag MJ can pass — treat read-only seats as advisory.",
+    ],
+  },
+
+  droid: {
+    id: "droid",
+    name: "Droid (Factory)",
+    bins: ["droid"],
+    install: "curl -fsSL https://app.factory.ai/cli | sh   (Linux also needs xdg-utils)",
+    // V11.7.1: vendor-documented headless mode (docs.factory.ai/droid-exec). `droid exec` is
+    // a single non-interactive pass whose DEFAULT is spec-mode — read-only operations only —
+    // so the derived READ_ONLY shape needs no flag at all. Writes are tiered: --auto low is
+    // the vendor's example tier for "enable edits and commands".
+    prompt: { argv: ["exec", "$PROMPT"], confidence: "docs", source: "docs.factory.ai/droid-exec — 'Execute a single command (non-interactive mode)'" },
+    json: { argv: null, kind: "text", confidence: "unverified", source: "-o/--output-format exists but the documented values were not verified" },
+    readOnly: { argv: [], confidence: "docs", source: "spec-mode default: exec only executes read-only operations (docs.factory.ai/droid-exec)" },
+    write: { argv: ["--auto", "low"], confidence: "docs", source: "'add --auto to enable edits and commands, with risk tiers gating what can run' — low is the vendor's example tier" },
+    fullAuto: { argv: null, confidence: "unverified", source: "tier semantics (--auto low|medium shown in docs) not mapped to a full-auto shape" },
+    maxTurns: { argv: null, confidence: "unverified", source: "not documented" },
+    timeout: { argv: null, confidence: "unverified", source: "MJ enforces its own wall clock" },
+    outputSchema: { argv: null, confidence: "unverified", source: "not documented" },
+    worktree: { argv: null, confidence: "unverified", source: "droid has git-worktree machinery but no documented argv flag" },
+    cwd: { argv: null, confidence: "unverified", source: "MJ sets cwd on the process" },
+    model: { argv: null, confidence: "unverified", source: "not verified on the exec flag table" },
+    resume: { argv: null, confidence: "unverified", source: "stream-json multi-turn sessions exist; no resume-by-id flag documented" },
+    sessionStart: { argv: null, confidence: "unverified", source: "not documented" },
+    noAutoUpdate: { argv: null, confidence: "unverified", source: "not documented" },
+    filters: null,
+    cost: null,
+    enforcedReadOnly: false,
+    gotchas: [
+      "Exec defaults to SPEC MODE: read-only operations only. A write seat composes --auto low; raise the tier in the argv only if a team explicitly trusts it.",
+      "Factory's agent: honours AGENTS.md conventions at the repo root.",
+    ],
+  },
+
+  kimi: {
+    id: "kimi",
+    name: "Kimi Code (Moonshot)",
+    bins: ["kimi"],
+    install: "curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash   (or: npm install -g @moonshot-ai/kimi-code)",
+    // V11.7.1: vendor-documented prompt mode (kimi.ai cheat sheet + moonshotai/kimi-code
+    // sources): -p runs a single prompt non-interactively and finalizeHeadlessRun exits
+    // cleanly. stream-json output and -S session resume are both on the vendor flag table.
+    prompt: { argv: ["-p", "$PROMPT"], confidence: "docs", source: "kimi.ai/resources/kimi-code-cheat-sheet — 'Run a single non-interactive prompt without opening the TUI'" },
+    json: { argv: ["--output-format", "stream-json"], kind: "ndjson", confidence: "docs", source: "'--output-format stream-json — emit JSONL events for scripting; only works with --prompt'" },
+    readOnly: { argv: null, confidence: "unverified", source: "no documented read-only flag; a no-write seat is advisory" },
+    write: { argv: [], confidence: "docs", source: "default: prompt mode edits files when the agent decides" },
+    fullAuto: { argv: ["--yolo"], confidence: "docs", source: "'--yolo (-y) — auto-approve regular tool calls; use only in trusted directories'" },
+    maxTurns: { argv: null, confidence: "unverified", source: "not documented" },
+    timeout: { argv: null, confidence: "unverified", source: "MJ enforces its own wall clock" },
+    outputSchema: { argv: null, confidence: "unverified", source: "not documented" },
+    worktree: { argv: null, confidence: "unverified", source: "not documented" },
+    cwd: { argv: null, confidence: "unverified", source: "MJ sets cwd on the process (-w reported in community wrappers)" },
+    model: { argv: ["-m", "$MODEL"], confidence: "docs", source: "'--model <model> (-m) — specify a model alias for this launch'" },
+    resume: { argv: ["--session", "$SESSION"], confidence: "docs", source: "'--session [id] (-S) — resume a session by ID'" },
+    sessionStart: { argv: null, confidence: "unverified", source: "no documented create-under-chosen-id flag; Kimi assigns its own session ids" },
+    noAutoUpdate: { argv: null, confidence: "unverified", source: "not documented" },
+    filters: null,
+    cost: null,
+    enforcedReadOnly: false,
+    gotchas: [
+      "Single native binary via the install script; the npm route needs Node 22.19+.",
+      "--auto is the no-questions permission mode; --yolo additionally skips regular tool approvals.",
+    ],
+  },
+
+  auggie: {
+    id: "auggie",
+    name: "Auggie (Augment Code)",
+    bins: ["auggie"],
+    install: "npm install -g @augmentcode/auggie   then   auggie login",
+    // V11.7.1: vendor-documented print mode (docs.augmentcode.com/cli/reference): --print
+    // runs one instruction and exits. Ask mode (--ask) is a real read-only mode but is
+    // documented as a mode of its own — combining it with --print is not shown, so the
+    // capability registry does not claim that composition.
+    prompt: { argv: ["--print", "$PROMPT"], confidence: "docs", source: "docs.augmentcode.com/cli/reference — 'Run one instruction in print mode and exit' (-p)" },
+    json: { argv: ["--output-format", "json"], kind: "json", confidence: "docs", source: "'--print --output-format json — output the response in structured JSON format for automation workflows'" },
+    readOnly: { argv: null, confidence: "unverified", source: "ask mode (--ask: retrieval and non-editing tools only) is documented as its own mode; combining with --print is not shown" },
+    write: { argv: [], confidence: "docs", source: "default: print mode edits when the agent decides" },
+    fullAuto: { argv: null, confidence: "unverified", source: "not documented" },
+    maxTurns: { argv: null, confidence: "unverified", source: "not documented" },
+    timeout: { argv: null, confidence: "unverified", source: "MJ enforces its own wall clock" },
+    outputSchema: { argv: null, confidence: "unverified", source: "not documented" },
+    worktree: { argv: null, confidence: "unverified", source: "not documented" },
+    cwd: { argv: null, confidence: "unverified", source: "MJ sets cwd on the process" },
+    model: { argv: ["--model", "$MODEL"], confidence: "community", source: "github/gh-aw's auggie engine appends --model; not on the vendor flag table" },
+    resume: { argv: null, confidence: "unverified", source: "not documented" },
+    sessionStart: { argv: null, confidence: "unverified", source: "not documented" },
+    noAutoUpdate: { argv: null, confidence: "unverified", source: "not documented" },
+    filters: null,
+    cost: null,
+    enforcedReadOnly: false,
+    gotchas: [
+      "Non-interactive mode may be DISABLED by enterprise agreement (vendor docs) — a headless Auggie seat can fail for licensing, not technical, reasons.",
+      "--augment-session-json <json-or-path> authenticates automation without auggie login.",
+      "--acp runs Auggie as an ACP agent for compatible editors; --mcp runs it as an MCP tool server.",
+    ],
+  },
+
+  warp: {
+    id: "warp",
+    name: "Warp Oz Agent CLI",
+    bins: ["oz"],
+    install: "Ships with Warp 2026 (Command Palette → Install Warp CLI), or: brew tap warpdotdev/warp && brew install --cask warp-cli   then   oz login",
+    // V11.7.1: Warp's agent infrastructure has its own CLI (docs.warp.dev/reference/cli).
+    // oz agent run --prompt starts a LOCAL agent run; WARP_API_KEY authenticates headless
+    // (CI pipelines, headless servers). run-cloud is cloud infrastructure — not composed.
+    prompt: { argv: ["agent", "run", "--prompt", "$PROMPT"], confidence: "docs", source: "docs.warp.dev/reference/cli — 'oz agent run --prompt ...' quickstart; API keys 'let the CLI authenticate non-interactively'" },
+    json: { argv: null, kind: "text", confidence: "unverified", source: "not documented on the CLI reference" },
+    readOnly: { argv: null, confidence: "unverified", source: "no documented read-only flag; a no-write seat is advisory" },
+    write: { argv: [], confidence: "docs", source: "default: the local agent run can edit" },
+    fullAuto: { argv: null, confidence: "unverified", source: "not documented" },
+    maxTurns: { argv: null, confidence: "unverified", source: "not documented" },
+    timeout: { argv: null, confidence: "unverified", source: "MJ enforces its own wall clock" },
+    outputSchema: { argv: null, confidence: "unverified", source: "not documented" },
+    worktree: { argv: null, confidence: "unverified", source: "not documented" },
+    cwd: { argv: null, confidence: "unverified", source: "MJ sets cwd on the process (--cwd existed on the 2025 warp surface)" },
+    model: { argv: null, confidence: "unverified", source: "not documented" },
+    resume: { argv: null, confidence: "unverified", source: "local runs are one-shot; run-cloud has --attach, not resume-by-id" },
+    sessionStart: { argv: null, confidence: "unverified", source: "not documented" },
+    noAutoUpdate: { argv: null, confidence: "unverified", source: "not documented" },
+    filters: null,
+    cost: null,
+    enforcedReadOnly: false,
+    gotchas: [
+      "MJ spawns LOCAL runs (oz agent run). oz agent run-cloud needs --environment and is deliberately NOT composed.",
+      "WARP_API_KEY (wk-...) authenticates CI/headless servers; otherwise `oz login`.",
+      "The 2025-era `warp agent run --prompt` surface still exists on the warp binary, and the Linux desktop launcher is warp-terminal — neither is the agent CLI MJ detects.",
     ],
   },
 

@@ -919,6 +919,10 @@ pub fn cli_providers_detect() -> Value {
         ("qwen", "Qwen Code", "qwen"),
         ("goose", "Goose (Block)", "goose"),
         ("amazonq", "Amazon Q / Kiro CLI", "kiro-cli"),
+        ("droid", "Droid (Factory)", "droid"),
+        ("kimi", "Kimi Code (Moonshot)", "kimi"),
+        ("auggie", "Auggie (Augment Code)", "auggie"),
+        ("warp", "Warp Oz Agent CLI", "oz"),
     ];
     Value::Array(names.into_iter().map(|(id, name, bin)| {
         let resolved = which_bin(bin).or_else(|| which_bin(id));
@@ -1071,6 +1075,12 @@ fn harness_argv(id: &str, prompt: &str) -> (String, Vec<String>) {
         "aider" => ("aider".into(), vec!["--message".into(), prompt.into(), "--yes".into(), "--no-auto-commits".into()]),
         "goose" => ("goose".into(), vec!["run".into(), "--text".into(), prompt.into()]),
         "amazonq" => ("amazonq".into(), vec!["chat".into(), "--no-interactive".into(), prompt.into()]),
+        // V11.7.1: vendor-documented headless modes (checked 2026-09). droid exec defaults to
+        // spec-mode (read-only); the policy layer's WRITE shape adds --auto low in TS.
+        "droid" => ("droid".into(), vec!["exec".into(), prompt.into()]),
+        "kimi" => ("kimi".into(), vec!["-p".into(), prompt.into()]),
+        "auggie" => ("auggie".into(), vec!["--print".into(), prompt.into()]),
+        "warp" => ("oz".into(), vec!["agent".into(), "run".into(), "--prompt".into(), prompt.into()]),
         other => (other.into(), vec![prompt.into()]),
     }
 }
@@ -1133,6 +1143,7 @@ const ALLOWED_CLI_BINS: &[&str] = &[
     "hermes", "claude", "codex", "opencode", "openclaude", "copilot", "cursor-agent", "agent",
     "grok", "cline", "kilo", "qwen", "gemini", "aider", "goose", "amazonq",
     "kiro-cli", "q", "agy", "amp", "crush", "openhands",
+    "droid", "kimi", "auggie", "oz",
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1291,7 +1302,7 @@ pub fn cli_env() -> Value {
         ("cursor", "cursor-agent"), ("grok", "grok"), ("cline", "cline"), ("kilo", "kilo"),
         ("qwen", "qwen"), ("gemini", "gemini"), ("aider", "aider"), ("goose", "goose"),
         ("antigravity", "agy"), ("amp", "amp"), ("crush", "crush"), ("openhands", "openhands"),
-        ("amazonq", "amazonq"),
+        ("amazonq", "amazonq"), ("droid", "droid"), ("kimi", "kimi"), ("auggie", "auggie"), ("warp", "oz"),
     ];
     let rows: Vec<Value> = bins.into_iter().map(|(id, bin)| {
         let resolved = which_bin(bin).or_else(|| which_bin(id));

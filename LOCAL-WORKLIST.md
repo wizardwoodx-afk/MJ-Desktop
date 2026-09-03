@@ -1,4 +1,4 @@
-# MJ 11.7 — LOCAL WORKLIST
+# MJ 11.8 — LOCAL WORKLIST
 
 Read this top to bottom. Items are ordered by priority. Everything here is either already verified
 (it says so, with the command that verified it) or needs your machine because it needs a Tauri

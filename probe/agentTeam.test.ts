@@ -142,10 +142,12 @@ function mkSeat(harness: HarnessId, over: Partial<TeamSeat> = {}): TeamSeat {
   const w = composeSeatArgv(mkSeat("claude", { role: "coder", mayWrite: true, maxTurns: 30 }), { prompt: "Implement it", cwd: "/repo", readOnly: false });
   ok(w.argv.includes("acceptEdits"), `a coder seat gets acceptEdits, got ${w.argv.join(" ")}`);
   ok(!w.argv.includes("plan"), "a coder seat must not also be in plan mode");
-  // CORRECTED after checking the real binary: Claude Code 2.1.197 has no --max-turns flag, so MJ must
-  // NOT emit one. The turn bound is enforced by MJ's own caps instead. Grok does have the flag, so it
-  // is asserted separately below.
-  ok(!w.argv.includes("--max-turns"), "claude does not get a --max-turns flag, because the binary has none");
+  // V11.8.0 CORRECTED AGAIN, with the evidence trail: the 2.1.197 --help scan once removed this
+  // flag (verified absent), but the current vendor CLI reference documents --max-turns for print
+  // mode (no default; exits with an error at the cap) — so claude's registry entry is docs-graded
+  // and the seat composer emits it like every other capability-documented harness. The CapLedger
+  // stays the authoritative ceiling; the CLI-side cap is defence in depth. Grok asserts below.
+  ok(w.argv.includes("--max-turns") && w.argv.includes("30"), `claude gets its docs-graded --max-turns 30 (print-mode flag), got ${w.argv.join(" ")}`);
   const grokWrite = composeSeatArgv(mkSeat("grok", { role: "coder", mayWrite: true, maxRisk: "MEDIUM", maxTurns: 30 }), { prompt: "Implement it", cwd: "/repo", readOnly: false });
   if (grokWrite.argv.includes("--max-turns")) {
     ok(grokWrite.argv.includes("30"), "grok does accept --max-turns, and the bound is passed through");

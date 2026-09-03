@@ -71,6 +71,10 @@ export const ENFORCED_SANDBOX: Record<HarnessId, boolean> = {
   goose: false,
   qwen: false,
   amazonq: false,
+  droid: false,
+  kimi: false,
+  auggie: false,
+  warp: false,
   hermes: enforcedReadOnly("hermes"),
   llm: enforcedReadOnly("llm"),
 };
@@ -132,6 +136,10 @@ export const READ_ONLY: Partial<Record<HarnessId, string[]>> = {
   goose: registryArgv("goose", "readOnly"),
   qwen: registryArgv("qwen", "readOnly"),
   amazonq: registryArgv("amazonq", "readOnly"),
+  droid: registryArgv("droid", "readOnly"),
+  kimi: registryArgv("kimi", "readOnly"),
+  auggie: registryArgv("auggie", "readOnly"),
+  warp: registryArgv("warp", "readOnly"),
   // Hand-tuned (CLI-shim shape): the in-process Hermes runtime takes the bare prompt;
   // the spawned CLI takes --print. The registry models the runtime; policy models the shim.
   hermes: ["--print", "$PROMPT"],
@@ -157,6 +165,16 @@ export const WRITE: Partial<Record<HarnessId, string[]>> = {
   goose: registryArgv("goose", "write"),
   qwen: registryArgv("qwen", "write"),
   amazonq: registryArgv("amazonq", "write"),
+  // V11.7.1 — the one hand-tuned WRITE among the new four: droid exec defaults to
+  // spec-mode (read-only operations only), so a write mission MUST compose --auto or the
+  // agent would honestly refuse to edit. `low` is the vendor's documented example tier
+  // (docs.factory.ai/droid-exec: "add --auto to enable edits and commands, with risk
+  // tiers gating what can run"). kimi/auggie/warp write exactly what their registry
+  // prompt mode writes, so they stay derived.
+  droid: ["exec", "--auto", "low", "$PROMPT"],
+  kimi: registryArgv("kimi", "write"),
+  auggie: registryArgv("auggie", "write"),
+  warp: registryArgv("warp", "write"),
   // Hand-tuned (CLI-shim shape): see the READ_ONLY note.
   hermes: ["--print", "$PROMPT"],
 };
@@ -218,14 +236,24 @@ export function policyFor(id: HarnessId, req: HarnessPolicyRequest): HarnessPoli
   };
 }
 
+/**
+ * V11.8.0 — capability-driven, like everything else in this file's world. The 11.7.x
+ * review caught this function special-casing claude with a literal ["--max-turns", N]
+ * while the capability registry said the flag does not exist — two layers, two answers,
+ * the exact drift the 11.6.2 consolidation was supposed to end. The truth (2026-09):
+ * the flag IS documented for Claude print mode, and Grok documents one too — so the
+ * registry now carries both, and this function composes whatever the registry says,
+ * for any harness. The CapLedger remains the authoritative ceiling; a CLI-side cap is
+ * defence in depth that fails fast.
+ */
 function withTurnLimit(id: HarnessId, argv: string[], maxTurns: number): string[] {
   if (!Number.isFinite(maxTurns) || maxTurns <= 0) return argv;
+  const shape = AGENT_CAPABILITIES[id]?.maxTurns?.argv;
+  if (!shape?.length) return argv;
   const at = argv.indexOf("$PROMPT");
-  const limit = String(Math.max(1, Math.round(maxTurns)));
-  const extra: string[] = id === "claude" ? ["--max-turns", limit] : [];
-  if (!extra.length) return argv;
-  if (at < 0) return [...argv, ...extra];
-  return [...argv.slice(0, at), ...extra, ...argv.slice(at)];
+  const filled = shape.map((t) => (t === "$N" ? String(Math.max(1, Math.round(maxTurns))) : t));
+  if (at < 0) return [...argv, ...filled];
+  return [...argv.slice(0, at), ...filled, ...argv.slice(at)];
 }
 
 function outputFormatFor(id: HarnessId): "text" | "json" | "ndjson" {

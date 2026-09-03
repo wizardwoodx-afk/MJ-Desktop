@@ -225,14 +225,27 @@ export function testRunCheck(command: string, output: string, exitCode: number |
   if (!output.trim()) {
     return unmeasuredCheck(`Test run: ${command}`, "TEST_RUN", "the command produced no output, so nothing was verified");
   }
-  const looksFailed = /(\bfail(ed|ing|ure)?\b|\berror\b|✗|FAILED|panic:|Traceback)/i.test(output);
-  const passed = exitCode === 0 && !looksFailed;
+  // V11.8.1: the exit code is the measured verdict; text is corroboration, never a veto.
+  // The 7th review ran the shipped offline gate on a machine whose environment injected an
+  // unrelated artifact-tool startup Traceback into captured stderr, and the old any-match
+  // regex (fail/error/✗/FAILED/panic:/Traceback) flipped a green pytest run
+  // (exit 0, "1 passed") to FAILED. Now a zero exit is overturned only by the RUNNER'S OWN
+  // failure summary: a counted "N failed/failing/failures" with N > 0, a TAP "not ok"
+  // line, a "FAILED" summary line, or a Go "panic:". Ambient noise words can no longer
+  // veto a measured pass; a non-zero exit fails regardless of cheerful text.
+  const failedCounts = [...output.matchAll(/(\d+)[ ,]+fail(?:ed|ing|ures?)?\b/gi)].map((m) => Number(m[1]));
+  const summaryFailed =
+    failedCounts.some((n) => n > 0) ||
+    /^not ok\b/m.test(output) ||
+    /^FAILED\b/m.test(output) ||
+    /\bpanic:/.test(output);
+  const passed = exitCode === 0 && !summaryFailed;
   return check({
     name: `Test run: ${command}`,
     source: "TEST_RUN",
     passed,
     score: passed ? 1 : 0,
-    detail: `exit=${exitCode ?? "?"}, ${output.length} bytes of output`,
+    detail: `exit=${exitCode ?? "?"}, ${output.length} bytes of output, ${summaryFailed ? "runner summary reports failures" : "no failure summary"}`,
     evidence: [output.slice(0, 2000)],
   });
 }

@@ -26,13 +26,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { buildSync } from "esbuild";
+// V11.7.1: the suite list is shared with the offline-verification pack builder, so the
+// dev gate and the shipped pack can never cover different sets of suites.
+import { listProbeSuites } from "./probe-list.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const probeDir = path.join(root, "probe");
-const files = fs
-  .readdirSync(probeDir)
-  .filter((f) => (f.endsWith(".test.ts") || f.endsWith(".test.tsx")) && !f.startsWith("."))
-  .sort();
+const files = listProbeSuites(probeDir);
 
 let totalPass = 0;
 let totalFail = 0;

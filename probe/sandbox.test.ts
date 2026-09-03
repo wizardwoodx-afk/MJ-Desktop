@@ -9,6 +9,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { execFile } from "node:child_process";
 import { sandboxProfileFor, scrubEnv, verifyEnforcement, wrapForSeat, type SandboxProfile } from "../src/mission/sandbox";
 
 let passed = 0;
@@ -72,8 +73,19 @@ section("2. canaries are measured, not asserted (Linux + bubblewrap when present
 {
   const ws = fs.mkdtempSync(path.join(os.tmpdir(), "mj-sbx-"));
   const profile = sandboxProfileFor("HIGH", ws, "linux");
-  const hasBwrap = fs.existsSync("/usr/bin/bwrap") || fs.existsSync("/bin/bwrap");
-  if (hasBwrap) {
+  // V11.8.1: existence is not usability. On the 7th review's machine bwrap existed but
+  // could not be executed (EACCES — e.g. a noexec mount): existsSync said "present" while
+  // every spawn failed. Detect the wrapper by trying to run it, so this probe branches on
+  // what the canaries will actually observe. A NUMERIC error code means bwrap ran and
+  // exited (even a usage error proves the binary executes); a spawn errno does not.
+  const bwrapUsable = await new Promise<boolean>((resolve) => {
+    const unavailable = new Set(["ENOENT", "EACCES", "EPERM", "ENOEXEC"]);
+    execFile("bwrap", ["--version"], { timeout: 4000 }, (err) => {
+      if (!err) return resolve(true);
+      resolve(!unavailable.has(String((err as NodeJS.ErrnoException).code ?? "")));
+    });
+  });
+  if (bwrapUsable) {
     const result = await verifyEnforcement(profile);
     ok("enforcement was measured by real canaries", result.measured);
     ok("the workspace write INSIDE is possible (control canary is implicit in the seat)", fs.existsSync(ws));
@@ -82,16 +94,52 @@ section("2. canaries are measured, not asserted (Linux + bubblewrap when present
     ok("verdict: enforced", result.enforced);
   } else {
     const result = await verifyEnforcement(profile);
-    ok("bubblewrap absent → measured:false, enforced:false, stated plainly",
+    ok("bubblewrap absent or unusable → measured:false, enforced:false, stated plainly",
       result.measured === false && result.enforced === false && result.note.length > 0,
       "no silent pass");
-    console.log("  (bubblewrap not installed here — install it to measure: apt install bubblewrap)");
+    console.log("  (bubblewrap not installed or not executable here — install it to measure: apt install bubblewrap)");
   }
   // The "no wrapper" platform must never claim enforcement.
   const winProfile = sandboxProfileFor("HIGH", ws, "windows");
   const winResult = await verifyEnforcement(winProfile);
   ok("Windows profile refuses to claim enforcement", winResult.measured === false && winResult.enforced === false && winProfile.note.includes("WSL2"));
   fs.rmSync(ws, { recursive: true, force: true });
+}
+
+section("2.5. an unusable wrapper is UNMEASURED, never enforced (V11.8.1 regression)");
+{
+  // The 7th review ran the shipped 11.8.0 offline gate on a machine where bwrap existed
+  // but could not be executed (EACCES — e.g. a noexec mount or a confined AppArmor
+  // profile). The 11.8.0 code recognized only ENOENT as "wrapper unavailable", so the
+  // spawn error was recorded as a canary that "failed as expected" — certifying
+  // enforcement that never ran. This fixture reproduces that machine deterministically
+  // (a present, readable, deliberately NON-executable file), so every environment proves
+  // the fix, not just the one that exposed it.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mj-unusable-"));
+  const fixtureProfile = (wrapper: string): SandboxProfile => ({
+    tier: "fs+net",
+    platform: "linux",
+    wrapper: [wrapper],
+    scrubbedEnvKeys: [],
+    canaries: [
+      { name: "write outside workspace", argv: [wrapper, "--ro-bind", "/", "/", "--", "sh", "-c", "echo canary > /etc/mj-probe"], mustFail: true },
+      { name: "network", argv: [wrapper, "--unshare-net", "--", "sh", "-c", "exit 0"], mustFail: true },
+    ],
+    note: "V11.8.1 unusable-wrapper fixture",
+  });
+  fs.writeFileSync(path.join(dir, "fake-bwrap"), "#!/bin/sh\nexit 0\n");
+  fs.chmodSync(path.join(dir, "fake-bwrap"), 0o644); // present, readable, deliberately NOT executable
+  const eacces = await verifyEnforcement(fixtureProfile(path.join(dir, "fake-bwrap")));
+  ok("EACCES wrapper → measured:false (the canary never ran)", eacces.measured === false, JSON.stringify(eacces));
+  ok("EACCES wrapper → enforced:false (a spawn error is not a canary failing)", eacces.enforced === false, JSON.stringify(eacces));
+  ok("the spawn error is never recorded as failedAsExpected", eacces.evidence.every((e) => !e.ran && !e.failedAsExpected), JSON.stringify(eacces.evidence));
+  ok("the evidence names the real cause — the wrapper, not the canary", eacces.evidence.every((e) => /not installed or not executable/.test(e.detail)), JSON.stringify(eacces.evidence.map((e) => e.detail)));
+  ok("the verdict states UNMEASURED plainly", /UNMEASURED/.test(eacces.note), eacces.note);
+  const enoent = await verifyEnforcement(fixtureProfile(path.join(dir, "no-such-wrapper")));
+  ok("ENOENT wrapper → measured:false, enforced:false, UNMEASURED note (the 11.8.0 rule, kept)",
+    enoent.measured === false && enoent.enforced === false && /UNMEASURED/.test(enoent.note),
+    JSON.stringify(enoent));
+  fs.rmSync(dir, { recursive: true, force: true });
 }
 
 section("3. profiles are deterministic");

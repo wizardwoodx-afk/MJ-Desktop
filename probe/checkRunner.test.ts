@@ -7,6 +7,7 @@
  */
 
 import { discoverChecks, runAllChecks, runCheck, type CheckSpec, type ReadFn, type RunFn } from "../src/mission/checkRunner";
+import { testRunCheck } from "../src/mission/evaluation";
 
 let pass = 0;
 let fail = 0;
@@ -159,6 +160,69 @@ console.log("\n== a whole pass ==\n");
   const results = await runAllChecks("/repo", { read: repo({ "package.json": pkg({ test: "vitest run" }) }), run: runOk, canRun, exists: existsFor({ "package.json": "x" }) });
   eq(results.length, 1, "one check discovered");
   ok(!results[0].didRun, "and it must not have run, because node_modules is absent");
+}
+
+console.log("\n== testRunCheck verdicts: exit code first, runner summary second, ambient noise never (V11.8.1) ==\n");
+
+{
+  // The 7th review's machine injected an unrelated artifact-tool startup Traceback into
+  // captured stderr, and the 11.8.0 any-match regex (fail/error/✗/FAILED/panic:/Traceback)
+  // flipped a green pytest run — exit 0, "1 passed" — to FAILED. The exit code is the
+  // measured verdict; text is corroboration, never a veto. These are the first direct unit
+  // tests of testRunCheck: through 11.8.0 it was only exercised end-to-end through real
+  // pytest, which is exactly why an environment-dependent false-fail survived 39 suites.
+  const green = testRunCheck(
+    "pytest -q",
+    [
+      "Traceback (most recent call last):",
+      '  File "/opt/artifact_tool/__main__.py", line 2, in <module>',
+      "    import watcher",
+      "ModuleNotFoundError: No module named 'watcher'",
+      "",
+      "============================= test session starts ==============================",
+      "collected 1 item",
+      "",
+      "test_green.py .                                                          [100%]",
+      "",
+      "========================= 1 passed, 0 warnings in 0.01s =========================",
+    ].join("\n"),
+    0,
+  );
+  ok(green.passed, "exit 0 + '1 passed' + an ambient Traceback must still PASS (the reviewer's exact case)");
+  ok(green.measured, "and it is a MEASURED pass, not a hedged one");
+  ok(/no failure summary/.test(green.detail), `the detail states the classification basis, got ${green.detail}`);
+}
+{
+  const counted = testRunCheck("pytest -q", "test_a .\ntest_b F\n\n======== 3 passed, 1 failed in 0.05s ========\n", 0);
+  ok(!counted.passed, "exit 0 but the runner's own summary says '1 failed' → FAIL");
+}
+{
+  const mocha = testRunCheck("mocha", "  2 passing (5ms)\n  1 failing\n", 0);
+  ok(!mocha.passed, "'1 failing' (mocha's wording) counts as a failure summary at exit 0");
+}
+{
+  const zero = testRunCheck("go test ./...", "=== RUN   TestGreen\n--- PASS: TestGreen\nPASS\nok  pkg 0.004s\n0 failed; 5 passed\n", 0);
+  ok(zero.passed, "'0 failed' is a count, not a verdict — the word 'failed' with a zero count must PASS");
+}
+{
+  const cheerful = testRunCheck("pytest -q", "all good, nice work\n", 1);
+  ok(!cheerful.passed, "a non-zero exit fails regardless of cheerful text (unchanged rule)");
+}
+{
+  const tap = testRunCheck("node --test", "TAP version 13\nok 1 - works\nnot ok 2 - breaks\n", 0);
+  ok(!tap.passed, "a TAP 'not ok' line fails even at exit 0");
+}
+{
+  const goPanic = testRunCheck("go test ./...", "--- FAIL: TestX\npanic: runtime error: index out of range\n", 0);
+  ok(!goPanic.passed, "a Go panic in the output fails even at exit 0");
+}
+{
+  const noise = testRunCheck("vitest run", "stderr: error: artifact_tool deprecation warning\nstderr: ✗ marker in a log line\n\n Test Files  1 passed (1)\n", 0);
+  ok(noise.passed, "bare noise words ('error', '✗') with no failure summary cannot veto a measured pass");
+}
+{
+  const empty = testRunCheck("pytest -q", "   \n", 0);
+  ok(!empty.passed && empty.measured === false, "no output → unmeasured, never passed (unchanged rule)");
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

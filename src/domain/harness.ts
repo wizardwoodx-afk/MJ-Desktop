@@ -47,6 +47,10 @@ export type HarnessId =
   | "goose"
   | "qwen"
   | "amazonq"
+  | "droid"
+  | "kimi"
+  | "auggie"
+  | "warp"
   | "llm";
 
 export interface HarnessSpec {
@@ -236,6 +240,42 @@ export const HARNESSES: HarnessSpec[] = [
     argv: ["chat", "--no-interactive", "$PROMPT"],
     install: "Install Amazon Q Developer CLI via Homebrew/WinGet or AWS CLI",
     notes: "AWS enterprise terminal coding agent with Bedrock model routing.",
+  },
+  {
+    id: "droid",
+    name: "Droid (Factory)",
+    bins: ["droid"],
+    argv: ["exec", "$PROMPT"],
+    install: "curl -fsSL https://app.factory.ai/cli | sh   (Linux also needs xdg-utils)",
+    notes: "V11.7.1: `droid exec \"<prompt>\"` is the vendor-documented non-interactive single-pass mode. The DEFAULT is spec-mode — read-only operations only — so MJ's read-only policy needs no flag at all; writes compose `--auto low` (the vendor's example tier; risk tiers gate what may run). `-f <file>` reads the prompt from a file, `-o` sets the output format.",
+    source: "docs.factory.ai/droid-exec/overview (checked 2026-09) — vendor-documented headless mode",
+  },
+  {
+    id: "kimi",
+    name: "Kimi Code (Moonshot)",
+    bins: ["kimi"],
+    argv: ["-p", "$PROMPT"],
+    install: "curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash   (or: npm install -g @moonshot-ai/kimi-code)",
+    notes: "V11.7.1: `kimi -p \"<prompt>\"` runs a single prompt non-interactively (the CLI's finalizeHeadlessRun exits the process after completion). `--output-format stream-json` emits JSONL events; `--yolo` auto-approves regular tool calls; `--auto` is the no-questions permission mode; `-S <id>` resumes a session by id. Swarm/goal modes are interactive concepts MJ does not compose.",
+    source: "kimi.ai/resources/kimi-code-cheat-sheet + moonshotai/kimi-code (checked 2026-09) — vendor-documented prompt mode",
+  },
+  {
+    id: "auggie",
+    name: "Auggie (Augment Code)",
+    bins: ["auggie"],
+    argv: ["--print", "$PROMPT"],
+    install: "npm install -g @augmentcode/auggie   then   auggie login",
+    notes: "V11.7.1: `auggie --print \"<instruction>\"` is print mode — one instruction, no UI, exits (the vendor's own automation workflow). `--quiet` shows only the final message, `--output-format json` structures the response, `--ask` is a genuine read-only mode (retrieval and non-editing tools only) that is documented as its own mode rather than a --print modifier. Non-interactive mode can be disabled by enterprise agreement. `--acp` exposes Auggie as an ACP agent.",
+    source: "docs.augmentcode.com/cli/reference (checked 2026-09) — vendor-documented print mode",
+  },
+  {
+    id: "warp",
+    name: "Warp Oz Agent CLI",
+    bins: ["oz"],
+    argv: ["agent", "run", "--prompt", "$PROMPT"],
+    install: "Ships with Warp 2026 (Command Palette → Install Warp CLI), or: brew tap warpdotdev/warp && brew install --cask warp-cli   then   oz login",
+    notes: "V11.7.1: Warp's agent infrastructure has its own CLI, `oz`. `oz agent run --prompt` starts a LOCAL agent run — that is what MJ spawns. `oz agent run-cloud` is Warp cloud infrastructure (needs --environment) and is deliberately NOT composed. WARP_API_KEY authenticates headless servers/CI. The 2025-era `warp agent run --prompt` surface still exists on the `warp` binary; the Linux desktop launcher is `warp-terminal` — neither is the agent CLI MJ detects.",
+    source: "docs.warp.dev/reference/cli (checked 2026-09) — vendor-documented local agent run",
   },
   {
     id: "llm",

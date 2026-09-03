@@ -19,7 +19,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { HARNESSES, HARNESS_BY_ID, customHarnessId, validateCustomHarness, type HarnessId } from "../src/domain/harness";
 import { AGENT_CAPABILITIES, resolveCaps } from "../src/mission/agentCapabilities";
-import { ENFORCED_SANDBOX, READ_ONLY, WRITE } from "../src/mission/harnessPolicy";
+import { ENFORCED_SANDBOX, READ_ONLY, WRITE, policyFor } from "../src/mission/harnessPolicy";
 import { allHarnesses, getHarness } from "../src/mission/harnessAdapters";
 import { sessionArgv, sessionIdKind } from "../src/mission/sessions";
 import { setCustomHarnesses } from "../src/domain/harness";
@@ -73,7 +73,7 @@ ok("HARNESS_BY_ID resolves every id", ids.every((id) => HARNESS_BY_ID.has(id)));
 const RESEARCHED: HarnessId[] = [
   "acp", "hermes", "claude", "codex", "opencode", "openclaude", "copilot", "cursor", "grok",
   "cline", "kilo", "aider", "gemini", "antigravity", "amp", "crush", "openhands", "goose",
-  "qwen", "amazonq", "llm",
+  "qwen", "amazonq", "droid", "kimi", "auggie", "warp", "llm",
 ];
 ok(`the researched 2026 landscape is complete (${RESEARCHED.length} ids)`,
   RESEARCHED.every((id) => HARNESS_BY_ID.has(id)),
@@ -110,13 +110,20 @@ ok("the six V11.6 agents have capability entries with a prompt shape and a named
     return Boolean(caps) && Array.isArray(caps.prompt.argv) && caps.prompt.source.length > 0;
   }),
   v116.filter((id) => !AGENT_CAPABILITIES[id]).join(", ") || "entry without prompt shape");
+const v1171 = ["droid", "kimi", "auggie", "warp"] as HarnessId[];
+ok("the four V11.7.1 agents have capability entries with a DOCS-graded prompt shape and a named source",
+  v1171.every((id) => {
+    const caps = AGENT_CAPABILITIES[id];
+    return Boolean(caps) && Array.isArray(caps.prompt.argv) && caps.prompt.confidence === "docs" && caps.prompt.source.length > 0;
+  }),
+  v1171.filter((id) => !AGENT_CAPABILITIES[id] || AGENT_CAPABILITIES[id].prompt.confidence !== "docs").join(", ") || "entry without a docs-graded prompt shape");
 ok("HARNESS_BADGES in TeamsPage covers every id",
   ids.every((id) => teams.includes(`${id}: { label:`)), ids.filter((id) => !teams.includes(`${id}: { label:`)).join(", "));
 
 // Rust: detect list, env list, allowlist, argv table
-const rustDetectIds = ["hermes", "claude", "codex", "opencode", "openclaude", "copilot", "cursor", "grok", "cline", "kilo", "aider", "gemini", "antigravity", "amp", "crush", "openhands", "qwen", "goose", "amazonq"];
+const rustDetectIds = ["hermes", "claude", "codex", "opencode", "openclaude", "copilot", "cursor", "grok", "cline", "kilo", "aider", "gemini", "antigravity", "amp", "crush", "openhands", "qwen", "goose", "amazonq", "droid", "kimi", "auggie", "warp"];
 ok("the Rust detect list covers every executable harness", rustDetectIds.every((id) => rust.includes(`("${id}",`)), rustDetectIds.filter((id) => !rust.includes(`("${id}",`)).join(", "));
-const rustBins = ["hermes", "claude", "codex", "opencode", "openclaude", "copilot", "cursor-agent", "grok", "cline", "kilo", "qwen", "gemini", "aider", "goose", "agy", "amp", "crush", "openhands", "amazonq", "kiro-cli", "q", "agent"];
+const rustBins = ["hermes", "claude", "codex", "opencode", "openclaude", "copilot", "cursor-agent", "grok", "cline", "kilo", "qwen", "gemini", "aider", "goose", "agy", "amp", "crush", "openhands", "amazonq", "kiro-cli", "q", "agent", "droid", "kimi", "auggie", "oz"];
 const allowMatch = rust.match(/const ALLOWED_CLI_BINS[^;]+;/)?.[0] ?? "";
 ok("every registry bin is on the Rust invoke allowlist",
   rustBins.every((b) => allowMatch.includes(`"${b}"`)), rustBins.filter((b) => !allowMatch.includes(`"${b}"`)).join(", "));
@@ -126,6 +133,9 @@ const argvFn = rust.match(/fn harness_argv[\s\S]*?\n\}/)?.[0] ?? "";
 ok("the Rust argv table has the six V11.6 agents",
   ['"openclaude"', '"copilot"', '"antigravity"', '"amp"', '"crush"', '"openhands"'].every((k) => argvFn.includes(k)),
   'harness_argv is missing a V11.6 entry');
+ok("the Rust argv table has the four V11.7.1 agents",
+  ['"droid"', '"kimi"', '"auggie"', '"warp"'].every((k) => argvFn.includes(k)),
+  'harness_argv is missing a V11.7.1 entry');
 
 // ═══════════════════════════════════ 3. custom harnesses — validated twice
 section("3. custom harnesses — validated in TS, re-validated in Rust");
@@ -324,7 +334,7 @@ const derived = (id: string, kind: "readOnly" | "write"): string[] => {
   const polSrc = read("src/mission/harnessPolicy.ts");
   ok("the policy layer derives from the capability registry (registryArgv)", polSrc.includes("function registryArgv("), "no derivation");
   const derivedIds = [...polSrc.matchAll(/(\w+): registryArgv\("(\w+)", "(readOnly|write)"\)/g)];
-  ok(`every non-legacy policy entry is DERIVED, not hand-copied (${derivedIds.length} entries = 12 ids x 2 maps)`, derivedIds.length === 24, `${derivedIds.length}`);
+  ok(`every non-legacy policy entry is DERIVED, not hand-copied (${derivedIds.length} entries = 12 legacy ids x 2 + kimi/auggie/warp x 2 + droid readOnly; droid's WRITE is the one DOCUMENTED hand-tune: --auto low, because exec defaults to spec-mode read-only)`, derivedIds.length === 31, `${derivedIds.length}`);
   const policyIds = new Set([...Object.keys(READ_ONLY), ...Object.keys(WRITE)]);
 
   for (const id of policyIds) {
@@ -339,7 +349,7 @@ const derived = (id: string, kind: "readOnly" | "write"): string[] => {
       ok(`${mapName}[${id}]: $PROMPT appears exactly once`, entry.filter((t) => t === "$PROMPT").length === 1, JSON.stringify(entry));
     }
   }
-  for (const id of ["openclaude", "copilot", "antigravity", "amp", "crush", "openhands", "gemini", "goose", "qwen", "amazonq", "cursor", "grok"]) {
+  for (const id of ["openclaude", "copilot", "antigravity", "amp", "crush", "openhands", "gemini", "goose", "qwen", "amazonq", "cursor", "grok", "kimi", "auggie", "warp"]) {
     ok(`READ_ONLY[${id}] IS the registry shape (derived, not drifted)`, JSON.stringify(READ_ONLY[id as HarnessId]) === JSON.stringify(derived(id, "readOnly")), `${JSON.stringify(READ_ONLY[id as HarnessId])} vs ${JSON.stringify(derived(id, "readOnly"))}`);
     ok(`WRITE[${id}] IS the registry shape (derived, not drifted)`, JSON.stringify(WRITE[id as HarnessId]) === JSON.stringify(derived(id, "write")), `${JSON.stringify(WRITE[id as HarnessId])} vs ${JSON.stringify(derived(id, "write"))}`);
   }
@@ -356,7 +366,7 @@ const derived = (id: string, kind: "readOnly" | "write"): string[] => {
     cliIds.every((id) => getHarness(id as never) !== null),
     cliIds.filter((id) => getHarness(id as never) === null).join(", ") || "all covered");
   ok("llm is deliberately NOT a spawnable CLI adapter (direct-LLM has its own path)", getHarness("llm" as never) === null, "llm got an adapter");
-  ok(`the adapter pool is whole-registry sized (${allHarnesses().length} adapters: 19 CLIs + acp + local-test)`, allHarnesses().length >= 21, String(allHarnesses().length));
+  ok(`the adapter pool is whole-registry sized (${allHarnesses().length} adapters: 23 CLIs + acp + local-test)`, allHarnesses().length >= 25, String(allHarnesses().length));
   const ampAdapter = getHarness("amp" as never);
   const ampPrep = ampAdapter?.prepare({ taskId: "t", title: "t", prompt: "do it", kind: "implement", languages: [], timeoutMs: 60_000, requiredCapabilities: [], cwd: "/tmp" } as never);
   ok("a graph-mission agent pinned to amp now prepares a REAL invocation (-x)", Boolean(ampPrep) && ampPrep.args.includes("-x") && ampPrep.program === "amp", JSON.stringify(ampPrep));
@@ -371,23 +381,36 @@ const derived = (id: string, kind: "readOnly" | "write"): string[] => {
 }
 
 /* ── 8. documentation truth + the resolver, everywhere (V11.6.3) ─────────────── */
-section("8. doc truth (21 ids) and the resolver in the session layer");
+section("8. doc truth (25 ids) and the resolver in the session layer");
 
-ok(`the registry is 21 ids (19 CLIs + hermes + llm) — the 11.6.0 docs said 22`,
-  HARNESSES.length === 21, String(HARNESSES.length));
+ok(`the registry is 25 ids (23 CLIs + hermes + llm) — 21 until V11.7.1 grew it, 22 was the 11.6.0 miscount`,
+  HARNESSES.length === 25, String(HARNESSES.length));
 {
-  // V11.7.0 — claim-precise (the 11.6.3 review's point): a historical mention of the old
-  // miscount is LEGAL documentation; a CURRENT claim of 22 is not. So: the current registry
-  // statements must say 21, and every line that still says "22 ids" must be the marked
-  // historical explanation (the quoted miscount + the word explaining it).
+  // V11.7.1 — claim-precise, generation two. The registry grew 21 -> 25, so the claim
+  // rules move with it: CURRENT claims (README, the V11.7.1 record) must say 25; the
+  // V11.6/V11.7 release records may keep their 21s only as MARKED history (each such
+  // line names V11.7.1 as the release that grew the count); and the original miscount
+  // rule still stands — every "22" mention must be the marked historical explanation.
   const doc = read("MJ-11.6-UPGRADE.md");
-  ok("the CURRENT registry claims say 21 (union count, seat dropdowns, probe description)",
-    doc.includes("grew from 15 to **21** ids") && doc.includes("all 21 registry harnesses") && doc.includes("well-formedness (21 ids,"),
-    "a current claim does not say 21");
-  const staleLines = doc.split("\n").map((l, i) => [i + 1, l] as const).filter(([, l]) => l.includes("22 ids") || l.includes("22 registry"));
-  ok(`every '22' mention is a MARKED historical miscount (${staleLines.length} line(s))`,
-    staleLines.length > 0 && staleLines.every(([, l]) => l.includes("miscount")),
-    staleLines.map(([n, l]) => `line ${n}: ${l.slice(0, 70)}`).join(" | "));
+  const stale22 = doc.split("\n").map((l, i) => [i + 1, l] as const).filter(([, l]) => l.includes("22 ids") || l.includes("22 registry"));
+  ok(`every '22' mention in the V11.6 record is a MARKED historical miscount (${stale22.length} line(s))`,
+    stale22.length > 0 && stale22.every(([, l]) => l.includes("miscount")),
+    stale22.map(([n, l]) => `line ${n}: ${l.slice(0, 70)}`).join(" | "));
+  for (const name of ["MJ-11.6-UPGRADE.md", "MJ-11.7-UPGRADE.md"]) {
+    const rec = read(name);
+    const lines21 = rec.split("\n").map((l, i) => [i + 1, l] as const).filter(([, l]) => l.includes("21 ids") || l.includes("all 21 registry") || l.includes("**21**") || l.includes("21 harnesses"));
+    ok(`every '21' mention in ${name} is MARKED as superseded history (${lines21.length} line(s))`,
+      lines21.length > 0 && lines21.every(([, l]) => l.includes("V11.7.1")),
+      lines21.filter(([, l]) => !l.includes("V11.7.1")).map(([n, l]) => `line ${n}: ${l.slice(0, 70)}`).join(" | ") || "all marked");
+  }
+  const readme = read("README.md");
+  ok("the README's CURRENT registry claims say 25",
+    readme.includes("**25** ids") && readme.includes("23 spawnable"),
+    "a README current claim does not say 25");
+  const rec71 = read("MJ-11.7.1-UPGRADE.md");
+  ok("the V11.7.1 record claims 25 (growth line, seat dropdowns, probe description)",
+    rec71.includes("grew from 21 to **25** ids") && rec71.includes("all 25 registry harnesses") && rec71.includes("well-formedness (25 ids,"),
+    "a V11.7.1 current claim does not say 25");
 }
 {
   const sessionsSrc = read("src/mission/sessions.ts");
@@ -403,6 +426,136 @@ ok(`the registry is 21 ids (19 CLIs + hermes + llm) — the 11.6.0 docs said 22`
   const claude = sessionArgv("claude", { kind: "resume", idKind: "mj-chosen", sessionId: "ses_3" });
   ok("builtin session behaviour is unchanged through the resolver (claude resumes by id)", claude.continuity === "session" && claude.argv.includes("ses_3"), JSON.stringify(claude));
   ok("builtin id-kind detection is unchanged (claude is mj-chosen)", sessionIdKind("claude") === "mj-chosen", sessionIdKind("claude"));
+}
+
+/* ── 9. the V11.7.1 additions — droid / kimi / auggie / warp ────────────────────
+   Researched 2026-09, every prompt shape below is VENDOR-documented (docs.factory.ai,
+   kimi.ai/moonshotai, docs.augmentcode.com, docs.warp.dev) — no community-graded flags
+   in any base argv, which no earlier registry growth could claim. droid is the
+   interesting one: its headless mode defaults to read-only (spec mode), so MJ's
+   write policy composes the documented --auto tier instead of a permission flag. */
+section("9. the V11.7.1 additions: droid / kimi / auggie / warp (vendor-documented)");
+
+ok("droid's one-shot is exec mode: droid exec $PROMPT (docs-graded)",
+  JSON.stringify(AGENT_CAPABILITIES.droid.prompt.argv) === JSON.stringify(["exec", "$PROMPT"]) && AGENT_CAPABILITIES.droid.prompt.confidence === "docs",
+  JSON.stringify(AGENT_CAPABILITIES.droid.prompt.argv));
+ok("droid's spec-mode default is modelled as the read-only shape (no flag needed — the rare CLI whose headless default IS read-only)",
+  JSON.stringify(READ_ONLY.droid) === JSON.stringify(["exec", "$PROMPT"]) && AGENT_CAPABILITIES.droid.readOnly?.argv?.length === 0,
+  `${JSON.stringify(READ_ONLY.droid)} / caps readOnly ${JSON.stringify(AGENT_CAPABILITIES.droid.readOnly?.argv)}`);
+ok("droid's WRITE composes the documented --auto tier (the one hand-tuned V11.7.1 shape)",
+  JSON.stringify(WRITE.droid) === JSON.stringify(["exec", "--auto", "low", "$PROMPT"]) && JSON.stringify(AGENT_CAPABILITIES.droid.write?.argv) === JSON.stringify(["--auto", "low"]),
+  JSON.stringify(WRITE.droid));
+ok("the Rust argv table agrees on droid exec",
+  rust.includes('"droid" => ("droid".into(), vec!["exec".into(), prompt.into()])'), "rust droid argv stale");
+ok("kimi's one-shot is prompt mode: kimi -p $PROMPT (docs-graded)",
+  JSON.stringify(AGENT_CAPABILITIES.kimi.prompt.argv) === JSON.stringify(["-p", "$PROMPT"]) && AGENT_CAPABILITIES.kimi.prompt.confidence === "docs",
+  JSON.stringify(AGENT_CAPABILITIES.kimi.prompt.argv));
+ok("the Rust argv table agrees on kimi -p",
+  rust.includes('"kimi" => ("kimi".into(), vec!["-p".into(), prompt.into()])'), "rust kimi argv stale");
+ok("kimi documents its JSONL mode (--output-format stream-json, ndjson)",
+  AGENT_CAPABILITIES.kimi.json?.kind === "ndjson" && JSON.stringify(AGENT_CAPABILITIES.kimi.json?.argv) === JSON.stringify(["--output-format", "stream-json"]),
+  JSON.stringify(AGENT_CAPABILITIES.kimi.json));
+ok("kimi resumes by session id through the SAME session layer (--session $SESSION, docs-graded)",
+  JSON.stringify(AGENT_CAPABILITIES.kimi.resume?.argv) === JSON.stringify(["--session", "$SESSION"]) &&
+  sessionArgv("kimi", { kind: "resume", idKind: sessionIdKind("kimi"), sessionId: "ses_kimi" }).argv.includes("ses_kimi"),
+  JSON.stringify(sessionArgv("kimi", { kind: "resume", idKind: sessionIdKind("kimi"), sessionId: "ses_kimi" })));
+ok("all four V11.7.1 harnesses are honest about WHO assigns session ids (cli-chosen, no documented sessionStart)",
+  sessionIdKind("droid") === "cli-chosen" && sessionIdKind("kimi") === "cli-chosen" && sessionIdKind("auggie") === "cli-chosen" && sessionIdKind("warp") === "cli-chosen",
+  "a V11.7.1 harness claims mj-chosen ids without a documented sessionStart");
+ok("auggie's one-shot is print mode: auggie --print $PROMPT (docs-graded)",
+  JSON.stringify(AGENT_CAPABILITIES.auggie.prompt.argv) === JSON.stringify(["--print", "$PROMPT"]) && AGENT_CAPABILITIES.auggie.prompt.confidence === "docs",
+  JSON.stringify(AGENT_CAPABILITIES.auggie.prompt.argv));
+ok("the Rust argv table agrees on auggie --print",
+  rust.includes('"auggie" => ("auggie".into(), vec!["--print".into(), prompt.into()])'), "rust auggie argv stale");
+ok("auggie documents its JSON output (--print --output-format json)",
+  AGENT_CAPABILITIES.auggie.json?.kind === "json" && JSON.stringify(AGENT_CAPABILITIES.auggie.json?.argv) === JSON.stringify(["--output-format", "json"]),
+  JSON.stringify(AGENT_CAPABILITIES.auggie.json));
+ok("auggie's enterprise gotcha is recorded (headless can be disabled by agreement)",
+  (AGENT_CAPABILITIES.auggie.gotchas ?? []).some((g) => g.includes("enterprise")),
+  "the licensing gotcha is missing");
+ok("auggie does NOT claim an unverified --print --ask composition (ask mode stays a noted mode, not a composed shape)",
+  AGENT_CAPABILITIES.auggie.readOnly?.argv === null && (HARNESS_BY_ID.get("auggie")?.notes ?? "").includes("--ask"),
+  "readOnly overclaims or the ask-mode note is gone");
+ok("warp's agent runs through the oz binary (like agy, the id is not the bin)",
+  JSON.stringify(HARNESS_BY_ID.get("warp")?.bins) === JSON.stringify(["oz"]),
+  JSON.stringify(HARNESS_BY_ID.get("warp")?.bins));
+ok("the Rust detect table maps warp -> oz and the allowlist admits oz (no warp-terminal confusion)",
+  rust.includes('("warp", "Warp Oz Agent CLI", "oz")') && !rust.includes('"warp-terminal"'),
+  "warp bin wiring stale");
+ok("warp's local agent run is the composed shape; run-cloud is explicitly NOT composed (honesty pin)",
+  JSON.stringify(READ_ONLY.warp) === JSON.stringify(["agent", "run", "--prompt", "$PROMPT"]) && (HARNESS_BY_ID.get("warp")?.notes ?? "").includes("run-cloud"),
+  JSON.stringify(READ_ONLY.warp));
+ok("the Rust argv table agrees on oz agent run --prompt",
+  rust.includes('"warp" => ("oz".into(), vec!["agent".into(), "run".into(), "--prompt".into(), prompt.into()])'), "rust warp argv stale");
+{
+  const expect: Array<[HarnessId, string, string[]]> = [
+    ["droid", "droid", ["exec"]],
+    ["kimi", "kimi", ["-p"]],
+    ["auggie", "auggie", ["--print"]],
+    ["warp", "oz", ["agent", "run", "--prompt"]],
+  ];
+  for (const [id, bin, head] of expect) {
+    const adapter = getHarness(id);
+    const prep = adapter?.prepare({ taskId: "t", title: "t", prompt: "do it", kind: "implement", languages: [], timeoutMs: 60_000, requiredCapabilities: [], cwd: "/tmp" } as never);
+    ok(`a graph-mission agent pinned to ${id} prepares a REAL invocation (${bin})`,
+      Boolean(prep) && prep.program === bin && head.every((t) => prep.args.includes(t)),
+      JSON.stringify(prep));
+  }
+}
+ok("the four installs name their documented installers",
+  HARNESS_BY_ID.get("droid")!.install.includes("app.factory.ai/cli") &&
+  HARNESS_BY_ID.get("kimi")!.install.includes("code.kimi.com") &&
+  HARNESS_BY_ID.get("auggie")!.install.includes("@augmentcode/auggie") &&
+  HARNESS_BY_ID.get("warp")!.install.includes("warp-cli"),
+  "an install line drifted from the vendor installer");
+ok("all four V11.7.1 harnesses are honest in the sandbox table (no enforced read-only claims)",
+  ENFORCED_SANDBOX.droid === false && ENFORCED_SANDBOX.kimi === false && ENFORCED_SANDBOX.auggie === false && ENFORCED_SANDBOX.warp === false,
+  "a V11.7.1 harness claims an enforced sandbox it does not have");
+
+/* ── 10. the turn-limit truth (V11.8.0) ────────────────────────────────────────
+   The 11.7.x review caught the registry and the policy layer DISAGREEING on Claude's
+   turn cap: caps said VERIFIED ABSENT (a 2.1.197 --help scan) while withTurnLimit()
+   still emitted --max-turns — two layers, two answers. The 2026-09 web evidence then
+   INVERTED the proposed remedy: the flag IS vendor-documented (print-mode only, exits
+   with an error at the cap), so the registry was corrected rather than the policy —
+   and withTurnLimit is capability-driven now, which also closed a second latent gap:
+   grok's documented turn cap was ignored by the policy path. This section pins the
+   whole class shut: the policy emits a turn flag IFF the registry documents one. */
+section("10. the turn-limit truth — the policy composes what the registry says, for every harness");
+
+{
+  const writeReq = { risk: "MEDIUM" as const, mayWriteFiles: true, mayRunShell: true, mayUseBrowser: false, maxTurns: 7, kind: "implement" };
+  for (const id of SPAWNABLE) {
+    const hasCap = Boolean((AGENT_CAPABILITIES[id as HarnessId]?.maxTurns?.argv ?? []).length);
+    const pol = policyFor(id as HarnessId, writeReq);
+    const emits = pol.argv.includes("--max-turns");
+    ok(`${id}: the write policy emits a turn flag IFF the registry documents one`,
+      hasCap === emits,
+      `registry ${hasCap ? "documents" : "has no"} turn flag; policy ${emits ? "emits" : "emits no"} --max-turns`);
+  }
+  ok("claude's turn cap is RESTORED at docs grade with the honest history (print-mode-only, supersedes the 2.1.197 --help scan)",
+    JSON.stringify(AGENT_CAPABILITIES.claude.maxTurns?.argv) === JSON.stringify(["--max-turns", "$N"]) && AGENT_CAPABILITIES.claude.maxTurns?.confidence === "docs" && (AGENT_CAPABILITIES.claude.maxTurns?.source ?? "").includes("2.1.197"),
+    JSON.stringify(AGENT_CAPABILITIES.claude.maxTurns));
+  ok("the registry no longer claims VERIFIED ABSENT for a flag the vendor documents",
+    !(AGENT_CAPABILITIES.claude.maxTurns?.source ?? "").includes("ABSENT"),
+    "the stale absence claim survives");
+  const pol5 = policyFor("claude", { ...writeReq, maxTurns: 5 });
+  ok("claude's write shape carries --max-turns 5 BEFORE the prompt (print-mode composition)",
+    pol5.argv.includes("--max-turns") && pol5.argv.includes("5") && pol5.argv.indexOf("--max-turns") < pol5.argv.indexOf("$PROMPT"),
+    JSON.stringify(pol5.argv));
+  const grok9 = policyFor("grok", { ...writeReq, maxTurns: 9 });
+  ok("grok's DOCUMENTED turn cap now flows through the policy path too (the second latent gap, closed)",
+    grok9.argv.includes("--max-turns") && grok9.argv.includes("9") && grok9.argv.indexOf("--max-turns") < grok9.argv.indexOf("$PROMPT"),
+    JSON.stringify(grok9.argv));
+  const codex7 = policyFor("codex", writeReq);
+  ok("codex (no documented turn flag) still gets none — the ledger is its only ceiling",
+    !codex7.argv.includes("--max-turns"), JSON.stringify(codex7.argv));
+  ok("the hardcoded claude special-case is GONE from withTurnLimit (capability-driven now)",
+    !read("src/mission/harnessPolicy.ts").includes('id === "claude" ? ["--max-turns"'),
+    "the special case survives");
+  ok("claude's gotchas record the --max-budget-usd decision (documented, deliberately not composed — the CapLedger is the spend authority)",
+    (AGENT_CAPABILITIES.claude.gotchas ?? []).some((g) => g.includes("--max-budget-usd") && g.includes("CapLedger")),
+    "the budget-cap note is missing");
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

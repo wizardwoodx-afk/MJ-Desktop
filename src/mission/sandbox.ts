@@ -177,9 +177,22 @@ export interface EnforcementResult {
 }
 
 /**
+ * Spawn errors that mean "the wrapper itself could not be started". V11.8.1: this was
+ * ENOENT-only through 11.8.0, and the 7th review ran the shipped offline gate on a machine
+ * where bubblewrap exists but cannot be executed (EACCES — e.g. a noexec mount or a
+ * confined AppArmor profile). The old code then recorded `absent: false, failed: true`, so
+ * a must-fail canary "failed as expected" and the verifier certified enforcement that never
+ * ran — a guaranteed false `enforced: true`, worse than a missing wrapper. Not-installed
+ * (ENOENT) and cannot-execute (EACCES/EPERM/ENOEXEC) both mean THE CANARY NEVER RAN.
+ * execFile's non-zero-exit errors carry a NUMERIC code, which can never collide with this
+ * string set, so a wrapper that genuinely ran and failed stays a measured run.
+ */
+const WRAPPER_UNAVAILABLE = new Set(["ENOENT", "EACCES", "EPERM", "ENOEXEC"]);
+
+/**
  * Run the canaries. The profile counts as enforced only when every canary that ran failed
- * the way it was supposed to. A platform with no wrapper is reported honestly: measured
- * false, enforced false — never a silent pass.
+ * the way it was supposed to. A platform whose wrapper cannot be spawned is reported
+ * honestly: measured false, enforced false — never a silent pass.
  */
 export async function verifyEnforcement(profile: SandboxProfile, timeoutMs = 8000): Promise<EnforcementResult> {
   const evidence: EnforcementResult["evidence"] = [];
@@ -193,12 +206,13 @@ export async function verifyEnforcement(profile: SandboxProfile, timeoutMs = 800
       const timer = setTimeout(() => resolve({ failed: true, absent: false, detail: "timeout (treated as blocked)" }), timeoutMs);
       execFile(canary.argv[0], canary.argv.slice(1), { timeout: timeoutMs }, (err) => {
         clearTimeout(timer);
-        const absent = Boolean(err) && (err as NodeJS.ErrnoException).code === "ENOENT";
+        const code = (err as NodeJS.ErrnoException | undefined)?.code;
+        const absent = Boolean(err) && typeof code === "string" && WRAPPER_UNAVAILABLE.has(code);
         resolve({
           failed: Boolean(err),
           absent,
           detail: absent
-            ? `wrapper '${canary.argv[0]}' is not installed — the canary never ran`
+            ? `wrapper '${canary.argv[0]}' is not installed or not executable (${code}) — the canary never ran`
             : err
               ? (err.message.split("\n")[0] ?? "").slice(0, 120)
               : "exited 0",
@@ -208,15 +222,17 @@ export async function verifyEnforcement(profile: SandboxProfile, timeoutMs = 800
     if (ran.absent) wrapperAbsent = true;
     evidence.push({ name: canary.name, ran: !ran.absent, failedAsExpected: !ran.absent && ran.failed === canary.mustFail, detail: ran.detail });
   }
-  // A missing wrapper is NOT enforcement: the canary did not fail *because the sandbox
-  // blocked it*, it failed because nothing was there. Claiming enforced here would be the
-  // exact fake-success this file exists to prevent.
+  // A wrapper that cannot be spawned is NOT enforcement: the canary did not fail *because
+  // the sandbox blocked it*, it failed because the wrapper never started. Claiming enforced
+  // here would be the exact fake-success this file exists to prevent.
   const enforced = !wrapperAbsent && evidence.length > 0 && evidence.every((e) => e.ran && e.failedAsExpected);
   return {
     enforced,
     measured: !wrapperAbsent,
     evidence,
-    note: wrapperAbsent ? `${profile.note}; wrapper not installed on this machine — enforcement UNMEASURED` : profile.note,
+    note: wrapperAbsent
+      ? `${profile.note}; wrapper unavailable on this machine (not installed or not executable) — enforcement UNMEASURED`
+      : profile.note,
   };
 }
 
