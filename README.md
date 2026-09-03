@@ -4,9 +4,9 @@
 
 I built MJ to explore one idea: **a Mission is an outcome that owns its organization**. You state the outcome, MJ plans it, forms the team, picks the right coding agent per task, repairs failures while running, and keeps a trace so you can answer *why does this artifact exist*.
 
-![MJ screenshot](public/favicon.svg)
+![MJ — Canvas](docs/images/canvas.png)
 
-*Add a real screenshot/GIF here — the Canvas and Mission pages are the best demo.*
+*Canvas — 25-harness registry, Teams arbitration, local-first verified runs. Also: [Mission](docs/images/mission.png) · [Workflows](docs/images/hero.png).*
 
 ---
 
