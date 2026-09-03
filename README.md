@@ -1,98 +1,88 @@
 # MJ — Agent Organization Runtime
 
-> A Tauri v2 desktop app that turns an outcome into a managed organization of agents.
+A desktop app for running agent organisations. Not a workflow builder with AI bolted on.
 
-I built MJ to explore one idea: **a Mission is an outcome that owns its organization**. You state the outcome, MJ plans it, forms the team, picks the right coding agent per task, repairs failures while running, and keeps a trace so you can answer *why does this artifact exist*.
+> I kept running into workflows that *looked* successful but weren't. MJ is my take on fixing that — you give it an outcome, it plans the work, picks the right agent for each task, actually checks if it worked, and remembers why.
 
-![MJ — Canvas wiring](docs/images/03-wiring.png)
+![MJ — wiring two planners](docs/images/03-wiring.png)
 
-## Screenshots
+### Screenshots
 
 | Empty canvas | Node Library |
 |---|---|
-| ![Empty workflow](docs/images/01-empty-canvas.png) | ![Node Library](docs/images/02-node-library.png) |
-| Clean workflow shell — dotted grid, bottom hint `DRAG FROM A PORT...` | Searchable library: Planner, Researcher, Browser Agent, Coder, Debugger, Tester, QA Agent — drag onto canvas |
+| ![Empty](docs/images/01-empty-canvas.png) | ![Library](docs/images/02-node-library.png) |
+| Dotted grid, hint `DRAG FROM A PORT...` — start blank, no demo data | Planner, Researcher, Browser, Coder, Debugger, Tester, QA — search and drag onto canvas |
 
-| Wired workflow — two Planners connected | Final layout with Library collapsed |
+| Wired workflow | With library closed |
 |---|---|
 | ![Wiring](docs/images/03-wiring.png) | ![Final](docs/images/04-wiring-final.png) |
-| Port-to-port wiring (`PLANNER → PLANNER`), idle/active wire states | Same graph, Library minimized — focus on the graph. The canvas is the source of truth. |
+| Two Planners wired port-to-port | Same graph, library collapsed — canvas is the source of truth |
 
-*All screens from the Tauri desktop build (OLED, frameless). Browser fallback renders the same shell.*
+*Tauri desktop build (OLED, frameless). Browser fallback renders the same shell.*
 
 ---
 
-## Features
+### What it does
 
-- **Mission-first, not workflow-builder** — the plan is the source of truth.
-- **25-harness registry** — 23 CLIs + hermes + llm, each with researched install + argv, grades `binary / docs / community`.
-- **Teams & arbitration** — per-task harness choice, review snapshots, merge planning.
-- **Measured, not inferred** — cost/tokens from real NDJSON, sandbox canaries that must fail, exit-code verdicts.
-- **Local-first** — SQLite + OS keychain + stdio child processes. No HTTP sidecar. Ollama at `127.0.0.1:11434` is yours, not MJ's.
-- **Hermes skills** (`SKILL.md`) and MCP over stdio, plus MJ's own Python evolution service (DSPy/GEPA).
+- **Mission owns the org, not the other way around.** The plan is the source of truth — MJ forms the team from it.
+- **25 harnesses, no lock-in.** Works with claude, codex, gemini, grok, cursor, opencode, amp, auggie, warp ... 23 CLIs + hermes + llm. Each has a researched install + argv. The policy that builds the argv comes from the same registry, so they can't drift.
+- **Teams that actually review.** Writers work in worktrees, reviewers get a snapshot of the writers' branches — they review what was written, not the base.
+- **Checks what matters.** Cost/tokens come from the CLI's own NDJSON or it's `unmeasured` — never `chars/4`. Sandbox wrappers are proven with canaries that *must* fail, verdicts are exit-code first.
+- **Local first.** SQLite, OS keychain for secrets, child processes over stdio. No sidecar HTTP. Ollama at `127.0.0.1:11434` is yours if you have it.
 
-## Tech Stack
+### Stack
 
-| Layer | Tech |
-|---|---|
-| Desktop | Tauri v2 (Rust 1.80), SQLite (rusqlite), keyring |
-| Frontend | React 18, Vite 6, TypeScript 5.6, Zustand, vanilla CSS |
-| Agents / MCP | CLI harnesses over stdio, MCP servers over stdio, ACP |
-| Python | `vendor/evolution-service` — `mj_evolution.stdio_server` |
+Tauri v2 (Rust 1.80) + React 18 / Vite 6 / TypeScript 5.6 / Zustand on top, Python `vendor/evolution-service` (`mj_evolution.stdio_server`) for the evolve loop. Vanilla CSS, self-hosted fonts.
 
-## Quick Start
+### Run it
 
 ```bash
-# prerequisites: Node 22, Rust stable, WebKit/GTK on Linux
+# Node 22 + Rust stable (WebKit/GTK on Linux)
 npm ci
 npm run typecheck   # tsc --noEmit
-npm test            # 40 probe suites
-npm run build       # vite production build
+npm test            # 40 suites
+npm run build       # vite build
 
-# dev / release
+# dev
 npm run tauri dev
-npm run tauri:build
+npm run tauri:build   # nsis / dmg / appimage
 
-# zero-install check (no node_modules, ~25s)
+# quick check without node_modules (~25s)
 node verify/run.mjs
 ```
 
-## Project Structure
+### Layout
 
 ```
-src/                # React app — pages, canvas, mission runtime, domain
-src-tauri/          # Tauri commands, SQLite, keyring, MCP/Hermes/ACP bridges, git parsers
-probe/              # 40 probe suites (40/40 on Linux)
-verify/             # offline pack — 39 bundles + runner (see verify/MANIFEST.json)
-vendor/             # hermes-agent, hermes-agent-self-evolution, mcp-servers-reference, mcp-github, evolution-service
-docs/               # extra docs, history, and verification details
+src/         # React — pages, canvas, mission runtime, domain/harness, engines
+src-tauri/   # 92 Tauri commands, SQLite, keyring, MCP/Hermes/ACP bridges, git
+probe/       # 40 suites (40/40)
+verify/      # offline pack — 39 bundles + runner, byte-pinned
+vendor/      # hermes-agent, mcp-servers-reference, mcp-github, evolution-service
+docs/        # history + verification
 ```
 
-## Testing
+### Tests
 
-- `npm test` — 40 suites, 270 harness assertions, sandbox/checkRunner/theme/meridian/canvasGeometry coverage. Typed command registry (`MjCommands`) guarantees Rust↔TS parity at compile time.
-- `node verify/run.mjs` — offline gate for reviewers, byte-pinned by `verify/MANIFEST.json`.
+`npm test` does 40 suites — harnesses 270 assertions (the `iff` on turn-flags for all 25), checkRunner, sandbox, theme, canvasGeometry, etc. There's a typed `MjCommands` in `src/ipc/client.ts` so a renamed Rust command is a compile error, not a runtime surprise.
 
-More in [docs/VERIFICATION.md](docs/VERIFICATION.md) and [verify/BUILD-INFO.txt](verify/BUILD-INFO.txt).
+`node verify/run.mjs` is the reviewer gate — same suites as bundles, no install.
 
-## History
+More in `docs/VERIFICATION.md` and `verify/BUILD-INFO.txt`.
 
-MJ evolved from 5.0 → 11.8.5. Each release fixed real bugs found by probing — vacuous gate, turn-limit drift, wrapper classification, exit-code verdicts, browser aliases, vendor bundling, and a deep type-safety pass that removed every `as never` in `src/`.
+### History
 
-See [CHANGELOG.md](CHANGELOG.md) for a short timeline and [docs/history/](docs/history/) for the full per-release notes.
+5.0 → 11.8.5 over about a year. Biggest fixes: vacuous gate (args reversed), turn-flag drift, wrapper `EACCES` mis-classified as enforced, browser `require('fs')` that broke in ESM, shipping the vendored engines, then typing the whole Rust↔TS boundary and killing every `as never` in `src/`.
 
-## Docs
+Short version in `CHANGELOG.md`, full notes in `docs/history/`.
 
-- [Desktop setup & sandbox mapping](DESKTOP-NATIVE.md)
-- [Build from source](BUILD-NATIVE.md) · [Install on laptop](INSTALL-ON-LAPTOP.md)
-- [What MJ wraps](VENDOR.md) · [Third-party notices](NOTICE)
+### Docs & License
 
-## License
+- Setup: `DESKTOP-NATIVE.md` / `BUILD-NATIVE.md` / `INSTALL-ON-LAPTOP.md`
+- What MJ wraps: `VENDOR.md` · `NOTICE`
 
-Source-available under **PolyForm Noncommercial 1.0.0** — free for personal, research, and noncommercial use. Commercial use (in a product, service, or internal tool) and AI/ML training require a separate license.
-
-See [LICENSE](LICENSE) and [NOTICE](NOTICE). For commercial licensing, open an issue at https://github.com/wizardwoodx-afk/MJ-Desktop.
+Source-available under **PolyForm Noncommercial 1.0.0** — free to run and study, not for commercial products or AI training. See `LICENSE`. Want to use it commercially? Open an issue.
 
 ---
 
-Built by **Sree Harshen** — portfolio project, open for review and noncommercial use.
+Built by **Sree Harshen** — this is a portfolio project. PRs and feedback welcome.
