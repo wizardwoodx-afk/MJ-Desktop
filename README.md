@@ -4,9 +4,21 @@
 
 I built MJ to explore one idea: **a Mission is an outcome that owns its organization**. You state the outcome, MJ plans it, forms the team, picks the right coding agent per task, repairs failures while running, and keeps a trace so you can answer *why does this artifact exist*.
 
-![MJ — Canvas](docs/images/canvas.png)
+![MJ — Canvas wiring](docs/images/03-wiring.png)
 
-*Canvas — 25-harness registry, Teams arbitration, local-first verified runs. Also: [Mission](docs/images/mission.png) · [Workflows](docs/images/hero.png).*
+## Screenshots
+
+| Empty canvas | Node Library |
+|---|---|
+| ![Empty workflow](docs/images/01-empty-canvas.png) | ![Node Library](docs/images/02-node-library.png) |
+| Clean workflow shell — dotted grid, bottom hint `DRAG FROM A PORT...` | Searchable library: Planner, Researcher, Browser Agent, Coder, Debugger, Tester, QA Agent — drag onto canvas |
+
+| Wired workflow — two Planners connected | Final layout with Library collapsed |
+|---|---|
+| ![Wiring](docs/images/03-wiring.png) | ![Final](docs/images/04-wiring-final.png) |
+| Port-to-port wiring (`PLANNER → PLANNER`), idle/active wire states | Same graph, Library minimized — focus on the graph. The canvas is the source of truth. |
+
+*All screens from the Tauri desktop build (OLED, frameless). Browser fallback renders the same shell.*
 
 ---
 
