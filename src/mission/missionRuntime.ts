@@ -1344,17 +1344,17 @@ export class MissionRuntime {
     if (!valid.ok || state.missionId !== this.mission.missionId) {
       return { ok: false, errors: valid.ok ? [`state belongs to ${state.missionId}, not ${this.mission.missionId}`] : valid.errors };
     }
-    this.org.hydrate({ agents: state.agents as never, tasks: state.tasks as never, taskUpdatedAt: state.taskUpdatedAt });
-    this.services.artifacts.hydrate(state.artifacts as never);
+    this.org.hydrate({ agents: state.agents, tasks: state.tasks, taskUpdatedAt: state.taskUpdatedAt });
+    this.services.artifacts.hydrate(state.artifacts);
     this.services.checkpoints.hydrate(state.checkpoints);
-    this.services.approvals.hydrate(state.approvals as never);
-    this.services.negotiations.hydrate(state.negotiations as never);
-    this.supervisor.hydrate(state.recommendations as never);
+    this.services.approvals.hydrate(state.approvals);
+    this.services.negotiations.hydrate(state.negotiations);
+    this.supervisor.hydrate(state.recommendations);
     this.resources.hydrate(state.usage, state.startedAt);
     this.graph = state.graph ?? this.graph;
     this.mission.graphVersion = state.graphVersion;
     this.completedNodeIds = new Set(state.completedNodeIds);
-    const restoredEvents = this.recorder.seedHistory(state.flightEvents as never);
+    const restoredEvents = this.recorder.seedHistory(state.flightEvents);
     this.recorder.record({
       kind: "MISSION_STATUS",
       actor: "runtime",

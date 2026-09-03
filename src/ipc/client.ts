@@ -16,9 +16,151 @@ import { detectHost } from "../app/desktop";
 import { MJ_VERSION } from "../version";
 import { localDb } from "./localDb";
 
-async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+/**
+ * The Rust <-> TypeScript command contract, in ONE table.
+ *
+ * Before this existed, `tauriInvoke` was generic over a type nobody supplied: 72 of 82 call
+ * sites inferred `T = unknown`, so a mistyped command name, a renamed Rust command, or a changed
+ * return shape all compiled clean and failed at runtime — in the one environment (the desktop
+ * build) the probe suites never touch, because they run with `useTauri() === false`.
+ *
+ * Now the command NAME is part of the type. `tauriInvoke("workflowk_list")` is a compile error,
+ * and so is reading a field off a payload MJ has not modelled.
+ *
+ * Honesty about precision: the entries typed `Json` are `serde_json::Value` on the Rust side. MJ
+ * has not modelled their shape and this table does not pretend otherwise — they are typed as
+ * "some JSON", not as a specific record wearing a type it has not earned. The precise entries are
+ * the ones the frontend already declares AND both branches (Tauri and localDb) agree on.
+ */
+type Json = Record<string, unknown> | unknown[] | string | number | boolean | null;
+
+/** Result of one CLI probe: what MJ resolved for each bin in this shell's PATH. */
+export interface CliEnvReport {
+  path: string;
+  searched: string[];
+  bins: Array<{ id: string; bin: string; executable: string | null; installed: boolean; version: string | null }>;
+}
+
+/**
+ * The shape `mcp_server_save` accepts.
+ *
+ * This is deliberately NOT `McpServerEntry`. `McpServerEntry` is the post-save READ shape, where
+ * the command lives at `config.command`. The save endpoint also accepts the flat WRITE shape —
+ * `command`, `args`, `enabled`, `pinned` at the top level — because `db::mcp_save` lifts them into
+ * `config` itself when no `config` key is present (src-tauri/src/db.rs:444). `McpPage` sends the
+ * flat form, and `mcp_connect_test` reads it back at `/config/command`.
+ *
+ * Typing this as `McpServerEntry` would have been a lie that only survived because the parameter
+ * used to be `Record<string, unknown>`.
+ */
+export type McpServerSaveInput = Partial<McpServerEntry> & {
+  name: string;
+  command?: string | null;
+  args?: string[] | null;
+  enabled?: boolean;
+  pinned?: boolean;
+};
+
+interface MjCommands {
+  acp_close: Json;
+  acp_open: Json;
+  acp_recv: Json;
+  acp_send: Json;
+  app_info: Record<string, unknown>;
+  approval_decide: null;
+  approval_get: Json;
+  approval_list: Json;
+  approval_request: Json;
+  browser_act: Json;
+  browser_console: Json;
+  browser_navigate: Json;
+  browser_screenshot: Json;
+  browser_session_close: Json;
+  browser_session_create: Json;
+  browser_sessions: Json;
+  cli_env: CliEnvReport;
+  cli_invoke: Json;
+  cli_providers_detect: CliProviderEntry[];
+  control_connect_ports: Connection;
+  control_disconnect_ports: Json;
+  control_list_nodes: Json;
+  control_run_workflow: Json;
+  control_validate_graph: Json;
+  custom_harness_delete: Json;
+  custom_harness_list: CustomHarnessEntry[];
+  custom_harness_save: Json;
+  db_maintenance: Json;
+  dlq_add: Json;
+  dlq_list: Json;
+  dlq_resolve: null;
+  evaluation_history: Json;
+  evaluation_save: Json;
+  event_emit: ExecutionEventRecord;
+  evolution_decide: Json;
+  evolution_list: Json;
+  evolution_propose_save: Json;
+  evolution_rollback: Json;
+  evolution_service_health: Json;
+  evolution_service_propose: Json;
+  execution_create: { id: string };
+  execution_events: ExecutionEventRecord[];
+  execution_finish: null;
+  execution_list: ExecutionRecord[];
+  execution_trace: Json;
+  feedback_add: Json;
+  feedback_list: Json;
+  fs_list: Json;
+  fs_mkdir: null;
+  fs_read: string;
+  fs_remove: null;
+  fs_write: null;
+  git_branch: GitBranchResult;
+  git_diff: GitDiffResult;
+  git_head: GitHeadResult;
+  git_is_repo: GitRepoResult;
+  git_read_only_check: GitReadOnlyResult;
+  git_status: GitStatusResult;
+  hermes_bridge: Json;
+  llm_chat: { content: string; model: string; usage: { input_tokens: number; output_tokens: number }; duration_ms: number };
+  mcp_call: Json;
+  mcp_connect_test: Json;
+  mcp_server_list: McpServerEntry[];
+  mcp_server_remove: null;
+  mcp_server_save: Json;
+  memory_add: Json;
+  memory_delete: null;
+  memory_search: MemoryRecord[];
+  node_state_load: Json;
+  node_state_save: null;
+  package_export: Json;
+  package_import: Json;
+  run_request_take: string[];
+  secret_delete: null;
+  secret_exists: Record<string, SecretStatus>;
+  secret_set: { stored: boolean; location: "keychain" | "memory-only" | "browser-localStorage" | "absent"; survivesRestart: boolean; warning?: string };
+  shell_exec: Json;
+  skill_deactivate: null;
+  skill_touch: Json;
+  skill_upsert: Json;
+  skills_list: { skills: SkillRecord[]; all: SkillRecord[] };
+  suite_list: Json;
+  suite_save: Json;
+  workflow_create: { id: string };
+  workflow_delete: null;
+  workflow_get: WorkflowRecord;
+  workflow_list: WorkflowRecord[];
+  workflow_save: null;
+  workflow_version_create: Json;
+  workflow_version_restore: Json;
+  workflow_versions: Json;
+}
+
+async function tauriInvoke<K extends keyof MjCommands>(
+  cmd: K,
+  args?: Record<string, unknown>,
+): Promise<MjCommands[K]> {
   const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<T>(cmd, args ?? {});
+  return invoke<MjCommands[K]>(cmd, args ?? {});
 }
 
 /**
@@ -124,7 +266,7 @@ export interface GitReadOnlyResult {
 
 export const ipc = {
   appInfo: async () => {
-    if (useTauri()) return tauriInvoke<Record<string, unknown>>("app_info");
+    if (useTauri()) return tauriInvoke("app_info");
     return {
       version: MJ_VERSION,
       platform: navigator.platform,
@@ -157,7 +299,7 @@ export const ipc = {
     return localDb.workflowGet(workflowId);
   },
   workflowCreate: async (name: string, description: string) => {
-    if (useTauri()) return tauriInvoke<{ id: string }>("workflow_create", { name, description });
+    if (useTauri()) return tauriInvoke("workflow_create", { name, description });
     return localDb.workflowCreate(name, description);
   },
   workflowDelete: async (workflowId: string) => {
@@ -290,7 +432,7 @@ export const ipc = {
   },
 
   executionCreate: async (workflowId: string, workflowVersion: number) => {
-    if (useTauri()) return tauriInvoke<{ id: string }>("execution_create", { workflowId, workflowVersion });
+    if (useTauri()) return tauriInvoke("execution_create", { workflowId, workflowVersion });
     return localDb.executionCreate(workflowId, workflowVersion);
   },
   executionFinish: async (executionId: string, status: string, error: string | null, stats: Record<string, unknown>) => {
@@ -299,7 +441,7 @@ export const ipc = {
   },
   eventEmit: async (executionId: string, kind: string, level: string, nodeId: string | null, data: Record<string, unknown>) => {
     if (useTauri()) {
-      const rec = await tauriInvoke<ExecutionEventRecord>("event_emit", { executionId, kind, level, nodeId, data });
+      const rec = await tauriInvoke("event_emit", { executionId, kind, level, nodeId, data });
       window.dispatchEvent(new CustomEvent("mj://event", { detail: rec }));
       return rec;
     }
@@ -367,7 +509,7 @@ export const ipc = {
     localDb.secretDelete(secretRef);
   },
   secretExists: async (refs: string[]): Promise<Record<string, SecretStatus>> => {
-    if (useTauri()) return tauriInvoke<Record<string, SecretStatus>>("secret_exists", { secretRefs: refs });
+    if (useTauri()) return tauriInvoke("secret_exists", { secretRefs: refs });
     return localDb.secretExists(refs);
   },
   llmChat: async (req: {
@@ -412,7 +554,7 @@ export const ipc = {
   },
 
   fsRead: async (path: string) => {
-    if (useTauri()) return tauriInvoke<string>("fs_read", { path });
+    if (useTauri()) return tauriInvoke("fs_read", { path });
     throw new Error("Filesystem is available in the native desktop build.");
   },
   fsWrite: async (path: string, content: string) => {
@@ -438,9 +580,9 @@ export const ipc = {
     if (useTauri()) return tauriInvoke("mcp_server_list");
     return localDb.mcpList();
   },
-  mcpServerSave: async (cfg: Record<string, unknown>) => {
+  mcpServerSave: async (cfg: McpServerSaveInput) => {
     if (useTauri()) return tauriInvoke("mcp_server_save", { cfg });
-    return localDb.mcpSave(cfg as never);
+    return localDb.mcpSave(cfg);
   },
   mcpServerRemove: async (serverId: string) => {
     if (useTauri()) return tauriInvoke("mcp_server_remove", { serverId });
@@ -520,7 +662,7 @@ export const ipc = {
    * inherit your shell's PATH, so the CLI can exist and still be invisible.
    */
   cliEnv: async (): Promise<{ path: string; searched: string[]; bins: Array<{ id: string; bin: string; executable: string | null; installed: boolean; version: string | null }> }> => {
-    if (useTauri()) return tauriInvoke("cli_env", {}) as never;
+    if (useTauri()) return tauriInvoke("cli_env", {});
     throw new Error("CLI diagnostics require the native desktop build.");
   },
 
@@ -574,23 +716,23 @@ export const ipc = {
    * the user cannot tell "clean tree" from "never checked". The thrown message is the label.
    */
   gitIsRepo: async (cwd: string) => {
-    if (useTauri()) return tauriInvoke<GitRepoResult>("git_is_repo", { cwd });
+    if (useTauri()) return tauriInvoke("git_is_repo", { cwd });
     throw new Error("git needs the native desktop build: a browser cannot see your repository.");
   },
   gitStatus: async (cwd: string) => {
-    if (useTauri()) return tauriInvoke<GitStatusResult>("git_status", { cwd });
+    if (useTauri()) return tauriInvoke("git_status", { cwd });
     throw new Error("git needs the native desktop build: a browser cannot see your repository.");
   },
   gitDiff: async (cwd: string, staged = false, budget?: number) => {
-    if (useTauri()) return tauriInvoke<GitDiffResult>("git_diff", { cwd, staged, budget: budget ?? null });
+    if (useTauri()) return tauriInvoke("git_diff", { cwd, staged, budget: budget ?? null });
     throw new Error("git needs the native desktop build: a browser cannot see your repository.");
   },
   gitHead: async (cwd: string) => {
-    if (useTauri()) return tauriInvoke<GitHeadResult>("git_head", { cwd });
+    if (useTauri()) return tauriInvoke("git_head", { cwd });
     throw new Error("git needs the native desktop build: a browser cannot see your repository.");
   },
   gitBranch: async (cwd: string) => {
-    if (useTauri()) return tauriInvoke<GitBranchResult>("git_branch", { cwd });
+    if (useTauri()) return tauriInvoke("git_branch", { cwd });
     throw new Error("git needs the native desktop build: a browser cannot see your repository.");
   },
   /**
@@ -598,7 +740,7 @@ export const ipc = {
    * A harness flag is a promise; this is the check. Three-way on purpose — see `git.rs`.
    */
   gitReadOnlyCheck: async (cwd: string) => {
-    if (useTauri()) return tauriInvoke<GitReadOnlyResult>("git_read_only_check", { cwd });
+    if (useTauri()) return tauriInvoke("git_read_only_check", { cwd });
     throw new Error("git needs the native desktop build: a browser cannot see your repository.");
   },
 

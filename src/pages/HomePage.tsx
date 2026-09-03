@@ -24,7 +24,7 @@ export function HomePage({
     if (!store.workflowId) {
       const res = await ipc.workflowCreate(name, "");
       const created = await ipc.workflowGet(res.id);
-      store.loadWorkflow(created as never);
+      store.loadWorkflow(created);
       window.__mjActiveWorkflowId = res.id;
     }
     store.insertTemplate(instances, wires);
@@ -46,7 +46,7 @@ export function HomePage({
         <button className="primary" onClick={async () => {
           const res = await ipc.workflowCreate(`Workflow ${workflows.length + 1}`, "");
           const created = await ipc.workflowGet(res.id);
-          store.loadWorkflow(created as never);
+          store.loadWorkflow(created);
           window.__mjActiveWorkflowId = res.id;
           onCreated();
         }}>New workflow</button>
@@ -109,7 +109,7 @@ export function HomePage({
     if (!store.workflowId) {
       const res = await ipc.workflowCreate("Untitled", "");
       const created = await ipc.workflowGet(res.id);
-      store.loadWorkflow(created as never);
+      store.loadWorkflow(created);
       window.__mjActiveWorkflowId = res.id;
     }
     const node = generateCustomNode(text);

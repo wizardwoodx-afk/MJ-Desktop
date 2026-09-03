@@ -1,4 +1,4 @@
-# Deep debug pass — MJ 11.8.4
+# Deep debug pass — MJ 11.8.5
 
 Method: cloned fresh, booted the app for real (jsdom + `react-dom/client`, not SSR — so effects,
 the async bootstrap and the lazy pages all execute), walked every page, then audited the type
@@ -60,7 +60,7 @@ Not a live crash — but it is precisely the 11.7.0 failure shape: a check that 
 checking and isn't. With the casts in place, adding a required field to `CliHarness` would have
 compiled with all 23 profiles silently wrong.
 
-## Fixed 2 — my own 11.8.4 fix was incomplete
+## Fixed 2 — my own 11.8.4-era fix was incomplete
 
 The first pass aliased `node:fs`, `fs/promises`, `os` and `path`. It missed two builtins:
 
@@ -76,7 +76,33 @@ instead of the missing capability. Added `child_process.ts` (every spawn/exec th
 
 ---
 
-## Reported, not fixed
+## Reported — all three now fixed
+
+These were open when this report was written. They are closed as of 11.8.5:
+
+- **72 of 85 `tauriInvoke` calls inferring `unknown`** — replaced by a single typed command
+  registry (`MjCommands` in `src/ipc/client.ts`). The command *name* is now part of the type, so a
+  typo, a renamed Rust command or a changed payload is a compile error. 91 registered commands:
+  38 precise shapes, 53 typed `Json` (`serde_json::Value` — opaque, and honest about being opaque
+  rather than wearing a shape it has not earned).
+- **`ipc.workflowGet` returning `unknown`** — now `WorkflowRecord`, which is what the localDb
+  branch already returned. Removed the six `store.loadWorkflow(x as never)` casts that depended on it.
+- **`mcpServerSave` not requiring `name`** — now `McpServerSaveInput`, which documents the real
+  write contract (Rust lifts top-level `command`/`args`/`enabled`/`pinned` into `config`, so the
+  flat shape `McpPage` sends is correct and the old type was modelling only the read shape).
+
+**Every `as never` in `src/` is gone.** Removing them surfaced three real defects that the casts
+had been hiding:
+
+1. `PersistedMissionState` declared seven collections as `unknown[]`; they are now
+   `OrgAgent[]`, `OrgTask[]`, `Artifact[]`, `ApprovalRequest[]`, `NegotiationThread[]`,
+   `SupervisorRecommendation[]` and `FlightEvent[]`.
+2. `methodFor` was handed a fallback object with no `id` — so `NODE_METHODS[def.id]` could never
+   resolve a method for it. The fallback now carries the real `node.definitionId`.
+3. `composeAssignment` was handed a `category` it never reads; the parameter is narrowed to
+   `Pick<NodeDefinition, "id" | "title" | "description" | "configSchema">`, which is what it uses.
+
+## Was reported, still open by choice
 
 ### 3. 72 of 85 `tauriInvoke` calls pass no type parameter → `unknown`
 

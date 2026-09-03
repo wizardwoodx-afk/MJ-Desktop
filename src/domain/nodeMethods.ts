@@ -151,7 +151,10 @@ export const NODE_FIELDS: Record<string, FieldDoc> = {
  * Booleans render as yes/no; embedded newlines fold to "; ". Values that are undefined,
  * null, empty-string or false are omitted — nothing is invented.
  */
-export function composeAssignment(def: NodeDefinition, config: Record<string, unknown> = {}): string {
+export function composeAssignment(
+  def: Pick<NodeDefinition, "id" | "title" | "description" | "configSchema">,
+  config: Record<string, unknown> = {},
+): string {
   const head = `${def.title} (${def.id})\n${def.description}`;
   const lines: string[] = [];
   for (const c of def.configSchema ?? []) {
@@ -165,6 +168,6 @@ export function composeAssignment(def: NodeDefinition, config: Record<string, un
 }
 
 /** methodFor — the in-built method line for a node, or its category fallback, never a lie. */
-export function methodFor(def: NodeDefinition): string {
+export function methodFor(def: Pick<NodeDefinition, "id" | "category">): string {
   return NODE_METHODS[def.id]?.method ?? CATEGORY_METHODS[def.category] ?? "Method not yet specified";
 }

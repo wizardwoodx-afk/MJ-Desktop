@@ -353,7 +353,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
     if (!store.workflowId) {
       const res = await ipc.workflowCreate(`${team.name}: ${task.slice(0, 36)}`, team.description);
       const created = await ipc.workflowGet(res.id);
-      store.loadWorkflow(created as never);
+      store.loadWorkflow(created);
       window.__mjActiveWorkflowId = res.id;
     }
     store.insertTemplate(nodes, wires);

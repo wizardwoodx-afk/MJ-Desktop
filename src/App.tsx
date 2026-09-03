@@ -190,7 +190,7 @@ export function App() {
   const openWorkflow = useCallback(async (id: string) => {
     await useGraphStore.getState().save();
     const wf = workflows.find((w) => w.id === id) ?? await ipc.workflowGet(id);
-    store.loadWorkflow(wf as never);
+    store.loadWorkflow(wf);
     window.__mjActiveWorkflowId = id;
     setOpenTabs((t) => t.includes(id) ? t : [...t, id]);
     setPage("workflow");
@@ -201,7 +201,7 @@ export function App() {
     const res = await ipc.workflowCreate(name ?? `Workflow ${workflows.length + 1}`, "");
     await refreshWorkflows();
     const created = await ipc.workflowGet(res.id);
-    store.loadWorkflow(created as never);
+    store.loadWorkflow(created);
     window.__mjActiveWorkflowId = res.id;
     setOpenTabs((t) => [...t, res.id]);
     setPage("workflow");

@@ -54,7 +54,7 @@ export function Inspector({ onClose }: { onClose: () => void }) {
       {/* V11.5: the node's METHOD is in-built and non-changeable (owner rule). Shown as a
           read-only contract — the user edits what/where inputs, never the verb. */}
       <div className="method-contract mono" title="Method — built in, not editable">
-        {methodFor(def ?? ({ category: cat } as never))}
+        {methodFor(def ?? ({ id: node.definitionId, category: cat }))}
       </div>
 
       <Section k="purpose" title="Purpose · this run" open={open} toggle={toggle}>
@@ -172,7 +172,7 @@ export function Inspector({ onClose }: { onClose: () => void }) {
           Last compose length: {composed.system.length + composed.user.length} chars.
         </div>
         <div className="muted" style={{ marginTop: 8 }}>Assignment as the runtime sees it:</div>
-        <pre className="mono assignment-preview">{composeAssignment(def ?? ({ id: node.definitionId, title: node.title, description: node.purpose ?? "", category: cat } as never), node.config)}</pre>
+        <pre className="mono assignment-preview">{composeAssignment(def ?? ({ id: node.definitionId, title: node.title, description: node.purpose ?? "" }), node.config)}</pre>
       </Section>
 
       <Section k="runtime" title="Last output" open={open} toggle={toggle}>

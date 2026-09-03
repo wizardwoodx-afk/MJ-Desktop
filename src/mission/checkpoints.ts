@@ -9,11 +9,18 @@
 import { uid } from "../app/id";
 import type {
   AgentState,
+  ApprovalRequest,
+  Artifact,
   Checkpoint,
+  FlightEvent,
   MissionBudget,
+  NegotiationThread,
+  OrgAgent,
+  OrgTask,
   ResourceLimitKind,
   ResourceUsage,
   ResourceViolation,
+  SupervisorRecommendation,
   TaskState,
 } from "./types";
 import type { WorkflowGraph } from "../domain/types";
@@ -210,15 +217,15 @@ export interface PersistedMissionState {
   savedAt: string;
   missionId: string;
   /** Everything needed to resume without repeating completed work. */
-  agents: unknown[];
-  tasks: unknown[];
+  agents: OrgAgent[];
+  tasks: OrgTask[];
   taskUpdatedAt: Record<string, number>;
-  artifacts: unknown[];
+  artifacts: Artifact[];
   checkpoints: Checkpoint[];
-  approvals: unknown[];
-  negotiations: unknown[];
-  recommendations: unknown[];
-  flightEvents: unknown[];
+  approvals: ApprovalRequest[];
+  negotiations: NegotiationThread[];
+  recommendations: SupervisorRecommendation[];
+  flightEvents: FlightEvent[];
   usage: ResourceUsage;
   startedAt: number;
   graphVersion: number;
