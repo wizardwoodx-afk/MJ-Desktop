@@ -29,7 +29,20 @@
  * to review, and the base branch stays pristine until a human decides to merge.
  */
 
-import * as path from "node:path";
+// Conditional Node.js imports for dual-environment support (browser + Node.js probes)
+let path: typeof import('path');
+
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  path = require('path');
+} catch {
+  // Browser fallback - provide minimal implementations
+  path = {
+    posix: {
+      join: (...paths: string[]) => paths.join('/'),
+    },
+  } as any;
+}
 
 import type { HarnessId } from "../domain/harness";
 import { resolveCaps } from "./agentCapabilities";

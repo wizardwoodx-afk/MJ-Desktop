@@ -17,9 +17,33 @@
  * host — and the profile counts as enforced only when the canaries FAIL the way the sandbox
  * is supposed to make them fail. The Proof page shows "enforced: measured" per seat.
  */
-import * as fsSync from "node:fs";
-import * as os from "node:os";
-import * as path from "node:path";
+
+// Conditional Node.js imports for dual-environment support (browser + Node.js probes)
+let fsSync: typeof import('fs');
+let os: typeof import('os');
+let path: typeof import('path');
+
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  fsSync = require('fs');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  os = require('os');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  path = require('path');
+} catch {
+  // Browser fallback - provide minimal implementations
+  fsSync = {} as any;
+  os = {
+    tmpdir: () => '/tmp',
+  } as any;
+  path = {
+    join: (...paths: string[]) => paths.join('/'),
+    posix: {
+      join: (...paths: string[]) => paths.join('/'),
+    },
+  } as any;
+}
+
 import type { RiskClass } from "./types";
 
 export type SandboxPlatform = "linux" | "macos" | "windows" | "unknown";

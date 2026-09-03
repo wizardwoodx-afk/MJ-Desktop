@@ -16,8 +16,23 @@
  * There is no cache: the file is the interface, and files change under agents' feet.
  */
 
-import * as fsSync from "node:fs";
-import * as path from "node:path";
+// Conditional Node.js imports for dual-environment support (browser + Node.js probes)
+let fsSync: typeof import('fs');
+let path: typeof import('path');
+
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  fsSync = require('fs');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  path = require('path');
+} catch {
+  // Browser fallback - provide minimal implementations
+  fsSync = {} as any;
+  path = {
+    join: (...paths: string[]) => paths.join('/'),
+    basename: (p: string) => p.split(/[/\\]/).pop() || '',
+  } as any;
+}
 
 export interface AgentsMdDoc {
   /** Where the file was found, relative to the search root. */
@@ -75,7 +90,7 @@ export function collectAgentsContext(root: string, maxDepth = 3): AgentsContext 
       /* no file here — that is the normal case */
     }
     if (depth === maxDepth) return;
-    let entries: fsSync.Dirent[];
+    let entries: import('fs').Dirent[];
     try {
       entries = fsSync.readdirSync(dir, { withFileTypes: true });
     } catch {
