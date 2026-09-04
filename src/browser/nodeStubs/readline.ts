@@ -1,5 +1,5 @@
 /**
- * Browser stand-in for `node:readline` — MJ 11.8.5.
+ * Browser stand-in for `node:readline` — MJ 11.9.
  *
  * `acp.ts` uses `createInterface` to read an ACP agent's stdout line by line. There is no child
  * process in a WebView to read from, so there is nothing to line-buffer.

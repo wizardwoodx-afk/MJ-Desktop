@@ -1226,7 +1226,7 @@ var caseCount = (icons.match(/case "/g) ?? []).length;
 var dotCount = (icons.match(/dot\(/g) ?? []).length;
 ok(`every glyph is redrawn on the grammar (${caseCount} cases)`, caseCount >= 42, `${caseCount} cases`);
 ok(`the ink dot helper exists and is used everywhere (${dotCount} dots)`, dotCount >= 40, `${dotCount} dots`);
-ok("the dot is a filled 1.7-radius currentColor circle", icons.includes('r="1.7" fill="currentColor" stroke="none"'), "no dot grammar");
+ok("the junction dot is a filled theme-accent LED (NTH grammar)", icons.includes('r="1.9" fill="var(--accent)" stroke="none"'), "no dot grammar");
 ok("strokes slimmed to the Meridian 1.6 weight", /strokeWidth: 1\.6/.test(icons), "still 1.7");
 ok("the 24-grid viewBox survives", /viewBox: "0 0 24 24"/.test(icons), "viewBox changed");
 ok("round caps keep the hand-set feel", /strokeLinecap: "round" as const/.test(icons), "caps changed");

@@ -61,6 +61,19 @@ export function Canvas({ onOpenLibrary }: { onOpenLibrary: () => void }) {
   /** Re-render the wire layer whenever the DOM invalidates a port measurement. */
   const metricsVersion = useSyncExternalStore(subscribePortMetrics, getMetricsVersion);
 
+  /**
+   * 11.9 (bug: "wires not connecting to ports"): the wire-layer geometry was keyed only on the
+   * port-metrics version, so a node drag / drop / connect toggled `store.graph` but re-used the
+   * *previous* measured map if the invalidation fired before the new DOM laid out. Force a fresh
+   * re-measure after the commit, so a moved node's wires re-anchor to the port a human can see.
+   */
+  const graphNodes = useGraphStore((s) => s.graph.nodes);
+  const graphConns = useGraphStore((s) => s.graph.connections);
+  useEffect(() => {
+    // Defer one frame so the committed DOM (card heights / anchor offsets) is settled.
+    requestAnimationFrame(() => invalidatePortMetrics());
+  }, [graphNodes, graphConns]);
+
   const vp = store.graph.viewport;
   const toWorld = useCallback(
     (cx: number, cy: number) => {

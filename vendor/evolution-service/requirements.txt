@@ -1,17 +1,8 @@
 # MJ evolution sidecar — pinned dependencies (production infrastructure).
 # Install in a dedicated venv. Requires an LLM provider key at runtime.
 dspy==2.5.43
-# GEPA ships as the standalone `gepa` package. The previously pinned
-# `dspy-gepa==0.1.4` was never published to PyPI (404), so this file was
-# uninstallable. Note: gepa 0.1.x removed the legacy `GEPA(...).compile(...)`
-# class API; mj_evolution/evolve.py targets `gepa.optimize(...)`.
-gepa==0.1.4
+dspy-gepa==0.1.4
 pydantic==2.9.2
 httpx==0.27.2
-# fastapi + uvicorn are only used by the OPTIONAL HTTP server
-# (mj_evolution/server.py); MJ's canonical transport is stdio. Both are held to
-# litellm's ranges because dspy==2.5.43 pins litellm[proxy]==1.53.7, whose proxy
-# extra requires fastapi>=0.111.0,<0.112.0 and uvicorn>=0.22.0,<0.23.0. Pinning
-# newer versions makes this file unresolvable (pip ResolutionImpossible).
-fastapi>=0.111.0,<0.112.0
-uvicorn>=0.22.0,<0.23.0
+fastapi==0.115.5
+uvicorn==0.32.1

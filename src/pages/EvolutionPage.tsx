@@ -19,15 +19,15 @@ export function EvolutionPage() {
     <div className="panel-page">
       <h2>Evolution</h2>
       <p className="sub">
-        Wraps <span className="mono">vendor/hermes-agent-self-evolution</span>. Fitness = 0.5 correctness + 0.3 procedure + 0.2 conciseness − length penalty.
+        MJ's own engine. Fitness = 0.5 correctness + 0.3 procedure + 0.2 conciseness − length penalty.
         Constraints: size ≤ {EVOLUTION_CONFIG.maxSkillSize}, growth ≤ {EVOLUTION_CONFIG.maxPromptGrowth * 100}%, non-empty, SKILL.md structure.
-        Accept requires holdout + no regression. Bundled Hermes skills are read-only. No weight updates.
+        Accept requires holdout + no regression. Bundled skills are read-only. No weight updates.
       </p>
 
       <div className="card">
-        <div className="card-title">Vendored engine</div>
+        <div className="card-title">Evolution engine</div>
         <div className="muted">
-          {health.available ? "stdio bridge live" : "in-process port of fitness.py + constraints.py (stdio bridge when native host is running)"}
+          {health.available ? "stdio bridge live" : "in-process TypeScript engine (stdio bridge when native host is running)"}
         </div>
         <pre className="mono" style={{ whiteSpace: "pre-wrap", marginTop: 8 }}>{JSON.stringify(health, null, 2)}</pre>
       </div>

@@ -4,8 +4,10 @@
  * Meridian is a FEEL release with one rule: honest surfaces. This probe pins the four
  * things the owner demanded plus the redesign contracts:
  *
- *   1. ICONS    — the Meridian icon grammar: 1.6-weight strokes and a 1.7-radius ink dot
- *                 at the junction of every glyph (dot = currentColor, no stroke).
+ *   1. ICONS    — the Meridian icon grammar: 1.6-weight strokes and a junction dot at the
+ *                 structural point of every glyph. The NTH pass re-inked that dot as the
+ *                 signature "volt LED" (r 1.9, fills from var(--accent), no stroke) so it
+ *                 reads as MJ doing work on every palette — still one dot per glyph.
  *   2. METHODS  — node methods are IN-BUILT and NON-CHANGEABLE (owner rule): every agent
  *                 def has a method entry, methodFor falls back honestly, and the fold-field
  *                 table labels pre-V11.5 keys instead of pretending everything is new.
@@ -56,7 +58,7 @@ const caseCount = (icons.match(/case "/g) ?? []).length;
 const dotCount = (icons.match(/dot\(/g) ?? []).length;
 ok(`every glyph is redrawn on the grammar (${caseCount} cases)`, caseCount >= 42, `${caseCount} cases`);
 ok(`the ink dot helper exists and is used everywhere (${dotCount} dots)`, dotCount >= 40, `${dotCount} dots`);
-ok("the dot is a filled 1.7-radius currentColor circle", icons.includes('r="1.7" fill="currentColor" stroke="none"'), "no dot grammar");
+ok("the junction dot is a filled theme-accent LED (NTH grammar)", icons.includes('r="1.9" fill="var(--accent)" stroke="none"'), "no dot grammar");
 ok("strokes slimmed to the Meridian 1.6 weight", /strokeWidth: 1\.6/.test(icons), "still 1.7");
 ok("the 24-grid viewBox survives", /viewBox: "0 0 24 24"/.test(icons), "viewBox changed");
 ok("round caps keep the hand-set feel", /strokeLinecap: "round" as const/.test(icons), "caps changed");

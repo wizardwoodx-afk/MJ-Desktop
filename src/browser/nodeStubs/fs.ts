@@ -1,5 +1,5 @@
 /**
- * Browser stand-in for `node:fs` — MJ 11.8.5.
+ * Browser stand-in for `node:fs` — MJ 11.9.
  *
  * WHY THIS IS A THROWING STUB AND NOT AN EMPTY OBJECT
  *

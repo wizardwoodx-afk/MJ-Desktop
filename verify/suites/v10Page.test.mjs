@@ -17429,7 +17429,7 @@ function detectHost() {
 }
 
 // src/version.ts
-var MJ_VERSION = "11.8.5";
+var MJ_VERSION = "11.9.0";
 var MJ_VERSION_SHORT = MJ_VERSION.split(".").slice(0, 2).join(".");
 var MJ_TITLE = `MJ ${MJ_VERSION_SHORT}`;
 
@@ -17818,7 +17818,7 @@ var ipc = {
       controlMcpRunning: true,
       startupMs: 0,
       host: "webview-host",
-      vendors: ["hermes-agent", "hermes-agent-self-evolution", "mcp-servers-reference", "mcp-github"]
+      vendors: ["mcp-servers-reference", "mcp-github"]
     };
   },
   dbMaintenance: async (vacuum) => {

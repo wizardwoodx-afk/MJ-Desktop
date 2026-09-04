@@ -1,5 +1,5 @@
 /**
- * Browser stand-in for `node:fs/promises` — MJ 11.8.5.
+ * Browser stand-in for `node:fs/promises` — MJ 11.9.
  *
  * `src/mission/checkRunner.ts` reaches for the async filesystem lazily:
  *

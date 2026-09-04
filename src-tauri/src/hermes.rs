@@ -49,7 +49,6 @@ pub fn call(vendor: &Path, msg: &Value) -> Result<Value, String> {
     let mut child = Command::new(&program)
         .args(&args)
         .current_dir(&cwd)
-        .env("HERMES_AGENT_REPO", vendor.join("hermes-agent"))
         .env("PYTHONPATH", &service)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -88,8 +87,7 @@ pub fn health(vendor: &Path) -> Value {
     json!({
         "available": p.get("ok").and_then(|x| x.as_bool()).unwrap_or(false),
         "transport": "stdio",
-        "vendor": vendor.join("hermes-agent-self-evolution").display().to_string(),
-        "hermes": vendor.join("hermes-agent").display().to_string(),
+        "service": vendor.join("evolution-service").display().to_string(),
         "bridge": p,
         "hooks": ["on_session_start", "pre_llm_call", "post_llm_call", "on_session_end"],
         "timeoutHintMs": Duration::from_secs(30).as_millis(),

@@ -1,5 +1,5 @@
 /**
- * Browser stand-in for `node:os` — MJ 11.8.5.
+ * Browser stand-in for `node:os` — MJ 11.9.
  *
  * Same story as `./fs.ts`: 11.8.1 installed `{}` via a silently-swallowing `require()` catch, so
  * `os.tmpdir()` threw an opaque `TypeError` deep inside sandbox probing.

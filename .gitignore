@@ -71,3 +71,9 @@ filelist.txt
 # Python bytecode (evolution-service runs local; never ship caches)
 __pycache__/
 *.pyc
+
+# Probe artifact download (headless chrome for wire/overlap checks)
+chrome-headless-shell/
+
+# Probe diagnostic screenshots (local reference only)
+verify/*.png

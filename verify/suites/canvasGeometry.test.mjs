@@ -5,11 +5,11 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 // src/canvas/geometry.ts
-var NODE_W = 248;
+var NODE_W = 264;
 function nodeH(n) {
   const ports = Math.max(n.inputs.length, n.outputs.length);
   const isControl = n.definitionId.startsWith("control.");
-  return isControl ? 52 : 86 + ports * 19;
+  return isControl ? 52 : 85 + ports * 19;
 }
 function portPos(n, portId, dir, metrics) {
   const local = metrics?.get(n.id)?.ports.get(`${dir}:${portId}`);
@@ -17,8 +17,9 @@ function portPos(n, portId, dir, metrics) {
   const list = dir === "in" ? n.inputs : n.outputs;
   const i = Math.max(0, list.findIndex((p) => p.id === portId));
   const isControl = n.definitionId.startsWith("control.");
-  const top = isControl ? 26 : 86 + i * 19 + 10;
-  return { x: n.x + (dir === "out" ? isControl ? 118 : NODE_W : 0), y: n.y + top };
+  const top = isControl ? 26 : 94 + i * 19;
+  const x = dir === "out" ? isControl ? 118 : NODE_W : isControl ? 0 : 24;
+  return { x: n.x + x, y: n.y + top };
 }
 function bezier(a2, b) {
   const dx = Math.max(60, Math.abs(b.x - a2.x) * 0.45);
@@ -70,18 +71,31 @@ function registerPortAnchor(key, el) {
   else if (key) portRegistry.delete(key);
 }
 function offsetWithinCard(el) {
-  let x = 0;
-  let y = 0;
+  const card = offsetParentCard(el);
+  if (!card) return null;
+  const er = el.getBoundingClientRect();
+  const cr = card.getBoundingClientRect();
+  const zoom = canvasZoom(card);
+  return {
+    x: (er.left + er.width / 2 - cr.left) / zoom,
+    y: (er.top + er.height / 2 - cr.top) / zoom
+  };
+}
+function offsetParentCard(el) {
   let cur = el;
-  while (cur && !cur.classList.contains("node-card")) {
-    x += cur.offsetLeft;
-    y += cur.offsetTop;
-    const parent = cur.offsetParent;
-    if (!parent || parent === cur) return null;
-    cur = parent;
+  while (cur) {
+    if (cur.classList.contains("node-card")) return cur;
+    cur = cur.parentElement;
   }
-  if (!cur) return null;
-  return { x: x + el.offsetWidth / 2, y: y + el.offsetHeight / 2 };
+  return null;
+}
+function canvasZoom(card) {
+  const layer2 = card.closest(".nodes-layer");
+  if (!layer2) return 1;
+  const t = getComputedStyle(layer2).transform;
+  if (!t || t === "none") return 1;
+  const m = t.match(/matrix\(([^)]+)\)/);
+  return m ? parseFloat(m[1].split(",")[0]) || 1 : 1;
 }
 function measurePort(nodeId, portId, dir) {
   const el = portRegistry.get(`${nodeId}:${dir}:${portId}`);
@@ -146,69 +160,91 @@ console.log("\n== bug Y: the wheel must zoom, anchored at the cursor ==\n");
   ok(Number.isFinite(lines) && lines <= 2.4, "normalised line mode must stay inside the clamp");
 }
 console.log("\n== bug X: a wire must land on the port, whatever the card grew into ==\n");
-function fakeAnchor(opts) {
-  const cardW = opts.cardW ?? NODE_W;
-  const rowTop = 5 + opts.index * 19;
-  const card = {
-    classList: { contains: (c) => c === "node-card" },
+var ZOOM = 1;
+var layer = {
+  parentElement: null,
+  classList: { contains: () => false },
+  closest: (sel) => sel === ".nodes-layer" ? layer : null,
+  getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0 })
+};
+var origGetComputedStyle = globalThis.getComputedStyle;
+globalThis.getComputedStyle = (el) => {
+  const t = el === layer ? `matrix(${ZOOM},0,0,${ZOOM},0,0)` : "none";
+  return { transform: t };
+};
+function box(x, y, w, h) {
+  return { left: x, top: y, right: x + w, bottom: y + h, width: w, height: h };
+}
+function makeEl(parent, isCard = false) {
+  const e = {
+    parentElement: parent,
+    classList: { contains: (c) => isCard ? c === "node-card" : false },
+    getBoundingClientRect: () => box(0, 0, 0, 0),
+    closest: (sel) => sel === ".nodes-layer" ? layer : null,
+    // offset* fields are retained so this keeps compiling as an HTMLElement, but they are
+    // deliberately NOT measured any more — boxes are the truth.
     offsetLeft: 0,
     offsetTop: 0,
-    offsetWidth: cardW,
+    offsetWidth: 0,
     offsetHeight: 0,
     offsetParent: null
   };
-  const grid = {
-    classList: { contains: () => false },
-    offsetLeft: 0,
-    offsetTop: opts.aboveGrid,
-    offsetWidth: cardW,
-    offsetHeight: 0,
-    offsetParent: card
+  return e;
+}
+function fakeAnchor(opts) {
+  const cardW = opts.cardW ?? NODE_W;
+  const cardH = opts.cardH ?? opts.aboveGrid + 5 + opts.index * 19 + 26;
+  const localY = opts.aboveGrid + 5 + opts.index * 19 + 9.5;
+  const localX = opts.dir === "in" ? -0.5 : cardW;
+  const card = makeEl(layer, true);
+  card.getBoundingClientRect = () => box(opts.cardLeft, opts.cardTop, cardW, cardH);
+  const grid = makeEl(card);
+  const col = makeEl(grid);
+  const row = makeEl(col);
+  const anchor = makeEl(row);
+  anchor.getBoundingClientRect = () => {
+    const cx = opts.cardLeft + localX;
+    const cy = opts.cardTop + localY;
+    return box(cx - 6, cy - 6, 12, 12);
   };
-  const col = {
-    classList: { contains: () => false },
-    offsetLeft: opts.dir === "in" ? 0 : cardW / 2 + 7,
-    offsetTop: 0,
-    offsetWidth: 0,
-    offsetHeight: 0,
-    offsetParent: grid
-  };
-  const row = {
-    classList: { contains: () => false },
-    offsetLeft: 0,
-    offsetTop: rowTop,
-    offsetWidth: 0,
-    offsetHeight: 19,
-    offsetParent: col
-  };
-  const anchor = {
-    classList: { contains: () => false },
-    offsetLeft: opts.dir === "in" ? -6 : col.offsetWidth === 0 ? cardW / 2 - 7 - 11 + 6 : 0,
-    offsetTop: 4,
-    offsetWidth: 11,
-    offsetHeight: 11,
-    offsetParent: row
-  };
-  if (opts.dir === "out") {
-    anchor.offsetLeft = 112;
-  }
   return anchor;
 }
 function metricsFor(n, aboveGrid) {
+  const cardW = NODE_W;
   const ports = /* @__PURE__ */ new Map();
+  const rows = Math.max(n.inputs.length, n.outputs.length);
+  const cardH = aboveGrid + 5 + rows * 19 + 7;
   n.inputs.forEach((p, i) => {
-    const el = fakeAnchor({ nodeId: n.id, dir: "in", portId: p.id, index: i, aboveGrid });
-    registerPortAnchor(`${n.id}:in:${p.id}`, el);
+    registerPortAnchor(`${n.id}:in:${p.id}`, fakeAnchor({
+      nodeId: n.id,
+      dir: "in",
+      portId: p.id,
+      index: i,
+      aboveGrid,
+      cardLeft: n.x,
+      cardTop: n.y,
+      cardW,
+      cardH
+    }));
     const m = measurePort(n.id, p.id, "in");
     if (m) ports.set(`in:${p.id}`, m);
   });
   n.outputs.forEach((p, i) => {
-    const el = fakeAnchor({ nodeId: n.id, dir: "out", portId: p.id, index: i, aboveGrid });
-    registerPortAnchor(`${n.id}:out:${p.id}`, el);
+    registerPortAnchor(`${n.id}:out:${p.id}`, fakeAnchor({
+      nodeId: n.id,
+      dir: "out",
+      portId: p.id,
+      index: i,
+      aboveGrid,
+      cardLeft: n.x,
+      cardTop: n.y,
+      cardW,
+      cardH
+    }));
     const m = measurePort(n.id, p.id, "out");
     if (m) ports.set(`out:${p.id}`, m);
   });
-  return /* @__PURE__ */ new Map([[n.id, { ports, h: aboveGrid + 5 + Math.max(n.inputs.length, n.outputs.length) * 19 + 7 }]]);
+  return /* @__PURE__ */ new Map([[n.id, { ports, h: cardH }]]);
 }
 var a = node("coder", [port("brief"), port("context")], [port("code"), port("notes")]);
 {
@@ -244,7 +280,7 @@ var a = node("coder", [port("brief"), port("context")], [port("code"), port("not
 {
   const p = portPos(a, "brief", "in");
   ok(Number.isFinite(p.x) && Number.isFinite(p.y), "the pre-mount fallback must be finite");
-  near(p.y, 300 + 96, "the fallback keeps the historical approximation");
+  near(p.y, 300 + 94, "the fallback tracks the measured first-port offset (~94px between the card top and the first port row)");
   const ghost = portPos(a, "does-not-exist", "in");
   ok(Number.isFinite(ghost.y), "an unknown port must not produce NaN");
 }

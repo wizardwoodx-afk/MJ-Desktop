@@ -1,13 +1,8 @@
 /**
- * Evolution engine — ports the vendored hermes-agent-self-evolution contract.
+ * MJ's own evolution engine (TypeScript) — fitness, constraints and gating for
+ * self-improving SKILL.md procedures. No weight updates; skills are plain text.
  *
- * Source of truth:
- *   vendor/hermes-agent-self-evolution/evolution/core/fitness.py
- *   vendor/hermes-agent-self-evolution/evolution/core/constraints.py
- *   vendor/hermes-agent-self-evolution/evolution/core/config.py
- *   vendor/hermes-agent-self-evolution/evolution/skills/skill_module.py
- *
- * No weight updates. Skills are SKILL.md text. Accept requires:
+ * Accept requires:
  *   1. every constraint passes
  *   2. holdoutPassed
  *   3. regressionPassed
@@ -73,7 +68,7 @@ export function lengthPenalty(artifactSize: number, maxSize: number): number {
   return Math.min(0.3, (ratio - 0.9) * 3.0);
 }
 
-/** Fast heuristic metric — same contract as skill_fitness_metric (DSPy path). */
+/** Fast heuristic metric for expected-behavior / output keyword overlap. */
 export function skillFitnessMetric(_taskInput: string, expectedBehavior: string, agentOutput: string): number {
   if (!agentOutput.trim()) return 0;
   const expectedWords = new Set(expectedBehavior.toLowerCase().split(/\s+/).filter(Boolean));
@@ -158,9 +153,9 @@ export function gateCandidate(args: {
   candidateOutput: string;
   bundled: boolean;
 }): GateResult {
-  if (args.bundled) {
+    if (args.bundled) {
     return {
-      constraints: [{ passed: false, constraintName: "bundled_readonly", message: "Curator never writes bundled Hermes skills." }],
+      constraints: [{ passed: false, constraintName: "bundled_readonly", message: "Curator never writes bundled skills." }],
       constraintsPassed: false,
       holdoutPassed: false,
       regressionPassed: false,

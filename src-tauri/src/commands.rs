@@ -30,7 +30,7 @@ pub fn app_info(app: AppHandle, state: State<Arc<AppState>>) -> Value {
         "controlMcpRunning": true,
         "host": "tauri",
         "desktopNative": true,
-        "vendors": ["hermes-agent", "hermes-agent-self-evolution", "mcp-servers-reference", "mcp-github"],
+        "vendors": ["mcp-servers-reference", "mcp-github"],
         "resourceDir": app.path().resource_dir().ok().map(|p| p.display().to_string()),
     })
 }

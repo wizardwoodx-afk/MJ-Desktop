@@ -1,4 +1,4 @@
-# Third-party notices — MJ 11.8.5
+# Third-party notices — MJ 11.9
 
 MJ is proprietary software (see LICENSE). It ships the third-party engines below under `vendor/`,
 unchanged apart from size pruning. Their upstream licences continue to apply to those directories
@@ -6,16 +6,8 @@ only and are reproduced in full alongside this notice.
 
 | Directory | Upstream | Licence | Licence file |
 |---|---|---|---|
-| `vendor/hermes-agent` | https://github.com/NousResearch/hermes-agent | MIT © 2025 Nous Research | `vendor/hermes-agent/LICENSE` |
-| `vendor/hermes-agent-self-evolution` | https://github.com/NousResearch/hermes-agent-self-evolution | MIT (declared in `pyproject.toml`) | see note below |
 | `vendor/mcp-servers-reference` | https://github.com/modelcontextprotocol/servers | MIT → Apache-2.0 transition (mixed) | `vendor/mcp-servers-reference/LICENSE` |
 | `vendor/mcp-github` | https://github.com/github/github-mcp-server | MIT © 2025 GitHub | `vendor/mcp-github/LICENSE` |
-
-## Note on `hermes-agent-self-evolution`
-
-Upstream declares `license = {text = "MIT"}` in `pyproject.toml` and states MIT in its README, but
-ships **no LICENSE file**. That declaration is the only grant of rights available. If you
-redistribute MJ commercially, have counsel confirm that declaration before shipping this directory.
 
 ## Note on `mcp-servers-reference`
 
@@ -25,6 +17,7 @@ verbatim.
 
 ## What MJ owns
 
-`vendor/evolution-service/` is **MJ's own** Python service (DSPy/GEPA reflective optimiser). It is
-first-party code and is covered by the MJ LICENSE, not by any notice above. It lives under `vendor/`
-because `src-tauri/src/hermes.rs` resolves the bridge as `<vendor>/evolution-service/…`.
+The agent skill contract, skill parsing, and the evolution fitness/constraints engine are MJ's own
+TypeScript code. `vendor/evolution-service/` is **MJ's own** Python service (DSPy/GEPA reflective
+optimiser) — first-party code covered by the MJ LICENSE, not by any notice above. It lives under
+`vendor/` because `src-tauri/src/hermes.rs` resolves the bridge as `<vendor>/evolution-service/…`.

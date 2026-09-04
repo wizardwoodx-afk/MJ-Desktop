@@ -8,13 +8,21 @@
 import type { NodeInstance } from "../domain/types";
 import type { PortPoint } from "./ports";
 
-export const NODE_W = 248;
+/** One source of truth for the agent-card width (px). The canvas and wires both read this. */
+export const NODE_W = 264;
 
-/** Fallback card height used before the DOM has been measured. */
+/**
+ * Fallback card height used before the DOM has been measured.
+ *
+ * 11.9: the constants now reflect the real rendered layout (measured on a built
+ * card): a non-control agent card is ~68px of header + purpose, minus the
+ * unmeasured span, plus `ports` rows at 19px and the port-grid padding. Kept as
+ * a first-paint fallback only — the measured path is authoritative.
+ */
 export function nodeH(n: NodeInstance): number {
   const ports = Math.max(n.inputs.length, n.outputs.length);
   const isControl = n.definitionId.startsWith("control.");
-  return isControl ? 52 : 86 + ports * 19;
+  return isControl ? 52 : 85 + ports * 19;
 }
 
 /** Measured port geometry per node: local anchor centres plus the real card height. */
@@ -43,8 +51,11 @@ export function portPos(
   const list = dir === "in" ? n.inputs : n.outputs;
   const i = Math.max(0, list.findIndex((p) => p.id === portId));
   const isControl = n.definitionId.startsWith("control.");
-  const top = isControl ? 26 : 86 + i * 19 + 10;
-  return { x: n.x + (dir === "out" ? (isControl ? 118 : NODE_W) : 0), y: n.y + top };
+  // 11.9: first port sits ~94px below a control-light agent card top (not 96), and
+  // input anchors hang just inside the left edge (~24px), outputs on the right edge.
+  const top = isControl ? 26 : 94 + i * 19;
+  const x = dir === "out" ? (isControl ? 118 : NODE_W) : (isControl ? 0 : 24);
+  return { x: n.x + x, y: n.y + top };
 }
 
 /** Cubic bezier between two anchors, bowing horizontally like a patch cable. */

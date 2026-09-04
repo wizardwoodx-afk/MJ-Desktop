@@ -1,4 +1,4 @@
-# MJ 11.8 — LOCAL WORKLIST
+# MJ 11.9 — LOCAL WORKLIST
 
 Read this top to bottom. Items are ordered by priority. Everything here is either already verified
 (it says so, with the command that verified it) or needs your machine because it needs a Tauri
@@ -111,35 +111,26 @@ Stored in the OS keyring; if the keyring is unavailable MJ keeps them in memory 
 ```bash
 cd mj/vendor/evolution-service
 python -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt     # dspy==2.5.43, gepa==0.1.4, pydantic==2.9.2, httpx==0.27.2
+pip install -r requirements.txt     # dspy==2.5.43, dspy-gepa==0.1.4, pydantic==2.9.2, httpx==0.27.2
 python -m mj_evolution.stdio_server
 ```
 
-Without `gepa`, the stdio server starts and reports `available: false`. That is the honest state —
-MJ will not pretend evolution ran. (`dspy-gepa==0.1.4` was never published to PyPI; GEPA ships as the
-standalone `gepa` package, and 0.1.x replaced the old `GEPA(...).compile(...)` class API with
-`gepa.optimize(...)` — see `mj_evolution/evolve.py`.)
+Without `dspy`, the stdio server starts and reports `available: false`. That is the honest state —
+MJ will not pretend evolution ran.
 
-## 5. Known gaps — re-verified 2026-09-04, all closed
+## 5. Known V5 gaps still present
 
-Every item previously listed here was re-checked against the source. **All are already
-fixed** — this list had drifted from the code and was reporting gaps that no longer exist.
-
-| Gap (as previously listed) | Status | Where it was fixed |
-|---|---|---|
-| `commands.rs` — `tool.starts_with("control")` shadowed real MCP servers named `control*` | ✅ closed | `mcp_call` now matches `server_id == "mcp.control"` **exactly** (V7, bug Q), so only the built-in server is served from the control plane. |
-| `control_mcp.rs` — `dispatch` was an echo stub while `mcp.rs` advertised 8 tools | ✅ closed | V7 (bug U) made `validate_graph` perform real structural validation (cycles, dangling wires, duplicate ids, self-loops). V11 (W2) made `list_nodes` / `connect_ports` / `disconnect_ports` / `run_workflow` real Plan → Apply → Verify against SQLite. Unimplemented tools return `notImplemented: true` — never `ok: true`. Delisted execution tools return `delisted: true`. |
-| `cap.browser` — `browser_navigate` canned, `browser_act` returned false, capability reported success | ✅ closed | `ensure_browser()` actually launches the Node browser service; `browser_call` POSTs to it. Failures return `ok: false` + `notAttached: true` + a reason. It fails closed rather than fabricating a result. |
-| `README.md:1` still said "MJ 4.0" | ✅ not reproducible | README line 1 reads `# MJ — Agent Organization Runtime`; no "MJ 4.0" string exists in the file. |
-
-**Advertisement == behaviour is now enforced by a test.** `mcp.rs` derives `toolCount`,
-`advertisedToolCount` and `notImplementedTools` from `control_mcp::IMPLEMENTED_TOOLS` /
-`ADVERTISED_TOOLS`, and `control_mcp::tests::advertised_equals_implemented_v11` asserts every
-advertised name is implemented. A tool cannot be advertised unless it is real.
-
-Remaining caveat (environmental, not a defect): the ACP/Tauri bridge commands and the
-db-backed control tools compile only where the platform toolchain is present — run
-`cargo check` on your machine (see MJ-11.0-UPGRADE.md).
+- `commands.rs` — `tool.starts_with("control")` shadows any real MCP server named `control*`.
+- `control_mcp.rs` — `dispatch` is an echo stub while `mcp.rs` advertises 8 tools.
+- `cap.browser` — `browser_navigate` canned, `browser_act` returns false, capability reports success.
+- V11 (W6) closed the stub ledger: `workflow_versions` / `workflow_version_restore` were made
+  real in V7, and `skill_touch`, `evaluation_save`, `evaluation_history`, `suite_list`,
+  `suite_save`, `run_request_take` are implemented against the SQLite store in V11
+  (`probe/stubLedger.test.ts` pins it). Remaining known gaps, stated plainly: the ACP/Tauri
+  bridge commands and the new db-backed control tools were written for V11 but are compiled
+  only where the GTK/WebKit toolchain exists — run `cargo check` on your machine (see
+  MJ-11.0-UPGRADE.md).
+- `README.md:1` still says "MJ 4.0".
 
 ## 6. V5 defects fixed in this package
 

@@ -1,9 +1,7 @@
 /**
- * Hermes Agent skill contract — wraps the vendored SKILL.md schema.
- *
- * Source of truth:
- *   vendor/hermes-agent/agent/skill_utils.py  (parse_frontmatter, platforms, environments)
- *   vendor/hermes-agent-self-evolution/evolution/skills/skill_module.py  (load_skill, reassemble_skill)
+ * MJ's own skill contract — parses, validates and reassembles the SKILL.md schema
+ * that MJ uses as its native skill format. This is MJ's implementation, written in
+ * TypeScript, and is not dependent on any vendored agent codebase.
  *
  * A skill is a folder containing SKILL.md with YAML frontmatter:
  *   ---
@@ -17,9 +15,9 @@
  *   ---
  *   # Body (procedure markdown)
  *
- * Bundled skills under vendor/hermes-agent/skills are READ-ONLY.
- * Curator / evolution never writes them. User and learned skills live
- * in the MJ skill store (native: {appData}/skills, preview: localDb).
+ * Bundled skills are READ-ONLY. Curator / evolution never writes them.
+ * User and learned skills live in the MJ skill store
+ * (native: {appData}/skills, preview: localDb).
  */
 
 export type SkillOrigin = "bundled" | "user" | "learned" | "evolution";
@@ -66,7 +64,7 @@ export function parseFrontmatter(content: string): { frontmatter: Record<string,
   return { frontmatter: parseSimpleYaml(m[1]), body: src.slice(m[0].length) };
 }
 
-/** Minimal YAML subset used by SKILL.md frontmatter (mirrors skill_utils fallback). */
+/** Minimal YAML subset used by SKILL.md frontmatter. */
 function parseSimpleYaml(yaml: string): Record<string, unknown> {
   const root: Record<string, unknown> = {};
   const stack: Array<{ indent: number; obj: Record<string, unknown> }> = [{ indent: -1, obj: root }];
@@ -169,12 +167,11 @@ export function runPluginHook(ctx: HookContext): Record<string, unknown> {
   return {
     hook: ctx.hook,
     applied: true,
-    vendor: "hermes-agent",
+    vendor: "mj",
     at: new Date().toISOString(),
     nodeKey: ctx.nodeKey ?? null,
     executionId: ctx.executionId ?? null,
   };
 }
 
-export const BUNDLED_SKILLS_ROOT = "vendor/hermes-agent/skills";
 export const ESSENTIAL_SKILLS = new Set(["hermes-agent"]);

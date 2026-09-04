@@ -13,10 +13,10 @@ interface HistoryEntry {
   label: string;
 }
 
-export type ThemeId = "inscribed" | "chalk" | "carbon" | "bone" | "indigo" | "sage" | "hazard" | "orchid" | "porcelain" | "aurora";
+export type ThemeId = "nth" | "inscribed" | "chalk" | "carbon" | "bone" | "indigo" | "sage" | "hazard" | "orchid" | "porcelain" | "aurora";
 
 /** One list of themes, owned here. SettingsPage renders it; the theme probe cross-checks CSS. */
-export const THEME_IDS: ThemeId[] = ["inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain", "aurora"];
+export const THEME_IDS: ThemeId[] = ["nth", "inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain", "aurora"];
 
 export interface EditorPrefs {
   snap: number;
@@ -62,7 +62,7 @@ export function getEditorPrefs(): EditorPrefs {
       const stored = typeof p.theme === "string" ? p.theme : "";
       const theme: ThemeId = THEME_IDS.includes(stored as ThemeId)
         ? (stored as ThemeId)
-        : THEME_ALIASES[stored] ?? "inscribed";
+        : THEME_ALIASES[stored] ?? "nth";
       return {
         snap: typeof p.snap === "number" && p.snap >= 0 ? p.snap : 16,
         autosaveMs: typeof p.autosaveMs === "number" && p.autosaveMs >= 0 ? p.autosaveMs : 1200,
@@ -75,7 +75,7 @@ export function getEditorPrefs(): EditorPrefs {
   } catch {
     /* ignore */
   }
-  return { snap: 16, autosaveMs: 1200, theme: "inscribed", showMinimap: true, showGrid: true, reducedMotion: false };
+  return { snap: 16, autosaveMs: 1200, theme: "nth", showMinimap: true, showGrid: true, reducedMotion: false };
 }
 export function saveEditorPrefs(p: EditorPrefs): void {
   try {

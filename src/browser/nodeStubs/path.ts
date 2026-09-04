@@ -1,5 +1,5 @@
 /**
- * Browser stand-in for `node:path` — MJ 11.8.5.
+ * Browser stand-in for `node:path` — MJ 11.9.
  *
  * WHY THIS EXISTS
  *

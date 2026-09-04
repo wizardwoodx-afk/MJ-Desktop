@@ -347,15 +347,20 @@ label.field {
 .marquee-rect { position: absolute; border: 1px dashed var(--amber); background: var(--accent-dim, var(--amber-dim)); pointer-events: none; z-index: 5; }
 
 .node-card {
-  position: absolute; width: 248px;
+  position: absolute; width: 264px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);
   border-radius: var(--r-lg);
   box-shadow: none;
   user-select: none;
+  /* Each card owns its stacking context, so a port's internal z-index can never
+     bleed through an overlapping node drawn in front of it. */
+  isolation: isolate;
+  z-index: 1;
 }
-.node-card:hover { border-color: var(--amber); }
-.node-card.selected { border-color: var(--amber); outline: 1px solid var(--amber-dim); }
+.node-card:hover { border-color: var(--amber); z-index: 2; }
+.node-card.selected { border-color: var(--amber); outline: 1px solid var(--amber-dim); z-index: 6; }
+.node-card.dragging { z-index: 7; }
 .node-card .head { display: flex; align-items: center; gap: 9px; padding: 11px 12px 3px; }
 .node-card .head .icon { color: var(--text-mute); display: flex; }
 .node-card.agent .head .icon { color: var(--amber); }
@@ -396,13 +401,18 @@ label.field {
 .port-row.output { justify-content: flex-end; padding-right: 22px; text-align: right; }
 .port-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 82px; }
 .port-anchor {
-  position: absolute; top: 50%; width: 11px; height: 11px; border-radius: 50%;
+  position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%;
   background: var(--bg); border: 1.6px solid var(--port-edge, var(--amber));
   transform: translateY(-50%); z-index: 3; cursor: crosshair;
+  /* 11.9: ports sit just inside the card edge so an overlapping node never crops them,
+     and the active/valid state glows so the connection target is unmistakable. */
 }
-.port-row.input .port-anchor { left: 0; margin-left: -6px; }
-.port-row.output .port-anchor { right: 0; margin-right: -6px; }
-.port-anchor:hover, .port-anchor.valid-target { border-color: var(--amber-hot); background: var(--amber); }
+.port-row.input .port-anchor { left: 4px; }
+.port-row.output .port-anchor { right: 4px; }
+.port-anchor:hover, .port-anchor.valid-target {
+  border-color: var(--amber-hot); background: var(--amber);
+  box-shadow: 0 0 0 3px var(--accent-dim), 0 0 8px var(--accent-dim);
+}
 .port-anchor.filled { background: var(--amber); }
 .port-anchor.dimmed { opacity: 0.22; }
 
@@ -417,7 +427,12 @@ label.field {
   background: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: var(--r-lg);
   cursor: pointer; z-index: 45;
   box-shadow: none;
+  /* 11.9: keep the minimap clear of the toolbar by giving it a touch more breathing
+     room and a subtler frame so it reads as a glanceable overview, not a competing panel. */
+  border-color: var(--border);
+  opacity: 0.9;
 }
+.minimap:hover { opacity: 1; border-color: var(--border-strong); }
 .canvas-empty { position: absolute; left: 50%; top: 42%; transform: translate(-50%,-50%); z-index: 20; text-align: center; }
 .canvas-empty .ce-mark { font-family: var(--font-doto); font-weight: 700; font-size: 54px; letter-spacing: 0.18em; color: var(--inset, #1c1c1c); }
 .canvas-empty .ce-title { font-family: var(--font-ui); font-weight: 600; font-size: 18px; letter-spacing: 0.04em; }
@@ -714,3 +729,26 @@ button:active { border-color: var(--amber); }
 @media (prefers-reduced-motion: reduce) {
   .asst-typing span { animation: none; }
 }
+
+/* ── accessibility + static theming (the V12 pass, trimmed to quiet) ─────
+   The motion layer was cut down after the owner rejected the splashy version:
+   no entrance rises, no card stagger, no hover-lift, no animated tab underline,
+   no toast slide. What survives does work, not show: a readable keyboard focus
+   ring, crisp volt text selection, and scrollbars in the palette. Lamp breathing
+   is already covered by `mj-lamp` above, which respects reduced motion.  */
+
+/* a clear, readable focus ring everywhere (keyboard nav) */
+:is(button, input, select, textarea, [role="button"]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* crisp volt selection inside editable fields and text */
+::selection { background: var(--sel-bg); color: var(--sel-fg); }
+
+/* ease the scrollbars into the palette too */
+* { scrollbar-color: var(--scroll-thumb) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 0; }
+*::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }

@@ -10,8 +10,13 @@ import type { ReactNode } from "react";
 
 const s = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
 
-/** The Meridian ink dot: a tiny filled circle placed at the glyph's junction. */
-const dot = (cx: number, cy: number) => <circle cx={cx} cy={cy} r="1.7" fill="currentColor" stroke="none" />;
+/**
+ * The NTH pixel-junction, re-inked as a signature LED: a tiny accent-colored dot
+ * placed at each glyph's structural junction. It reads as the "volt" that lights
+ * up wherever MJ does work — one consistent signal across every icon, on every
+ * palette. Draws from the theme token (var(--accent)) so it is never hardcoded.
+ */
+const dot = (cx: number, cy: number) => <circle cx={cx} cy={cy} r="1.9" fill="var(--accent)" stroke="none" opacity="0.92" />;
 
 export function iconFor(name?: string): ReactNode {
   switch (name) {

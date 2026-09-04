@@ -14,7 +14,7 @@ var MJ_VERSION, MJ_VERSION_SHORT, MJ_TITLE;
 var init_version = __esm({
   "src/version.ts"() {
     "use strict";
-    MJ_VERSION = "11.8.5";
+    MJ_VERSION = "11.9.0";
     MJ_VERSION_SHORT = MJ_VERSION.split(".").slice(0, 2).join(".");
     MJ_TITLE = `MJ ${MJ_VERSION_SHORT}`;
   }
@@ -3074,7 +3074,7 @@ var init_client = __esm({
           controlMcpRunning: true,
           startupMs: 0,
           host: "webview-host",
-          vendors: ["hermes-agent", "hermes-agent-self-evolution", "mcp-servers-reference", "mcp-github"]
+          vendors: ["mcp-servers-reference", "mcp-github"]
         };
       },
       dbMaintenance: async (vacuum) => {

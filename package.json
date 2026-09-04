@@ -1,7 +1,7 @@
 {
   "name": "mj-desktop",
   "private": true,
-  "version": "11.8.5",
+  "version": "11.9.0",
   "description": "MJ — native visual AI agent orchestration workstation (ROX spec)",
   "type": "module",
   "scripts": {

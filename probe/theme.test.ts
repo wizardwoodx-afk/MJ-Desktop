@@ -46,6 +46,15 @@ function section(name: string): void {
   console.log(`\n== ${name}`);
 }
 
+// Perceived luminance of a #rrggbb hex, used to prove palettes are genuinely dark / bright.
+const lum = (hex: string): number => {
+  const m = hex.replace("#", "");
+  const r = parseInt(m.slice(0, 2), 16) / 255;
+  const g = parseInt(m.slice(2, 4), 16) / 255;
+  const b = parseInt(m.slice(4, 6), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
 declare const MJ_ROOT: string | undefined;
 const root = typeof MJ_ROOT === "string" && MJ_ROOT.length > 0
   ? MJ_ROOT
@@ -74,7 +83,7 @@ ok("SettingsPage declares its theme row as a const array", row !== null, "the ([
 const THEMES = row
   ? (row[1].split(",").map((t) => t.trim().replace(/^"|"$/g, "")) as string[])
   : ["inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain"];
-ok(`the advertised set is the ten-palette INSCRIBED set (${THEMES.length} themes)`, THEMES.length === 10, THEMES.join(","));
+ok(`the advertised set is the eleven-palette INSCRIBED set (${THEMES.length} themes)`, THEMES.length === 11, THEMES.join(","));
 ok(`themes.css has the expected token block count (got ${THEMES.filter((t) => !themesCss.includes(`[data-theme="${t}"]`)).length} missing)`,
   THEMES.every((t) => themesCss.includes(`[data-theme="${t}"]`)),
   THEMES.filter((t) => !themesCss.includes(`[data-theme="${t}"]`)).join(", ") || "all present");
@@ -124,20 +133,26 @@ ok(`the version.ts release is well formed (${MJ_VERSION})`, /^\d+\.\d+\.\d+$/.te
 ok(`the release notes for MJ ${MJ_VERSION_SHORT} exist`, fs.existsSync(path.join(root, `MJ-${MJ_VERSION_SHORT}-UPGRADE.md`)) || fs.existsSync(path.join(root, "docs", "history", `MJ-${MJ_VERSION_SHORT}-UPGRADE.md`)), "missing");
 
 /* ── §V11.5: AURORA — the tenth palette, and the Meridian feel ───────────── */
+section("3.5. NTH — the eleventh palette, MJ's flagship (V12)");
+const nthBlock = themesCss.match(/\[data-theme="nth"\] \{[^}]*\n\}/)?.[0] ?? "";
+const nt = (name: string): string => nthBlock.match(new RegExp(`--${name}: (#[0-9a-fA-F]{6})`))?.[1] ?? "";
+ok("the nth token block exists", nthBlock.length > 400, `block is ${nthBlock.length} chars`);
+ok("nth carries the cold obsidian ground (#05060b)", nt("bg") === "#05060b", nt("bg"));
+ok("nth's signature accent is electro-violet volt (#7c5cff)", nt("accent") === "#7c5cff", nt("accent"));
+ok("nth's alive pulse is plasma-mint (#2be6d6)", nt("ok") === "#2be6d6", nt("ok"));
+ok("nth's only brand-ish red is the functional danger (#ff3d6e)", nt("danger") === "#ff3d6e", nt("danger"));
+ok("nth selection inverts (volt fill, obsidian text)", nt("sel-bg") === "#7c5cff" && nt("sel-fg") === "#05060b", `${nt("sel-bg")} / ${nt("sel-fg")}`);
+ok("nth active wires carry the volt signal", nt("wire-active") === "#7c5cff", nt("wire-active"));
+ok("nth is genuinely dark (bg luminance < 0.12)", lum(nt("bg")) < 0.12, String(lum(nt("bg"))));
+ok("nth text is genuinely bright (luminance > 0.55)", lum(nt("text")) > 0.55, String(lum(nt("text"))));
+ok("nth uses no gradients (flat instrument panel)", !/gradient\(/i.test(nthBlock), "gradient found");
+ok("nth is the default theme (editor prefs) and advertised in Settings", /theme: "nth"/.test(storeSrc) && settings.includes('"nth"'), "not wired as default");
+ok("Settings copy names nth's character", /nth · obsidian ground, electro-violet volt/.test(settings), "missing descriptor");
+ok("nth joins every shared selector group (not a bolt-on)", (themesCss.match(/\[data-theme="nth"\]/g) ?? []).length >= 100, `only ${(themesCss.match(/\[data-theme="nth"\]/g) ?? []).length} mentions`);
+
 section("4. V11.5 aurora — the tenth palette, honestly dark");
 const auroraBlock = themesCss.match(/\[data-theme="aurora"\] \{[\s\S]*?\n\}/)?.[0] ?? "";
-const lum = (hex: string): number => {
-  const m = hex.replace("#", "");
-  const r = parseInt(m.slice(0, 2), 16) / 255;
-  const g = parseInt(m.slice(2, 4), 16) / 255;
-  const b = parseInt(m.slice(4, 6), 16) / 255;
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
 const tok = (name: string): string => auroraBlock.match(new RegExp(`--${name}: (#[0-9a-fA-F]{6})`))?.[1] ?? "";
-ok("the aurora token block exists", auroraBlock.length > 400, `block is ${auroraBlock.length} chars`);
-ok("aurora carries the deep blue-teal night ground (#060a12)", tok("bg") === "#060a12", tok("bg"));
-ok("aurora's signal is ice blue (#7dd3fc)", tok("accent") === "#7dd3fc", tok("accent"));
-ok("aurora ink is readable ice (#bfe8ff)", tok("text") === "#bfe8ff", tok("text"));
 ok("aurora ok/warn hues are distinct (#34d399 / #f87171)", tok("ok") === "#34d399" && tok("danger") === "#f87171", `${tok("ok")} / ${tok("danger")}`);
 ok("aurora selection inverts (ice fill, night text)", tok("sel-bg") === "#7dd3fc" && tok("sel-fg") === "#060a12", `${tok("sel-bg")} / ${tok("sel-fg")}`);
 ok("aurora active wires carry the signal", tok("wire-active") === "#7dd3fc", tok("wire-active"));

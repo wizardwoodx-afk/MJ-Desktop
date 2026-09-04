@@ -1,5 +1,5 @@
 /**
- * Browser stand-in for `node:child_process` — MJ 11.8.5.
+ * Browser stand-in for `node:child_process` — MJ 11.9.
  *
  * `sandbox.ts`, `checkRunner.ts` and `acp.ts` spawn real processes: the sandbox canaries, the
  * mission's own test commands, and ACP agents over stdio. None of that is possible in a WebView,

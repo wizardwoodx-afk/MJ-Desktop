@@ -294,7 +294,7 @@ function validateConstraints(artifactText, artifactType, baselineText) {
 function gateCandidate(args) {
   if (args.bundled) {
     return {
-      constraints: [{ passed: false, constraintName: "bundled_readonly", message: "Curator never writes bundled Hermes skills." }],
+      constraints: [{ passed: false, constraintName: "bundled_readonly", message: "Curator never writes bundled skills." }],
       constraintsPassed: false,
       holdoutPassed: false,
       regressionPassed: false,

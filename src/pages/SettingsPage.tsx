@@ -55,9 +55,9 @@ export function SettingsPage() {
 
       <div className="card">
         <div className="card-title">Appearance</div>
-        <div className="muted">One Inscribed design system, ten palettes — monochrome canvas, one accent signal, dot-matrix display type. inscribed · Nothing OS dark, signal red — chalk · the system on paper — carbon · industrial, phosphor green — bone · parchment, terracotta — indigo · slate dark, ice blue — sage · botanical light, forest green — hazard · soot dark, safety yellow — orchid · noir plum, orchid magenta — porcelain · porcelain light, ultraviolet — aurora · deep blue-teal night, ice signal</div>
+        <div className="muted">One Inscribed design system, eleven palettes — monochrome canvas, one accent signal, dot-matrix display type. nth · obsidian ground, electro-violet volt + plasma pulse (default) — inscribed · Nothing OS dark, signal red — chalk · the system on paper — carbon · industrial, phosphor green — bone · parchment, terracotta — indigo · slate dark, ice blue — sage · botanical light, forest green — hazard · soot dark, safety yellow — orchid · noir plum, orchid magenta — porcelain · porcelain light, ultraviolet — aurora · deep blue-teal night, ice signal</div>
         <div className="row" style={{ marginTop: 10, flexWrap: "wrap", gap: 6 }}>
-          {(["inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain", "aurora"] as const).map((t) => (
+          {(["nth", "inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain", "aurora"] as const).map((t) => (
             <button key={t} data-t={t} className={"theme-chip" + (prefs.theme === t ? " on primary" : "")} onClick={() => apply({ ...prefs, theme: t })}>
               <span className="tdot" aria-hidden="true"></span>
               {t}
@@ -77,8 +77,8 @@ export function SettingsPage() {
       </div>
 
       <div className="card">
-        <div className="card-title">Vendors</div>
-        <div className="muted">Hermes Agent · hermes-agent-self-evolution · official MCP servers. Wrapped over stdio. Never HTTP sidecars.</div>
+        <div className="card-title">Bundled runtime</div>
+        <div className="muted">MJ's own evolution service + official MCP servers. Launched over stdio. Never HTTP sidecars.</div>
       </div>
 
       <div className="card">

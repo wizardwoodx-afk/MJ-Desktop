@@ -29,27 +29,50 @@ export function registerPortAnchor(key: string | null, el: HTMLElement | null) {
 }
 
 /**
- * Sum `offsetLeft`/`offsetTop` up to (but excluding) the node card.
+ * Local (unscaled) position of a port anchor's centre within its node card.
  *
- * These are layout values, so they are unaffected by the canvas zoom transform — which is what we
- * want, because the wires layer is scaled by that same transform. Using getBoundingClientRect here
- * would bake the zoom in twice.
+ * 11.9 (bug fix): the old implementation walked `offsetTop` up the offsetParent chain and added
+ * `el.offsetHeight / 2`. That is wrong here because the anchor is absolutely positioned with
+ * `top: 50%; translateY(-50%)` — its layout-box top is not its visual centre, so every measured
+ * port drifted ~6px down (and the drift grew for each row below the first), which is exactly why
+ * wires detached from the ports the user could see.
+ *
+ * The truthful source is the rendered bounding box: (anchorRect − cardRect). Both are in the same
+ * (zoomed) screen space, so the difference is the *world* offset once divided by the canvas zoom.
+ * The wires layer and the node cards share the same transform, so the same unscaled offset applies
+ * to both — no double-scaling, no constant guesswork, and it stays correct however the card grows
+ * or the description wraps.
  */
 function offsetWithinCard(el: HTMLElement): { x: number; y: number } | null {
-  let x = 0;
-  let y = 0;
+  const card = offsetParentCard(el);
+  if (!card) return null;
+  const er = el.getBoundingClientRect();
+  const cr = card.getBoundingClientRect();
+  const zoom = canvasZoom(card);
+  return {
+    x: (er.left + er.width / 2 - cr.left) / zoom,
+    y: (er.top + er.height / 2 - cr.top) / zoom,
+  };
+}
+
+/** The nearest `.node-card` ancestor, or null. */
+function offsetParentCard(el: HTMLElement): HTMLElement | null {
   let cur: HTMLElement | null = el;
-  while (cur && !cur.classList.contains("node-card")) {
-    x += cur.offsetLeft;
-    y += cur.offsetTop;
-    const parent = cur.offsetParent as HTMLElement | null;
-    if (!parent || parent === cur) return null;
-    cur = parent;
+  while (cur) {
+    if (cur.classList.contains("node-card")) return cur;
+    cur = cur.parentElement;
   }
-  if (!cur) return null;
-  // The anchor is centred on the row via `top: 50%; translateY(-50%)`, so its layout box top is
-  // where it renders. Add half its own height to land on the visible centre of the dot.
-  return { x: x + el.offsetWidth / 2, y: y + el.offsetHeight / 2 };
+  return null;
+}
+
+/** The canvas zoom from the node's own layer transform (nodes and wires share it). */
+function canvasZoom(card: HTMLElement): number {
+  const layer = card.closest(".nodes-layer") as HTMLElement | null;
+  if (!layer) return 1;
+  const t = getComputedStyle(layer).transform;
+  if (!t || t === "none") return 1;
+  const m = t.match(/matrix\(([^)]+)\)/);
+  return m ? parseFloat(m[1].split(",")[0]) || 1 : 1;
 }
 
 /** Measure one port anchor. Returns null if it is not mounted yet. */

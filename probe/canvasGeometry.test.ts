@@ -82,79 +82,106 @@ console.log("\n== bug Y: the wheel must zoom, anchored at the cursor ==\n");
 console.log("\n== bug X: a wire must land on the port, whatever the card grew into ==\n");
 
 /**
- * Build the real offsetParent chain for one port anchor:
- *   .port-anchor (11x11) -> .port-row (h 19) -> .port-col -> .port-grid -> .node-card
+ * Build the real DOM tree for one port anchor, because 11.9 measures the anchor's RENDERED
+ * bounding box, not a walk of the offsetParent booleans. The chain is:
+ *   .port-anchor (12x12) -> .port-row (h 19) -> .port-col -> .port-grid -> .node-card
+ * and the card sits inside a .nodes-layer whose computed transform carries the canvas zoom.
+ *
  * `aboveGrid` stands in for everything that sits above the port grid and changes height:
  * the head, the wrapped purpose-preview, and the stream-preview when it appears.
+ *
+ * Each fake element implements the three things offsetWithinCard() actually reads:
+ *   parentElement          — so the walk finds the .node-card ancestor
+ *   classList.contains()   — so it recognises that ancestor with a node-card class
+ *   getBoundingClientRect()— the source of truth (anchor centre − card top-left)
+ * The .node-card's closest(".nodes-layer") returns the layer, and getComputedStyle on
+ * that layer reports a scale-N matrix as the canvas zoom.
  */
-function fakeAnchor(opts: { nodeId: string; dir: "in" | "out"; portId: string; index: number; aboveGrid: number; cardW?: number }) {
+const ZOOM = 1; // the layer transform is scale(1) in every assertion below
+
+// A single .nodes-layer shared by every fake card: closest(".nodes-layer") resolves here and
+// getComputedStyle(layer).transform reports the zoom.
+const layer = {
+  parentElement: null,
+  classList: { contains: () => false },
+  closest: (sel: string) => (sel === ".nodes-layer" ? layer : null),
+  getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0 }),
+} as unknown as HTMLElement;
+
+// getComputedStyle does not exist in a bare Node process; canvasZoom reads layer.transform.
+const origGetComputedStyle = (globalThis as { getComputedStyle?: typeof getComputedStyle }).getComputedStyle;
+(globalThis as any).getComputedStyle = (el: any) => {
+  const t = el === layer ? `matrix(${ZOOM},0,0,${ZOOM},0,0)` : "none";
+  return { transform: t } as unknown as CSSStyleDeclaration;
+};
+
+function box(x: number, y: number, w: number, h: number) {
+  return { left: x, top: y, right: x + w, bottom: y + h, width: w, height: h };
+}
+
+// A minimal element with the three capabilities the measurement reads.
+function makeEl(parent: HTMLElement | null, isCard = false): HTMLElement {
+  const e = {
+    parentElement: parent,
+    classList: { contains: (c: string) => (isCard ? c === "node-card" : false) },
+    getBoundingClientRect: () => box(0, 0, 0, 0),
+    closest: (sel: string) => (sel === ".nodes-layer" ? layer : null),
+    // offset* fields are retained so this keeps compiling as an HTMLElement, but they are
+    // deliberately NOT measured any more — boxes are the truth.
+    offsetLeft: 0, offsetTop: 0, offsetWidth: 0, offsetHeight: 0, offsetParent: null,
+  } as unknown as HTMLElement;
+  return e;
+}
+
+function fakeAnchor(opts: {
+  nodeId: string; dir: "in" | "out"; portId: string; index: number; aboveGrid: number;
+  cardLeft: number; cardTop: number; cardW?: number; cardH?: number;
+}) {
   const cardW = opts.cardW ?? NODE_W;
-  const rowTop = 5 + opts.index * 19; // .port-grid padding-top is 5px, rows are 19px
-  const card = {
-    classList: { contains: (c: string) => c === "node-card" },
-    offsetLeft: 0,
-    offsetTop: 0,
-    offsetWidth: cardW,
-    offsetHeight: 0,
-    offsetParent: null,
-  } as unknown as HTMLElement;
-  const grid = {
-    classList: { contains: () => false },
-    offsetLeft: 0,
-    offsetTop: opts.aboveGrid,
-    offsetWidth: cardW,
-    offsetHeight: 0,
-    offsetParent: card,
-  } as unknown as HTMLElement;
-  const col = {
-    classList: { contains: () => false },
-    offsetLeft: opts.dir === "in" ? 0 : cardW / 2 + 7,
-    offsetTop: 0,
-    offsetWidth: 0,
-    offsetHeight: 0,
-    offsetParent: grid,
-  } as unknown as HTMLElement;
-  const row = {
-    classList: { contains: () => false },
-    offsetLeft: 0,
-    offsetTop: rowTop,
-    offsetWidth: 0,
-    offsetHeight: 19,
-    offsetParent: col,
-  } as unknown as HTMLElement;
-  // The anchor is centred on its row: top 50% of a 19px row minus half its own 11px height.
-  const anchor = {
-    classList: { contains: () => false },
-    offsetLeft: opts.dir === "in" ? -6 : col.offsetWidth === 0 ? cardW / 2 - 7 - 11 + 6 : 0,
-    offsetTop: 4,
-    offsetWidth: 11,
-    offsetHeight: 11,
-    offsetParent: row,
-  } as unknown as HTMLElement;
-  // Output anchors hang off the right edge of the row's own box: the column is 117px wide
-  // (248 - 12*2 padding - 14 gap, split in two), the dot is 11px, and margin-right is -6px,
-  // so its left edge is 117 - 11 + 6 = 112 inside the column.
-  if (opts.dir === "out") {
-    (anchor as unknown as { offsetLeft: number }).offsetLeft = 112;
-  }
+  const cardH = opts.cardH ?? (opts.aboveGrid + 5 + opts.index * 19 + 26);
+  // Anchor centre relative to the CARD's top-left, in world pixels (zoom = 1 here).
+  // .port-grid has padding-top 5px, each .port-row is 19px, the anchor is 12px tall and
+  // vertically centred (top:50%, translateY(-50%)) => its centre is 5 + i*19 + 9.5 down.
+  const localY = opts.aboveGrid + 5 + opts.index * 19 + 9.5;
+  // Input anchors sit just inside the left edge; outputs just inside the right edge.
+  const localX = opts.dir === "in" ? -0.5 : cardW;
+
+  const card = makeEl(layer, true);
+  card.getBoundingClientRect = () => box(opts.cardLeft, opts.cardTop, cardW, cardH);
+  const grid = makeEl(card);
+  const col = makeEl(grid);
+  const row = makeEl(col);
+  const anchor = makeEl(row);
+  anchor.getBoundingClientRect = () => {
+    const cx = opts.cardLeft + localX;
+    const cy = opts.cardTop + localY;
+    return box(cx - 6, cy - 6, 12, 12);
+  };
   return anchor;
 }
 
 function metricsFor(n: NodeInstance, aboveGrid: number): Map<string, NodeMetrics> {
+  const cardW = NODE_W;
   const ports = new Map<string, { x: number; y: number }>();
+  const rows = Math.max(n.inputs.length, n.outputs.length);
+  const cardH = aboveGrid + 5 + rows * 19 + 7;
   n.inputs.forEach((p, i) => {
-    const el = fakeAnchor({ nodeId: n.id, dir: "in", portId: p.id, index: i, aboveGrid });
-    registerPortAnchor(`${n.id}:in:${p.id}`, el);
+    registerPortAnchor(`${n.id}:in:${p.id}`, fakeAnchor({
+      nodeId: n.id, dir: "in", portId: p.id, index: i, aboveGrid,
+      cardLeft: n.x, cardTop: n.y, cardW, cardH,
+    }));
     const m = measurePort(n.id, p.id, "in");
     if (m) ports.set(`in:${p.id}`, m);
   });
   n.outputs.forEach((p, i) => {
-    const el = fakeAnchor({ nodeId: n.id, dir: "out", portId: p.id, index: i, aboveGrid });
-    registerPortAnchor(`${n.id}:out:${p.id}`, el);
+    registerPortAnchor(`${n.id}:out:${p.id}`, fakeAnchor({
+      nodeId: n.id, dir: "out", portId: p.id, index: i, aboveGrid,
+      cardLeft: n.x, cardTop: n.y, cardW, cardH,
+    }));
     const m = measurePort(n.id, p.id, "out");
     if (m) ports.set(`out:${p.id}`, m);
   });
-  return new Map([[n.id, { ports, h: aboveGrid + 5 + Math.max(n.inputs.length, n.outputs.length) * 19 + 7 }]]);
+  return new Map([[n.id, { ports, h: cardH }]]);
 }
 
 const a = node("coder", [port("brief"), port("context")], [port("code"), port("notes")]);
@@ -204,7 +231,7 @@ const a = node("coder", [port("brief"), port("context")], [port("code"), port("n
   // No metrics yet (first paint) must still produce a sane position, never NaN.
   const p = portPos(a, "brief", "in");
   ok(Number.isFinite(p.x) && Number.isFinite(p.y), "the pre-mount fallback must be finite");
-  near(p.y, 300 + 96, "the fallback keeps the historical approximation");
+  near(p.y, 300 + 94, "the fallback tracks the measured first-port offset (~94px between the card top and the first port row)");
   const ghost = portPos(a, "does-not-exist", "in");
   ok(Number.isFinite(ghost.y), "an unknown port must not produce NaN");
 }

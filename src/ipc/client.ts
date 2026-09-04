@@ -278,7 +278,7 @@ export const ipc = {
       controlMcpRunning: true,
       startupMs: 0,
       host: "webview-host",
-      vendors: ["hermes-agent", "hermes-agent-self-evolution", "mcp-servers-reference", "mcp-github"],
+      vendors: ["mcp-servers-reference", "mcp-github"],
     };
   },
   dbMaintenance: async (vacuum: boolean) => {

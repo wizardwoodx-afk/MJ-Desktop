@@ -1,10 +1,10 @@
-MJ 11.8.5 — offline verification pack provenance
+MJ 11.9.0 — offline verification pack provenance
 =================================================
 
 Toolchain
-  node          v24.18.0 / v20.20.2
+  node          v20.20.2
   esbuild       0.25.12
-  MJ            11.8.5 (package.json + package-lock.json / version.ts /
+  MJ            11.9.0 (package.json + package-lock.json / version.ts /
                 tauri.conf.json / Cargo.toml / Cargo.lock / LICENSE)
 
 The pack
@@ -17,23 +17,23 @@ The pack
 Gates run on this tree (fresh npm ci)
   tsc --noEmit          exit 0
   npm test              ALL PROBES SUMMARY: 40 passed, 0 failed.
-                          suite #39 harnesses  270 assertions (incl. §10
-                            registry<->policy turn-flag iff-agreement)
-                          suite #40 offlinePack 15 (byte-identity + manifest hash
-                            + executability)
-                          checkRunner 45 · sandbox 26 · meridian 43 · theme 44
-                          canvasGeometry 82 · agentsMd 19
+                          harnesses 270 · canvasGeometry 82 · checkRunner 45 ·
+                          theme 44 · meridian 43 · sandbox 26 · offlinePack 18
   vite build            exit 0
 
 Offline gate
   Command:     node verify/run.mjs
   Result:      OFFLINE VERIFY SUMMARY: 39 passed, 0 failed., exit 0
 
-  This pack was rebuilt from the 11.8.5 source immediately before the run above,
-  and suite #40 confirms every bundle is byte-identical to a fresh rebuild. That
-  matters: the 11.8.1 pack reported 39/39 while its bundles had been built from
-  pre-regression source. A green offline gate means nothing unless #40 is green
-  too — the two numbers are only honest read together.
+  This pack was rebuilt from the 11.9.0 source immediately before the run above,
+  and suite #40 (offlinePack) confirms every bundle is byte-identical to a fresh
+  rebuild. That matters: an earlier pack reported 39/39 while its bundles had been
+  built from pre-regression source. A green offline gate means nothing unless the
+  freshness gate is green too — the two numbers are only honest read together.
+
+  NOTE (11.9.0 release review): an earlier archive shipped this verify/ directory
+  without its bundles, so `node verify/run.mjs` reported a vacuous "0 passed".
+  This pack is regenerated from the 11.9.0 source and includes all 39 bundles.
 
 What this pack does NOT prove
   - It does not compile the Rust crate. No cargo toolchain was available in the
@@ -44,25 +44,16 @@ What this pack does NOT prove
     why this pack exists — the runtime gate does not.
 
 Manual mutation checks / probe inversions carried forward (each fails when flipped, green when reverted)
-  1. HARNESSES.length === 25 -> 26            suite #39: 239/1, count check named
-  2. one tampered byte in a bundle            suite #40: 13/2, the bundle named
-  3. claude registry maxTurns argv -> null    suite #39: 268/2 (docs-grade restoration
+  1. HARNESSES.length pumped up              suite #39: count check named
+  2. one tampered byte in a bundle            suite #40: the bundle named
+  3. claude registry maxTurns argv -> null    suite #39 (docs-grade restoration
                                               + before-the-prompt composition)
   4. WRAPPER_UNAVAILABLE reverted to ENOENT-only
-                                              sandbox probe: 21 passed, 5 failed
+                                              sandbox probe: fails
   5. testRunCheck verdict restored to the any-match regex
-                                              checkRunner probe: 41 passed, 4 failed
-  6. CI RUNNER CURRENCY (11.8.5): x86_64 macOS build re-pinned to the retired
-     macos-13 label (a debugging pass put it back deliberately).
-                                              versionDrift probe: 21 passed, 1 failed —
-                                                "no workflow targets a retired runner
-                                                 (5 banned labels) — release.yml ->
-                                                 macos-13". Revert -> 22/0. Proves §5
-                                                catches a pipeline GitHub would refuse
-                                                to start, which no other suite can see.
-  7. STALE RELEASE NOTES (11.8.5): releaseBody pointed back at MJ-11.0-UPGRADE.md.
-                                              versionDrift probe: 21 passed, 1 failed —
-                                                "releaseBody names docs/history/MJ-11.8-UPGRADE.md —
-                                                 the release notes link to the wrong
-                                                 version". Revert -> 22/0.
-
+                                              checkRunner probe: fails
+  6. CI RUNNER CURRENCY: x86_64 macOS build re-pinned to the retired
+     macos-13 label.                         versionDrift probe fails — releases
+     targeting a runner GitHub refuses to start are caught.
+  7. STALE RELEASE NOTES: releaseBody pointed back at an older MJ-11.x-UPGRADE.md.
+                                              versionDrift probe fails.
