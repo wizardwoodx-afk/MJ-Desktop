@@ -75,7 +75,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "MJ ${{ github.ref_name }}"
-          releaseBody: "Signed installers for Windows, macOS (arm64 + x86_64) and Linux. The in-app updater verifies the minisign signature of every artifact. See MJ-11.8-UPGRADE.md for what is proven and what is not."
+          releaseBody: "Signed installers for Windows, macOS (arm64 + x86_64) and Linux. The in-app updater verifies the minisign signature of every artifact. See docs/history/MJ-11.8-UPGRADE.md for what is proven and what is not."
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

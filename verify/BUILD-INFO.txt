@@ -2,7 +2,7 @@ MJ 11.8.5 — offline verification pack provenance
 =================================================
 
 Toolchain
-  node          v20.20.2 (linux x64)
+  node          v24.18.0 / v20.20.2
   esbuild       0.25.12
   MJ            11.8.5 (package.json + package-lock.json / version.ts /
                 tauri.conf.json / Cargo.toml / Cargo.lock / LICENSE)
@@ -27,7 +27,7 @@ Gates run on this tree (fresh npm ci)
 
 Offline gate
   Command:     node verify/run.mjs
-  Result:      OFFLINE VERIFY SUMMARY: 39 passed, 0 failed. (node v20.20.2), exit 0
+  Result:      OFFLINE VERIFY SUMMARY: 39 passed, 0 failed., exit 0
 
   This pack was rebuilt from the 11.8.5 source immediately before the run above,
   and suite #40 confirms every bundle is byte-identical to a fresh rebuild. That
@@ -43,7 +43,7 @@ What this pack does NOT prove
     need devDependencies (React types, the Tauri API surface), which is exactly
     why this pack exists — the runtime gate does not.
 
-Mutation tests carried forward from 11.8.1 (each fails when flipped, green when reverted)
+Manual mutation checks / probe inversions carried forward (each fails when flipped, green when reverted)
   1. HARNESSES.length === 25 -> 26            suite #39: 239/1, count check named
   2. one tampered byte in a bundle            suite #40: 13/2, the bundle named
   3. claude registry maxTurns argv -> null    suite #39: 268/2 (docs-grade restoration
@@ -62,6 +62,7 @@ Mutation tests carried forward from 11.8.1 (each fails when flipped, green when 
                                                 to start, which no other suite can see.
   7. STALE RELEASE NOTES (11.8.5): releaseBody pointed back at MJ-11.0-UPGRADE.md.
                                               versionDrift probe: 21 passed, 1 failed —
-                                                "releaseBody names MJ-11.8-UPGRADE.md —
+                                                "releaseBody names docs/history/MJ-11.8-UPGRADE.md —
                                                  the release notes link to the wrong
                                                  version". Revert -> 22/0.
+
