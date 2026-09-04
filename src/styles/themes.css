@@ -56,6 +56,7 @@
   --font-ui: "Inter", "Space Grotesk", system-ui, sans-serif;
   --font-mono: "Space Mono", "JetBrains Mono", ui-monospace, monospace;
   --font-doto: "Doto", "Space Mono", ui-monospace, monospace;
+  --font-serif: "Georgia", "Iowan Old Style", "Palatino", ui-serif, "Times New Roman", serif;
 
   /* Shape: technical, never pill. */
   --r-sm: 0px;
@@ -132,72 +133,74 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   NTH — MJ's flagship palette. 5 rare colors, zero brown.
-   void (#05060b) · ink (#f2f5fb) · ash (#828d9f) · volt (#7c5cff) · plasma (#2be6d6)
-   A cold obsidian ground, a single electro-violet accent, and a plasma-mint "alive"
-   pulse for anything running. One functional signal-red reserved for errors only.
+   NTH — MJ's flagship palette, re-cut in the FOUNDRY identity (v3 color atlas).
+   Five cold-but-warm rare tones, zero neon: carbon (#0e0f0e) · slate (#161814)
+   · paper (#f3eee3) · brass (#b8a17b) · verdigris (#5f8a74).
+   A charcoal-green "foundry" ground, warm cream paper ink, and a single brass
+   accent that reads like an engraved instrument plate. Verdigris is the "alive"
+   pulse for anything running; a functional oxide is reserved for errors only.
    ───────────────────────────────────────────────────────────────────────────── */
 [data-theme="nth"] {
   /* ground */
-  --bg: #05060b;
-  --bg-elevated: #0c0e15;
-  --bg-panel: #070810;
-  --bg-input: #0b0d15;
-  --border: #1b2030;
-  --border-strong: #2c3346;
-  --text: #f2f5fb;
-  --text-dim: #929cb0;
-  --text-mute: #5c6577;
-  --text-4: #333b4d;
-  /* signature: volt (electro-violet) */
-  --amber: #7c5cff;
-  --amber-dim: rgba(124, 92, 255, 0.10);
-  --amber-hot: #9b7fff;
+  --bg: #0e0f0e;
+  --bg-elevated: #161814;
+  --bg-panel: #12130f;
+  --bg-input: #131410;
+  --border: #2b2d25;
+  --border-strong: #3d3f33;
+  --text: #f3eee3;
+  --text-dim: #c9c1b4;
+  --text-mute: #918b82;
+  --text-4: #66645d;
+  /* signature: brass */
+  --amber: #b8a17b;
+  --amber-dim: rgba(184, 161, 123, 0.10);
+  --amber-hot: #d8c4a0;
   /* functional errors only — never a brand color */
-  --danger: #ff3d6e;
-  --danger-dim: rgba(255, 61, 110, 0.20);
-  /* alive pulse: plasma-mint */
-  --ok: #2be6d6;
-  --nk-black: #05060b;
-  --nk-surface: #0c0e15;
-  --nk-surface-2: #10121b;
-  --nk-surface-3: #161927;
-  --nk-input: #0b0d15;
-  --nk-border: #2c3346;
-  --nk-border-strong: #3d475e;
-  --nk-hairline: #1b2030;
-  --white: #f2f5fb;
-  --text-1: #f2f5fb;
-  --text-2: #929cb0;
-  --text-3: #5c6577;
-  --red: #ff3d6e;
-  --red-dim: rgba(255, 61, 110, 0.14);
-  --silver: #929cb0;
-  --silver-dim: rgba(146, 156, 176, 0.2);
-  --success: #2be6d6;
-  --error: #ff3d6e;
-  --row-hover: #131524;
-  --accent: #7c5cff;
-  --accent-hot: #9b7fff;
-  --accent-contrast: #05060b;
-  --accent-dim: rgba(124, 92, 255, 0.10);
-  --dot-1: rgba(242, 245, 251, 0.05);
-  --dot-2: rgba(124, 92, 255, 0.14);
-  --wire: rgba(242, 245, 251, 0.30);
-  --wire-active: #7c5cff;
-  --wire-hot: #9b7fff;
-  --wire-done: rgba(43, 230, 214, 0.55);
-  --glyph-off: #161927;
-  --glyph-on: #7c5cff;
-  --menu-hover: #161927;
-  --seg-off: #161927;
-  --overlay: rgba(5, 6, 11, 0.82);
-  --sel-bg: #7c5cff;
-  --sel-fg: #05060b;
-  --scroll-thumb: #232a3c;
-  --scroll-thumb-hover: #3d475e;
-  --port-edge: #929cb0;
-  --inset: #161927;
+  --danger: #c0563f;
+  --danger-dim: rgba(192, 86, 63, 0.20);
+  /* alive pulse: verdigris */
+  --ok: #7ba58e;
+  --nk-black: #0e0f0e;
+  --nk-surface: #161814;
+  --nk-surface-2: #191b16;
+  --nk-surface-3: #21231c;
+  --nk-input: #131410;
+  --nk-border: #3d3f33;
+  --nk-border-strong: #55584a;
+  --nk-hairline: #2b2d25;
+  --white: #f3eee3;
+  --text-1: #f3eee3;
+  --text-2: #c9c1b4;
+  --text-3: #918b82;
+  --red: #c0563f;
+  --red-dim: rgba(192, 86, 63, 0.14);
+  --silver: #c9c1b4;
+  --silver-dim: rgba(201, 193, 180, 0.2);
+  --success: #7ba58e;
+  --error: #c0563f;
+  --row-hover: #1c1e17;
+  --accent: #b8a17b;
+  --accent-hot: #d8c4a0;
+  --accent-contrast: #0e0f0e;
+  --accent-dim: rgba(184, 161, 123, 0.10);
+  --dot-1: rgba(243, 238, 227, 0.05);
+  --dot-2: rgba(184, 161, 123, 0.14);
+  --wire: rgba(243, 238, 227, 0.30);
+  --wire-active: #b8a17b;
+  --wire-hot: #d8c4a0;
+  --wire-done: rgba(123, 165, 142, 0.55);
+  --glyph-off: #21231c;
+  --glyph-on: #b8a17b;
+  --menu-hover: #21231c;
+  --seg-off: #21231c;
+  --overlay: rgba(14, 15, 14, 0.82);
+  --sel-bg: #b8a17b;
+  --sel-fg: #0e0f0e;
+  --scroll-thumb: #3a3c33;
+  --scroll-thumb-hover: #55584a;
+  --port-edge: #c9c1b4;
+  --inset: #21231c;
 }
 
 /* chalk — the same system in light: a printed technical manual. */

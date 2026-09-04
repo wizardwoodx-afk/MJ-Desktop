@@ -52,14 +52,14 @@ const inspector = read("src/panels/Inspector.tsx");
 const storeSrc = read("src/graph/store.ts");
 
 /* ── 1. the Meridian icon grammar ─────────────────────────────────────────── */
-section("1. the Meridian icon grammar — 1.6 strokes, junction ink dots");
+section("1. the FOUNDRY icon grammar — 1.9 engraved strokes, brass facet chips");
 
 const caseCount = (icons.match(/case "/g) ?? []).length;
-const dotCount = (icons.match(/dot\(/g) ?? []).length;
+const facetCount = (icons.match(/facet\(/g) ?? []).length;
 ok(`every glyph is redrawn on the grammar (${caseCount} cases)`, caseCount >= 42, `${caseCount} cases`);
-ok(`the ink dot helper exists and is used everywhere (${dotCount} dots)`, dotCount >= 40, `${dotCount} dots`);
-ok("the junction dot is a filled theme-accent LED (NTH grammar)", icons.includes('r="1.9" fill="var(--accent)" stroke="none"'), "no dot grammar");
-ok("strokes slimmed to the Meridian 1.6 weight", /strokeWidth: 1\.6/.test(icons), "still 1.7");
+ok(`the facet chip helper exists and is used everywhere (${facetCount} facets)`, facetCount >= 40, `${facetCount} facets`);
+ok("the facet chip is a filled theme-accent square (FOUNDRY grammar)", icons.includes('fill="var(--accent)" stroke="none"'), "no facet grammar");
+ok("strokes cut to the FOUNDRY 1.9 engraved weight", /strokeWidth: 1\.9/.test(icons), "weight changed");
 ok("the 24-grid viewBox survives", /viewBox: "0 0 24 24"/.test(icons), "viewBox changed");
 ok("round caps keep the hand-set feel", /strokeLinecap: "round" as const/.test(icons), "caps changed");
 ok("iconFor stays the single export the app calls", /export function iconFor/.test(icons), "export changed");

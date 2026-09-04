@@ -72,7 +72,7 @@ More in `docs/VERIFICATION.md` and `verify/BUILD-INFO.txt`.
 
 ### History
 
-5.0 → 11.9.2 over about a year. Biggest fixes: vacuous gate (args reversed), turn-flag drift, wrapper `EACCES` mis-classified as enforced, browser `require('fs')` that broke in ESM, shipping the vendored engines, then typing the whole Rust↔TS boundary and killing every `as never` in `src/`. 11.9 then de-vendored the Hermes agent engines, shipped the minimal/unique **NTH** theme (obsidian ground, electro-violet volt, plasma pulse — no gimmicky motion), and fixed the four canvas integrity bugs the review found: wires now land on their port anchors via rendered bounding-box measurement, overlapping cards own their stacking contexts, ports are inset into the card edge, and agent cards are a consistent `264px`.
+5.0 → 11.9.4 over about a year. Biggest fixes: vacuous gate (args reversed), turn-flag drift, wrapper `EACCES` mis-classified as enforced, browser `require('fs')` that broke in ESM, shipping the vendored engines, then typing the whole Rust↔TS boundary and killing every `as never` in `src/`. 11.9 then de-vendored the Hermes agent engines, shipped the minimal/unique **NTH** theme (obsidian ground, electro-violet volt, plasma pulse — no gimmicky motion), 11.9.4 re-cut it on the v3 atlas **FOUNDRY** identity (carbon ground, cream ink, brass accent — frontend-only), and fixed the four canvas integrity bugs the review found: wires now land on their port anchors via rendered bounding-box measurement, overlapping cards own their stacking contexts, ports are inset into the card edge, and agent cards are a consistent `264px`.
 
 Short version in `CHANGELOG.md`, full notes in `docs/history/`.
 

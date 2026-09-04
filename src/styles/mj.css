@@ -1,66 +1,67 @@
 @import "./fonts.css";
 @import "./themes.css";
 
-:root {
-  /* V11.3 — the fallback palette IS Inscribed (OLED black, white data, signal red #D71921),
-     so the pre-theme boot flash no longer shows the retired amber heritage scheme.
-     Theme blocks in themes.css override every token below; var names are kept (--amber
-     now means "the one accent signal") because the component layer reads them. */
-  --bg: #000000;
-  --bg-elevated: #0d0d0d;
-  --bg-panel: #050505;
-  --bg-input: #0a0a0a;
-  --border: #1f1f1f;
-  --border-strong: #343434;
-  --text: #f1f1f1;
-  --text-dim: #9a9a9a;
-  --text-mute: #6b6b6b;
-  --amber: #d71921;
-  --amber-dim: rgba(215, 25, 33, 0.14);
-  --amber-hot: #ff2d36;
-  --danger: #ff2d36;
-  --danger-dim: rgba(255, 45, 54, 0.22);
-  --ok: #f1f1f1;
+:where(:root) {
+  /* V11.3 / FOUNDRY recut — the fallback palette IS the flagship (carbon ground,
+     warm cream ink, brass accent), so the pre-theme boot flash never shows a
+     stale scheme. Theme blocks in themes.css override every token below; var
+     names are kept (--amber now means "the one accent signal") because the
+     component layer reads them. */
+  --bg: #0e0f0e;
+  --bg-elevated: #161814;
+  --bg-panel: #12130f;
+  --bg-input: #131410;
+  --border: #2b2d25;
+  --border-strong: #3d3f33;
+  --text: #f3eee3;
+  --text-dim: #c9c1b4;
+  --text-mute: #918b82;
+  --amber: #b8a17b;
+  --amber-dim: rgba(184, 161, 123, 0.10);
+  --amber-hot: #d8c4a0;
+  --danger: #c0563f;
+  --danger-dim: rgba(192, 86, 63, 0.20);
+  --ok: #7ba58e;
 
   --nk-black: var(--bg);
   --nk-surface: var(--bg-elevated);
-  --nk-surface-2: #141414;
-  --nk-surface-3: #1b1b1d;
+  --nk-surface-2: #191b16;
+  --nk-surface-3: #21231c;
   --nk-input: var(--bg-input);
   --nk-border: var(--border-strong);
-  --nk-border-strong: #4a4a4a;
+  --nk-border-strong: #55584a;
   --nk-hairline: var(--border);
   --white: var(--text);
   --text-1: var(--text);
   --text-2: var(--text-dim);
   --text-3: var(--text-mute);
-  --text-4: #3d3d3d;
-  --red: #d71921;
-  --red-dim: rgba(215, 25, 33, 0.14);
-  --silver: #9a9a9a;
-  --silver-dim: rgba(154, 154, 154, 0.2);
-  --success: #f1f1f1;
-  --error: #ff2d36;
+  --text-4: #66645d;
+  --red: #c0563f;
+  --red-dim: rgba(192, 86, 63, 0.14);
+  --silver: #c9c1b4;
+  --silver-dim: rgba(201, 193, 180, 0.2);
+  --success: #7ba58e;
+  --error: #c0563f;
 
-  --accent: #d71921;
-  --accent-hot: #ff2d36;
-  --accent-contrast: #ffffff;
-  --accent-dim: rgba(215, 25, 33, 0.14);
-  --sel-bg: #d71921;
-  --sel-fg: #ffffff;
-  --scroll-thumb: #2c2c2c;
-  --scroll-thumb-hover: #d71921;
-  --glyph-off: #1b1b1d;
-  --glyph-on: #d71921;
-  --seg-off: #1b1b1d;
-  --inset: #1b1b1d;
-  --dot-1: rgba(241, 241, 241, 0.05);
-  --dot-2: rgba(215, 25, 33, 0.1);
-  --wire: rgba(241, 241, 241, 0.32);
-  --wire-active: #d71921;
-  --wire-hot: #ff2d36;
-  --wire-done: rgba(241, 241, 241, 0.55);
-  --port-edge: #9a9a9a;
+  --accent: #b8a17b;
+  --accent-hot: #d8c4a0;
+  --accent-contrast: #0e0f0e;
+  --accent-dim: rgba(184, 161, 123, 0.10);
+  --sel-bg: #b8a17b;
+  --sel-fg: #0e0f0e;
+  --scroll-thumb: #3a3c33;
+  --scroll-thumb-hover: #55584a;
+  --glyph-off: #21231c;
+  --glyph-on: #b8a17b;
+  --seg-off: #21231c;
+  --inset: #21231c;
+  --dot-1: rgba(243, 238, 227, 0.05);
+  --dot-2: rgba(184, 161, 123, 0.14);
+  --wire: rgba(243, 238, 227, 0.32);
+  --wire-active: #b8a17b;
+  --wire-hot: #d8c4a0;
+  --wire-done: rgba(123, 165, 142, 0.55);
+  --port-edge: #c9c1b4;
 
   /* V11.3 type: Inter is the clean body sans; Space Mono the instrument voice;
      Doto the dot-matrix display face. All three are really @font-face-declared
@@ -274,11 +275,18 @@ label.field {
 }
 .rail button {
   width: 34px; height: 34px; padding: 0; border: none; border-radius: 3px;
-  color: var(--text-mute); display: grid; place-items: center;
+  color: var(--text-mute); display: grid; place-items: center; position: relative;
 }
 .rail button:hover { color: var(--text); background: var(--bg-elevated); }
-.rail button.active { color: var(--amber); background: var(--bg-elevated); }
-.rail button.active svg { color: var(--amber); }
+.rail button.active {
+  color: var(--accent); background: var(--bg-elevated);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.rail button.active::after {
+  content: ""; width: 5px; height: 5px; background: var(--accent);
+  position: absolute; right: 5px; top: 8px; opacity: 0.9;
+}
+.rail button.active svg { color: var(--accent); }
 .rail .spacer { flex: 1; }
 
 .main {
@@ -497,7 +505,7 @@ label.field {
 .ev-data { color: var(--text-mute); }
 
 .panel-page { flex: 1; overflow-y: auto; padding: 28px 32px; }
-.panel-page h2 { font-family: var(--font-ui); font-weight: 600; font-size: 20px; letter-spacing: 0.04em; text-transform: none; margin: 0 0 4px; }
+.panel-page h2 { font-family: var(--font-serif); font-weight: 400; font-size: 26px; letter-spacing: -0.015em; text-transform: none; margin: 0 0 4px; line-height: 1.05; }
 .panel-page .sub { color: var(--text-mute); font-family: var(--font-mono); font-size: 11px; margin-bottom: 20px; line-height: 1.6; }
 .card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px; margin-bottom: 10px; box-shadow: none; }
 .card .card-title { font-family: var(--font-ui); font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
@@ -513,7 +521,7 @@ label.field {
 
 .home { padding: 36px 40px; overflow-y: auto; flex: 1; }
 .home-hero { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px; gap: 24px; }
-.home-hero h1 { font-family: var(--font-doto); font-size: 36px; letter-spacing: 0.12em; margin: 0; font-weight: 600; }
+.home-hero h1 { font-family: var(--font-serif); font-size: 44px; letter-spacing: -0.02em; margin: 0; font-weight: 400; line-height: 1; }
 .home-hero h1 span { color: var(--amber); }
 .home-hero p { color: var(--text-mute); max-width: 520px; line-height: 1.6; margin: 8px 0 0; }
 .nl-box { display: flex; gap: 8px; margin: 8px 0 28px; }

@@ -55,7 +55,7 @@ export function SettingsPage() {
 
       <div className="card">
         <div className="card-title">Appearance</div>
-        <div className="muted">One Inscribed design system, eleven palettes — monochrome canvas, one accent signal, dot-matrix display type. nth · obsidian ground, electro-violet volt + plasma pulse (default) — inscribed · Nothing OS dark, signal red — chalk · the system on paper — carbon · industrial, phosphor green — bone · parchment, terracotta — indigo · slate dark, ice blue — sage · botanical light, forest green — hazard · soot dark, safety yellow — orchid · noir plum, orchid magenta — porcelain · porcelain light, ultraviolet — aurora · deep blue-teal night, ice signal</div>
+        <div className="muted">One Inscribed design system, eleven palettes — monochrome canvas, one accent signal, dot-matrix display type. nth · carbon ground, cream ink, brass accent + verdigris pulse (default) — inscribed · Nothing OS dark, signal red — chalk · the system on paper — carbon · industrial, phosphor green — bone · parchment, terracotta — indigo · slate dark, ice blue — sage · botanical light, forest green — hazard · soot dark, safety yellow — orchid · noir plum, orchid magenta — porcelain · porcelain light, ultraviolet — aurora · deep blue-teal night, ice signal</div>
         <div className="row" style={{ marginTop: 10, flexWrap: "wrap", gap: 6 }}>
           {(["nth", "inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain", "aurora"] as const).map((t) => (
             <button key={t} data-t={t} className={"theme-chip" + (prefs.theme === t ? " on primary" : "")} onClick={() => apply({ ...prefs, theme: t })}>

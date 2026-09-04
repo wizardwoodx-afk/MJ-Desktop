@@ -1,4 +1,4 @@
-# Deep debug pass — MJ 11.9.2
+# Deep debug pass — MJ 11.9.4
 
 Method: cloned fresh, booted the app for real (jsdom + `react-dom/client`, not SSR — so effects,
 the async bootstrap and the lazy pages all execute), walked every page, then audited the type
@@ -83,7 +83,7 @@ instead of the missing capability. Added `child_process.ts` (every spawn/exec th
 
 ## Reported — all three now fixed
 
-These were open when this report was written. They are closed in the current 11.9.2 tree
+These were open when this report was written. They are closed in the current 11.9.4 tree
 (the typed `MjCommands` registry + `McpServerSaveInput` + typed `workflowGet`):
 
 - **72 of 85 `tauriInvoke` calls inferring `unknown`** — replaced by a single typed command
@@ -141,7 +141,7 @@ Now closed. `mcpServerSave` takes a `McpServerSaveInput` whose shape documents t
 contract (Rust lifts top-level `command`/`args`/`enabled`/`pinned` into `config`), so a nameless
 persist no longer type-checks.
 
-> `as never` audit (11.9.2): the only remaining `as never`-like strings in `src/` are ordinary
+> `as never` audit (11.9.4): the only remaining `as never`-like strings in `src/` are ordinary
 > English comments (e.g. "was never executed", "never independently evaluated"); there are **no**
 > `as never` type casts left. `tsc --noEmit` confirms the compiler genuinely checks the surface.
 
@@ -159,7 +159,7 @@ persist no longer type-checks.
 ## Suggested next steps, in order
 
 1. ~~Type the remaining 72 `tauriInvoke` calls and delete the surviving `as never`~~ — **closed** in
-11.9.2 via the typed `MjCommands` registry. Kept here only to acknowledge the follow-up was done.
+11.9.4 via the typed `MjCommands` registry. Kept here only to acknowledge the follow-up was done.
 2. Add a lint rule banning `as never` — it is a stronger `any`, and it was what let #1 hide. Still
    open; a lint enforcement is the belt-and-braces layer over a registry that already makes it a
    compile error to use a bad command name.
