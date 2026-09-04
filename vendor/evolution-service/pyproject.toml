@@ -10,15 +10,17 @@ requires-python = ">=3.10"
 dependencies = [
     # Pinned production optimization infrastructure (no floating versions).
     "dspy==2.5.43",
-    "dspy-gepa==0.1.4",
+    "gepa==0.1.4",
     "pydantic==2.9.2",
     "httpx==0.27.2",
 ]
 
 [project.optional-dependencies]
 server = [
-    "fastapi==0.115.5",
-    "uvicorn==0.32.1",
+    # Held to litellm's ranges: dspy==2.5.43 pins litellm[proxy]==1.53.7, whose
+    # proxy extra requires fastapi>=0.111.0,<0.112.0 and uvicorn>=0.22.0,<0.23.0.
+    "fastapi>=0.111.0,<0.112.0",
+    "uvicorn>=0.22.0,<0.23.0",
 ]
 
 [tool.setuptools]

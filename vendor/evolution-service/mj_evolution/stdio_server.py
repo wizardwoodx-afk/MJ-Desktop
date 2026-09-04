@@ -24,9 +24,9 @@ Request  ``{"cmd": "propose", "current": str, "kind": str, "trigger": str,
 Response ``{"ok": true, "candidate": {...}}`` or ``{"ok": false, "error": str}``
 
 `score_fitness` deliberately degrades to a pure-Python mirror of the TypeScript
-`scoreFitness` in `src/domain/evolutionEngine.ts` when DSPy is not installed, so the
-gate arithmetic stays identical whether or not the optional optimiser is present. It
-never invents a candidate score for the caller to trust as measured.
+`scoreFitness` in `src/domain/evolutionEngine.ts` when the optional optimiser is not
+installed, so the gate arithmetic stays identical whether or not the optimiser is
+present. It never invents a candidate score for the caller to trust as measured.
 """
 
 from __future__ import annotations
@@ -108,9 +108,11 @@ def handle(msg: dict[str, Any]) -> dict[str, Any]:
 
         try:
             from .evolve import MJEvolver  # noqa: F401
-            import dspy  # noqa: F401
-            from dspy_gepa import GEPA  # noqa: F401
+            import gepa  # noqa: F401
+            import litellm  # noqa: F401  # LLM backend gepa uses to run the task/reflection LMs
 
+            if not callable(getattr(gepa, "optimize", None)):
+                raise ImportError("gepa.optimize() is unavailable (unsupported gepa version)")
             available, reason = True, None
         except Exception as exc:  # pragma: no cover - depends on optional deps
             available, reason = False, str(exc)
