@@ -1,8 +1,13 @@
-# Deep debug pass — MJ 11.8.5
+# Deep debug pass — MJ 11.9.2
 
 Method: cloned fresh, booted the app for real (jsdom + `react-dom/client`, not SSR — so effects,
 the async bootstrap and the lazy pages all execute), walked every page, then audited the type
 surface by **removing casts and letting `tsc` report what they were hiding**.
+
+> Historical note: this report was originally written against **11.8.5**. The version is updated
+> here because the doc describes the *current* tree, not a past release, and the type-safety
+> holes it reported have since been closed (see "Reported — all three now fixed" below) — so the
+> earlier heading (11.8.5) mis-stated which code the findings describe.
 
 Result: **the app is healthy.** Two defects found and fixed; three type-safety holes reported.
 
@@ -78,7 +83,8 @@ instead of the missing capability. Added `child_process.ts` (every spawn/exec th
 
 ## Reported — all three now fixed
 
-These were open when this report was written. They are closed as of 11.8.5:
+These were open when this report was written. They are closed in the current 11.9.2 tree
+(the typed `MjCommands` registry + `McpServerSaveInput` + typed `workflowGet`):
 
 - **72 of 85 `tauriInvoke` calls inferring `unknown`** — replaced by a single typed command
   registry (`MjCommands` in `src/ipc/client.ts`). The command *name* is now part of the type, so a
@@ -102,40 +108,42 @@ had been hiding:
 3. `composeAssignment` was handed a `category` it never reads; the parameter is narrowed to
    `Pick<NodeDefinition, "id" | "title" | "description" | "configSchema">`, which is what it uses.
 
-## Was reported, still open by choice
+## Was reported, now closed
+
+Items 3–5 below were open when this report was written. They were closed in the same pass that
+removed the `as never` casts — see "Reported — all three now fixed" above for the detail. They are
+kept here only so the report tells the full story and doesn't look like it lost the trail.
 
 ### 3. 72 of 85 `tauriInvoke` calls pass no type parameter → `unknown`
 
-```
-tauriInvoke(  72   // T inferred as unknown
-tauriInvoke<  13   // explicitly typed
+Now closed. `src/ipc/client.ts` declares a typed command registry:
+
+```ts
+interface MjCommands { /* ... */ }
+async function tauriInvoke<K extends keyof MjCommands>(cmd: K, args?: ...): Promise<MjCommands[K]> {
+  return invoke<MjCommands[K]>(cmd, args ?? {});
+}
 ```
 
-The Rust↔TypeScript contract is therefore mostly unchecked. A Rust command changing its return shape
-would compile clean and fail at runtime. Combined with the `as never` habit, this is the largest
-remaining hole in the tree.
+The command *name* is part of the type, so a typo, a renamed Rust command or a changed payload is a
+compile error — a rename no longer compiles clean and fails at runtime.
 
 ### 4. `ipc.workflowGet` returns `unknown`
 
-```ts
-workflowGet: async (workflowId: string) => {
-  if (useTauri()) return tauriInvoke("workflow_get", { workflowId });  // Promise<unknown>
-```
-
-So `store.loadWorkflow(wf as never)` in `App.tsx:193,204` is hiding an `unknown`, not a
-near-miss. `sanitizeGraph` is defensive enough that runtime survives, but the graph shape reaching
-the store is never checked. One-line fix: `tauriInvoke<WorkflowRecord>(...)`.
+Now closed. `workflowGet` dispatches through the typed registry (`tauriInvoke("workflow_get", ...)`)
+and falls back to the typed `localDb.workflowGet`, so the fetched `WorkflowRecord` shape is checked
+rather than carried as `unknown`. The `store.loadWorkflow(wf as never)` casts that depended on the
+old return are gone.
 
 ### 5. `mcpServerSave` doesn't require the `name` its storage layer requires
 
-```ts
-mcpServerSave(cfg: Record<string, unknown>)      // public
-mcpSave(cfg: Partial<McpServerEntry> & { name: string })  // storage — name REQUIRED
-```
+Now closed. `mcpServerSave` takes a `McpServerSaveInput` whose shape documents the real write
+contract (Rust lifts top-level `command`/`args`/`enabled`/`pinned` into `config`), so a nameless
+persist no longer type-checks.
 
-`as never` bridges them. Current callers (`McpPage.tsx:41`) do pass `name`, and the Tauri path
-doesn't validate either — so **no live bug today**, but a future caller can persist a nameless MCP
-server and TypeScript will not object.
+> `as never` audit (11.9.2): the only remaining `as never`-like strings in `src/` are ordinary
+> English comments (e.g. "was never executed", "never independently evaluated"); there are **no**
+> `as never` type casts left. `tsc --noEmit` confirms the compiler genuinely checks the surface.
 
 ---
 
@@ -150,8 +158,11 @@ server and TypeScript will not object.
 
 ## Suggested next steps, in order
 
-1. Type the remaining 72 `tauriInvoke` calls (`workflowGet` first) and delete the three surviving
-   `as never` in `App.tsx` and `client.ts`.
-2. Add a lint rule banning `as never` — it is a stronger `any`, and it is what let #1 hide.
-3. Add a probe that mounts the app in jsdom and asserts every page renders error-free. The 11.8.1
-   regression would have been caught by exactly this, and nothing currently covers it.
+1. ~~Type the remaining 72 `tauriInvoke` calls and delete the surviving `as never`~~ — **closed** in
+11.9.2 via the typed `MjCommands` registry. Kept here only to acknowledge the follow-up was done.
+2. Add a lint rule banning `as never` — it is a stronger `any`, and it was what let #1 hide. Still
+   open; a lint enforcement is the belt-and-braces layer over a registry that already makes it a
+   compile error to use a bad command name.
+3. Add a probe that boots the **full** app in jsdom and asserts every page renders error-free, in
+   addition to the single-page `v10Page` render probe. The 11.8.1 regression would have been
+   caught by exactly this, and nothing currently walks all twelve pages in one process.

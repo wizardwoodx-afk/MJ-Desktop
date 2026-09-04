@@ -1,10 +1,10 @@
-MJ 11.9.0 — offline verification pack provenance
+MJ 11.9.2 — offline verification pack provenance
 =================================================
 
 Toolchain
-  node          v20.20.2
+  node          v22.23.2  (same supported LTS line CI uses — Node 22; Node 20 is EOL)
   esbuild       0.25.12
-  MJ            11.9.0 (package.json + package-lock.json / version.ts /
+  MJ            11.9.2 (package.json + package-lock.json / version.ts /
                 tauri.conf.json / Cargo.toml / Cargo.lock / LICENSE)
 
 The pack
@@ -25,15 +25,15 @@ Offline gate
   Command:     node verify/run.mjs
   Result:      OFFLINE VERIFY SUMMARY: 39 passed, 0 failed., exit 0
 
-  This pack was rebuilt from the 11.9.0 source immediately before the run above,
+  This pack was rebuilt from the 11.9.2 source immediately before the run above,
   and suite #40 (offlinePack) confirms every bundle is byte-identical to a fresh
   rebuild. That matters: an earlier pack reported 39/39 while its bundles had been
   built from pre-regression source. A green offline gate means nothing unless the
   freshness gate is green too — the two numbers are only honest read together.
 
-  NOTE (11.9.0 release review): an earlier archive shipped this verify/ directory
+  NOTE (11.9.2 release review): an earlier archive shipped this verify/ directory
   without its bundles, so `node verify/run.mjs` reported a vacuous "0 passed".
-  This pack is regenerated from the 11.9.0 source and includes all 39 bundles.
+  This pack is regenerated from the 11.9.2 source and includes all 39 bundles.
 
 What this pack does NOT prove
   - It does not compile the Rust crate. No cargo toolchain was available in the

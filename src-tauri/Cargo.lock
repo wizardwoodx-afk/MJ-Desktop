@@ -2357,7 +2357,7 @@ dependencies = [
 
 [[package]]
 name = "mj-desktop"
-version = "11.8.5"
+version = "11.9.2"
 dependencies = [
  "chrono",
  "keyring",

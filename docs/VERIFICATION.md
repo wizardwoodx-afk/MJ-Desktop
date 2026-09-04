@@ -1,6 +1,6 @@
 # Verifying an MJ release
 
-MJ 11.7.1 ships its verification with it. There are three tiers — use the deepest one
+MJ 11.9.2 ships its verification with it. There are three tiers — use the deepest one
 your environment allows.
 
 ## Tier 1 — offline, zero install (any machine with Node.js)
