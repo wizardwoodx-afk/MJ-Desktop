@@ -85,4 +85,4 @@ Source-available under **PolyForm Noncommercial 1.0.0** — free to run and stud
 
 ---
 
-Built by **Sree Harshen** — this is a portfolio project. PRs and feedback welcome.
+Built by **Sree Harshen** — MJ is a real desktop app we ship. Feedback and PRs welcome.
