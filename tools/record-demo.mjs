@@ -20,7 +20,7 @@ async function main() {
     '--disable-gpu',
     '--no-first-run',
     '--no-default-browser-check',
-    'about:blank'
+    'about:blank',
   ]);
 
   await new Promise((r) => setTimeout(r, 2000));
@@ -51,117 +51,359 @@ async function main() {
 
   await send('Page.enable');
   await send('Page.navigate', { url: URL });
-  await new Promise((r) => setTimeout(r, 3000));
+  await new Promise((r) => setTimeout(r, 3500));
 
-  // Inject Ghost Mouse & HUD Overlay
+  // Inject realistic macOS / Windows precision cursor and high-tech feature HUD
   await send('Runtime.evaluate', {
     expression: `
       (() => {
+        // Remove existing if any
+        document.getElementById('real-mouse-cursor')?.remove();
+        document.getElementById('demo-hud')?.remove();
+
+        // Realistic OS Mouse Pointer SVG (dark border + clean white interior + shadow)
         const cursor = document.createElement('div');
-        cursor.id = 'ghost-mouse';
-        cursor.style.cssText = 'position:fixed;width:28px;height:28px;border-radius:50%;background:rgba(99,102,241,0.4);border:2px solid #818cf8;box-shadow:0 0 16px rgba(129,140,248,0.9), inset 0 0 8px rgba(165,180,252,0.8);pointer-events:none;z-index:999999;transform:translate(-50%,-50%);transition:left 0.18s ease-out, top 0.18s ease-out;display:flex;align-items:center;justify-content:center;';
-        
-        const centerDot = document.createElement('div');
-        centerDot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:#ffffff;box-shadow:0 0 6px #fff;';
-        cursor.appendChild(centerDot);
+        cursor.id = 'real-mouse-cursor';
+        cursor.style.cssText = 'position:fixed;left:960px;top:540px;width:32px;height:32px;pointer-events:none;z-index:9999999;transition:transform 0.05s linear;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5));';
+        cursor.innerHTML = \`
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 3L11.5 21L14.2 13.8L21.5 11.5L4 3Z" fill="#FFFFFF" stroke="#0F172A" stroke-width="1.8" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="3" fill="#38BDF8" opacity="0.85"/>
+          </svg>
+        \`;
         document.body.appendChild(cursor);
 
+        // Feature Banner HUD
         const hud = document.createElement('div');
         hud.id = 'demo-hud';
-        hud.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.88);backdrop-filter:blur(14px);border:1px solid rgba(99,102,241,0.5);border-radius:14px;padding:12px 28px;color:#f8fafc;font-family:Inter,system-ui,sans-serif;font-size:16px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:0 12px 32px rgba(0,0,0,0.6);z-index:999998;transition:all 0.3s ease;';
-        hud.innerHTML = '<span style="width:10px;height:10px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;display:inline-block;"></span><span id="hud-text">MJ Desktop 11.8.5 - Multi-Agent Desktop Engine</span>';
+        hud.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.92);backdrop-filter:blur(16px);border:1px solid rgba(56,189,248,0.4);border-radius:12px;padding:12px 28px;color:#F8FAFC;font-family:Inter,system-ui,sans-serif;font-size:15px;font-weight:600;display:flex;align-items:center;gap:14px;box-shadow:0 16px 36px rgba(0,0,0,0.7);z-index:9999998;transition:all 0.3s ease;';
+        hud.innerHTML = '<span style="width:10px;height:10px;border-radius:50%;background:#38BDF8;box-shadow:0 0 10px #38BDF8;display:inline-block;"></span><span id="hud-text">MJ Desktop Engine — Loading</span>';
         document.body.appendChild(hud);
 
-        window.__moveGhost = (x, y) => {
+        window.__setCursorPos = (x, y) => {
           cursor.style.left = x + 'px';
           cursor.style.top = y + 'px';
         };
 
         window.__setHud = (text) => {
-          document.getElementById('hud-text').innerText = text;
+          const el = document.getElementById('hud-text');
+          if (el) el.innerText = text;
         };
 
-        window.__clickRipple = (x, y) => {
+        window.__spawnClickWave = (x, y) => {
           const rip = document.createElement('div');
-          rip.style.cssText = 'position:fixed;width:20px;height:20px;border-radius:50%;border:2px solid #38bdf8;pointer-events:none;z-index:999998;transform:translate(-50%,-50%);left:' + x + 'px;top:' + y + 'px;animation:rip 0.5s cubic-bezier(0,0,0.2,1) forwards;';
+          rip.style.cssText = 'position:fixed;width:14px;height:14px;border-radius:50%;border:2px solid #38BDF8;pointer-events:none;z-index:9999998;left:' + x + 'px;top:' + y + 'px;transform:translate(-50%,-50%);animation:clickPulse 0.4s ease-out forwards;';
           document.body.appendChild(rip);
-          setTimeout(() => rip.remove(), 500);
+          setTimeout(() => rip.remove(), 420);
         };
 
         const style = document.createElement('style');
-        style.textContent = '@keyframes rip { 0% { width:10px;height:10px;opacity:1; } 100% { width:55px;height:55px;opacity:0; } }';
+        style.textContent = '@keyframes clickPulse { 0% { width:12px;height:12px;opacity:1;box-shadow:0 0 0 0 rgba(56,189,248,0.7); } 100% { width:52px;height:52px;opacity:0;box-shadow:0 0 16px 6px rgba(56,189,248,0); } }';
         document.head.appendChild(style);
-        window.__moveGhost(960, 540);
+
+        window.__findEl = (selector) => {
+          try {
+            if (selector.startsWith('//') || selector.startsWith('xpath:')) {
+              const xp = selector.startsWith('xpath:') ? selector.slice(6) : selector;
+              const res = document.evaluate(xp, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+              return res.singleNodeValue;
+            }
+            if (selector.startsWith('text:')) {
+              const txt = selector.slice(5).toLowerCase();
+              const all = Array.from(document.querySelectorAll('button, a, div, span, h3'));
+              return all.find((el) => el.textContent && el.textContent.toLowerCase().includes(txt) && el.offsetParent !== null);
+            }
+            return document.querySelector(selector);
+          } catch (e) {
+            return null;
+          }
+        };
+
+        window.__getElementCoord = (selector) => {
+          const el = window.__findEl(selector);
+          if (!el) return null;
+          const r = el.getBoundingClientRect();
+          return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+        };
+
+        window.__clickSelector = (selector) => {
+          const el = window.__findEl(selector);
+          if (el) {
+            el.click();
+            return true;
+          }
+          return false;
+        };
       })()
     `,
   });
 
+  let currentX = 960;
+  let currentY = 540;
   let frameIdx = 0;
-  async function capture(hudText, cursorX, cursorY, count = 5) {
+
+  async function snapFrame() {
+    const res = await send('Page.captureScreenshot', { format: 'png' });
+    const filename = path.join(FRAMES_DIR, `frame_${String(frameIdx++).padStart(5, '0')}.png`);
+    fs.writeFileSync(filename, Buffer.from(res.data, 'base64'));
+  }
+
+  async function hold(frames = 8, hudText) {
     if (hudText) {
-      await send('Runtime.evaluate', { expression: `window.__setHud('${hudText}')` });
+      await send('Runtime.evaluate', {
+        expression: `window.__setHud(${JSON.stringify(hudText)})`,
+      });
     }
-    if (cursorX !== undefined && cursorY !== undefined) {
-      await send('Runtime.evaluate', { expression: `window.__moveGhost(${cursorX}, ${cursorY})` });
-    }
-    for (let i = 0; i < count; i++) {
-      const res = await send('Page.captureScreenshot', { format: 'png' });
-      const filename = path.join(FRAMES_DIR, `frame_${String(frameIdx++).padStart(5, '0')}.png`);
-      fs.writeFileSync(filename, Buffer.from(res.data, 'base64'));
+    for (let i = 0; i < frames; i++) {
+      await snapFrame();
     }
   }
 
-  async function clickAt(x, y, selector) {
-    await send('Runtime.evaluate', { expression: `window.__moveGhost(${x}, ${y})` });
-    await capture(null, x, y, 3);
+  // Smooth Bezier / interpolated mouse motion from current position to target (targetX, targetY)
+  async function moveMouseTo(targetX, targetY, steps = 14, hudText) {
+    if (hudText) {
+      await send('Runtime.evaluate', {
+        expression: `window.__setHud(${JSON.stringify(hudText)})`,
+      });
+    }
+    const startX = currentX;
+    const startY = currentY;
+    for (let i = 1; i <= steps; i++) {
+      // Ease-out quad
+      const t = i / steps;
+      const ease = t * (2 - t);
+      const x = Math.round(startX + (targetX - startX) * ease);
+      const y = Math.round(startY + (targetY - startY) * ease);
+      currentX = x;
+      currentY = y;
+      await send('Runtime.evaluate', { expression: `window.__setCursorPos(${x}, ${y})` });
+      await snapFrame();
+    }
+  }
+
+  async function clickMouse(selector, hudText, postWaitFrames = 10) {
+    if (hudText) {
+      await send('Runtime.evaluate', {
+        expression: `window.__setHud(${JSON.stringify(hudText)})`,
+      });
+    }
+    // Spawn ripple
     await send('Runtime.evaluate', {
-      expression: `
-        (() => {
-          window.__clickRipple(${x}, ${y});
-          if ('${selector || ''}') {
-            const el = document.querySelector('${selector}');
-            if (el) el.click();
-          }
-        })()
-      `,
+      expression: `window.__spawnClickWave(${currentX}, ${currentY})`,
     });
-    await capture(null, x, y, 4);
+    // Click DOM element if specified
+    if (selector) {
+      await send('Runtime.evaluate', {
+        expression: `window.__clickSelector(${JSON.stringify(selector)})`,
+      });
+    }
+    await snapFrame();
+    await snapFrame();
+    for (let i = 0; i < postWaitFrames; i++) {
+      await snapFrame();
+    }
   }
 
-  console.log('Recording interactive feature demo walk-through...');
+  async function moveAndClickSelector(selector, hudText, steps = 14, postWaitFrames = 12) {
+    const evalRes = await send('Runtime.evaluate', {
+      expression: `window.__getElementCoord(${JSON.stringify(selector)})`,
+      returnByValue: true,
+    });
+    const coord = evalRes.result?.value;
+    if (coord) {
+      await moveMouseTo(coord.x, coord.y, steps, hudText);
+      await clickMouse(selector, hudText, postWaitFrames);
+    } else {
+      console.warn(`Selector not found: ${selector}`);
+      await hold(steps, hudText);
+    }
+  }
 
-  // Scene 1: Introduction & Multi-agent missions
-  await capture('MJ Desktop v11.8.5 - Multi-Agent Desktop Orchestration Platform', 960, 540, 20);
-  await capture('Dual Git Staging, Worktrees & Autonomous AI Teams', 600, 420, 15);
+  console.log('Recording detailed feature walkthrough with real mouse motion...');
 
-  // Scene 2: Interactive Mission Workspace
-  await clickAt(80, 160);
-  await capture('Mission Hub: Ephemeral Seats, Zero-Pollute Isolation & Subagents', 350, 240, 20);
-  await clickAt(300, 250);
-  await capture('Live Sandbox Execution with Strict POSIX & Win32 Compatibility', 480, 360, 18);
+  // ==========================================
+  // SCENE 1: HOME PAGE & WORKFLOW TEMPLATES
+  // ==========================================
+  await hold(12, 'MJ Desktop v11.8.5 — Visual Agent Architecture Engine');
+  await moveMouseTo(420, 180, 14, 'Fast Visual Workstation · 25 Harnesses · Zero Lock-In');
+  await hold(8);
 
-  // Scene 3: Provider Harnesses & Model Router
-  await clickAt(80, 220);
-  await capture('25 AI Provider Harnesses (Claude 3.7, OpenAI o3, Gemini 2.5, DeepSeek)', 500, 320, 22);
-  await clickAt(650, 380);
-  await capture('Cost Optimization, Token Budgeting & Dynamic Fallback Routing', 700, 400, 18);
+  // Hover over stats row
+  await moveMouseTo(300, 270, 12, 'Live Stats: Workflows, Canvas Nodes, Role Packs & Frameworks');
+  await hold(8);
+  await moveMouseTo(520, 270, 10);
+  await hold(8);
 
-  // Scene 4: Visual Canvas & Graph Execution
-  await clickAt(80, 280);
-  await capture('Visual Mission Canvas & Multi-Agent Directed Acyclic Graph (DAG)', 820, 460, 24);
-  await clickAt(920, 510);
-  await capture('Real-Time Agent Handoffs, Automated Code Review & Merging', 960, 530, 20);
+  // Click on a pre-built template card to load full workflow into Canvas
+  await moveAndClickSelector(
+    '.grid-2 .card.tpl:nth-child(1)',
+    'Loading Architectural Template: Research → Plan → Code → QA',
+    16,
+    18
+  );
 
-  // Scene 5: Proof Matrix & Verification
-  await clickAt(80, 340);
-  await capture('Proof Matrix: 39 Offline Evals & 40 Probes Verified (100% Pass Rate)', 620, 420, 24);
+  // ==========================================
+  // SCENE 2: INTERACTIVE CANVAS & GRAPH ENGINE
+  // ==========================================
+  await hold(14, 'Interactive Canvas: Real-Time DAG Workflow with Live Node Ports');
 
-  // Scene 6: OLED Theme & Native Tauri Shell
-  await clickAt(80, 400);
-  await capture('Tailored for Engineers: OLED Midnight Interface & Rust Tauri Core', 640, 360, 20);
-  await capture('Production Ready & Battle-Tested on Windows, macOS, and Linux', 960, 540, 20);
+  // Move over Canvas nodes and select a node
+  await moveAndClickSelector(
+    '.node-card',
+    'Selecting Planner Agent Node — Inspecting Inputs & Outputs',
+    16,
+    14
+  );
+  await moveMouseTo(800, 360, 14, 'Wire Geometry with Measured Port Anchors & Bezier Links');
+  await hold(10);
 
-  console.log(`Captured ${frameIdx} frames.`);
+  // Click top "Run" button in Titlebar to test validation / execution
+  await moveAndClickSelector(
+    '.titlebar button.primary',
+    'Executing Workflow: Live DAG Scheduler & Cycle Validation',
+    16,
+    18
+  );
+
+  // ==========================================
+  // SCENE 3: MULTI-AGENT TEAMS & COLLABORATION
+  // ==========================================
+  // Switch to Teams Page via Sidebar Rail (Users icon)
+  await moveAndClickSelector(
+    '.rail button[title="Teams"]',
+    'Multi-Agent Teams: 14 Coding CLIs in Parallel Worktrees',
+    16,
+    20
+  );
+
+  // Switch to Inter-Agent Bus & Chat
+  await moveAndClickSelector(
+    'text:Inter-Agent Bus',
+    'Real-Time Inter-Agent Channel & Shared Blackboard',
+    16,
+    16
+  );
+  // Trigger simulated debate
+  await moveAndClickSelector(
+    'text:Run Simulated Debate',
+    'Triggering Autonomous Agent Debate (Claude, Codex, Synthesizer)',
+    16,
+    28
+  );
+  await hold(16, 'Agents Reached Consensus via Blackboard & Message Bus');
+
+  // Switch to Adversarial Arena (Red vs Blue)
+  await moveAndClickSelector(
+    'text:Adversarial Arena',
+    '⚔️ Red vs Blue Adversarial Arena: Hardening Against Invariant Exploits',
+    16,
+    16
+  );
+  await moveAndClickSelector(
+    'text:Run Adversarial Duel',
+    'Simulating Fuzzing, Race Conditions & Boundary Exploits',
+    16,
+    28
+  );
+  await hold(14, 'Defense Score 100%: All Vectors Defended & Patched');
+
+  // Switch to Structural 3-Way AST Merge
+  await moveAndClickSelector(
+    'text:Structural 3-Way Merge',
+    '🧬 Structural 3-Way Merge: Eliminating Git Conflict Markers',
+    16,
+    16
+  );
+  await moveAndClickSelector(
+    'text:Run Structural Merge Demo',
+    'Synthesizing Structural TypeScript AST Interface Union',
+    16,
+    24
+  );
+  await hold(14, 'Conflict-Free AST Synthesis Completed');
+
+  // Switch to Multi-Agent Consensus Matrix
+  await moveAndClickSelector(
+    'text:Consensus Matrix',
+    '⚖️ Byzantine Fault Tolerant Consensus Matrix',
+    16,
+    16
+  );
+  await moveAndClickSelector(
+    'text:Calculate Consensus',
+    'Aggregating Multi-Agent Confidence & Review Votes',
+    16,
+    22
+  );
+  await hold(14, 'Consensus Verified: UNANIMOUS APPROVAL');
+
+  // ==========================================
+  // SCENE 4: 25 PROVIDER HARNESSES
+  // ==========================================
+  await moveAndClickSelector(
+    '.rail button[title="Providers"]',
+    '25 AI Provider Harnesses: Claude, Codex, Gemini, DeepSeek, Ollama',
+    16,
+    20
+  );
+  await moveMouseTo(600, 320, 14, 'Zero Drift Registry: Strict CLI Argv & Keychain Storage');
+  await hold(12);
+  await moveMouseTo(600, 480, 12, 'Auto-Detect Local Binaries on PATH or Ollama at 127.0.0.1');
+  await hold(12);
+
+  // ==========================================
+  // SCENE 5: PROOF MATRIX & VERIFICATION
+  // ==========================================
+  await moveAndClickSelector(
+    '.rail button[title="Proof"]',
+    'Comprehensive Proof Matrix: 39 Offline Evals & 40 Probes (100% Pass)',
+    16,
+    20
+  );
+  await moveMouseTo(500, 350, 14, 'Capability Assertions Verified Directly Against Binaries');
+  await hold(14);
+
+  // ==========================================
+  // SCENE 6: OLED MIDNIGHT THEMES & SETTINGS
+  // ==========================================
+  await moveAndClickSelector(
+    '.rail button[title="Settings"]',
+    'OLED Dark & High-Contrast Design System with 10 Palettes',
+    16,
+    20
+  );
+
+  // Switch themes interactively
+  await moveAndClickSelector(
+    'button[data-t="chalk"]',
+    'Switching Theme: Chalk (Paper Minimalist)',
+    14,
+    16
+  );
+  await moveAndClickSelector(
+    'button[data-t="aurora"]',
+    'Switching Theme: Aurora (Deep Teal Night)',
+    14,
+    16
+  );
+  await moveAndClickSelector(
+    'button[data-t="carbon"]',
+    'Switching Theme: Carbon (Industrial Phosphor Green)',
+    14,
+    16
+  );
+  await moveAndClickSelector(
+    'button[data-t="inscribed"]',
+    'Switching Theme: Inscribed (OLED Signature Dark)',
+    14,
+    18
+  );
+
+  // Concluding frame
+  await moveMouseTo(960, 540, 14, 'MJ Desktop v11.8.5 — Production Ready Agent Runtime');
+  await hold(22);
+
+  console.log(`Total captured frames: ${frameIdx}`);
 
   ws.close();
   chromeProc.kill();
@@ -170,15 +412,21 @@ async function main() {
   fs.mkdirSync(outDir, { recursive: true });
   const outMp4 = path.join(outDir, 'demo.mp4');
 
-  console.log('Encoding MP4 with FFmpeg at:', outMp4);
+  console.log('Encoding high-bitrate MP4 with FFmpeg at:', outMp4);
   const ffmpegArgs = [
     '-y',
-    '-framerate', '15',
-    '-i', path.join(FRAMES_DIR, 'frame_%05d.png'),
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-preset', 'fast',
-    '-crf', '22',
+    '-framerate',
+    '15',
+    '-i',
+    path.join(FRAMES_DIR, 'frame_%05d.png'),
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-preset',
+    'medium',
+    '-crf',
+    '20',
     outMp4,
   ];
 
@@ -196,7 +444,7 @@ async function main() {
   fs.copyFileSync(outMp4, path.resolve('docs', 'demo.mp4'));
 
   fs.rmSync(FRAMES_DIR, { recursive: true, force: true });
-  console.log('Done recording.');
+  console.log('Complete!');
 }
 
 main().catch((err) => {
