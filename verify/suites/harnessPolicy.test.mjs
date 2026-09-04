@@ -149,8 +149,8 @@ async function verifyEnforcement(profile, timeoutMs = 8e3) {
     note: wrapperAbsent ? `${profile.note}; wrapper unavailable on this machine (not installed or not executable) \u2014 enforcement UNMEASURED` : profile.note
   };
 }
-function wrapForSeat(risk, workspace, program, args) {
-  const profile = sandboxProfileFor(risk, workspace);
+function wrapForSeat(risk, workspace, program, args, platform) {
+  const profile = sandboxProfileFor(risk, workspace, platform);
   return { argv: profile.wrapper.length > 0 ? [...profile.wrapper, program, ...args] : [program, ...args], profile };
 }
 function scratchWorkspace() {

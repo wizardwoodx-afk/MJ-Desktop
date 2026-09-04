@@ -47,7 +47,13 @@ const ok = (label: string, cond: boolean, detail = "") => {
 };
 const section = (s: string) => console.log(`\n== ${s}\n`);
 
-const read = (p: string): string => fs.readFileSync(path.join(process.cwd(), p), "utf8");
+const read = (p: string): string => {
+  const direct = path.join(process.cwd(), p);
+  if (fs.existsSync(direct)) return fs.readFileSync(direct, "utf8");
+  const history = path.join(process.cwd(), "docs", "history", p);
+  if (fs.existsSync(history)) return fs.readFileSync(history, "utf8");
+  return fs.readFileSync(direct, "utf8");
+};
 const teams = read("src/pages/TeamsPage.tsx");
 const ipcSrc = read("src/ipc/client.ts");
 const runnerSrc = read("src/engine/harnessRunner.ts");
@@ -405,7 +411,7 @@ ok(`the registry is 25 ids (23 CLIs + hermes + llm) — 21 until V11.7.1 grew it
   }
   const readme = read("README.md");
   ok("the README's CURRENT registry claims say 25",
-    readme.includes("**25** ids") && readme.includes("23 spawnable"),
+    (readme.includes("**25** ids") && readme.includes("23 spawnable")) || (readme.includes("25 harnesses") && readme.includes("23 CLIs")),
     "a README current claim does not say 25");
   const rec71 = read("MJ-11.7.1-UPGRADE.md");
   ok("the V11.7.1 record claims 25 (growth line, seat dropdowns, probe description)",

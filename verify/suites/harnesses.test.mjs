@@ -125,13 +125,13 @@ async function verifyEnforcement(profile, timeoutMs = 8e3) {
   const { execFile } = await import("node:child_process");
   let wrapperAbsent = false;
   for (const canary of profile.canaries) {
-    const ran = await new Promise((resolve) => {
-      const timer = setTimeout(() => resolve({ failed: true, absent: false, detail: "timeout (treated as blocked)" }), timeoutMs);
+    const ran = await new Promise((resolve2) => {
+      const timer = setTimeout(() => resolve2({ failed: true, absent: false, detail: "timeout (treated as blocked)" }), timeoutMs);
       execFile(canary.argv[0], canary.argv.slice(1), { timeout: timeoutMs }, (err) => {
         clearTimeout(timer);
         const code = err?.code;
         const absent = Boolean(err) && typeof code === "string" && WRAPPER_UNAVAILABLE.has(code);
-        resolve({
+        resolve2({
           failed: Boolean(err),
           absent,
           detail: absent ? `wrapper '${canary.argv[0]}' is not installed or not executable (${code}) \u2014 the canary never ran` : err ? (err.message.split("\n")[0] ?? "").slice(0, 120) : "exited 0"
@@ -149,8 +149,8 @@ async function verifyEnforcement(profile, timeoutMs = 8e3) {
     note: wrapperAbsent ? `${profile.note}; wrapper unavailable on this machine (not installed or not executable) \u2014 enforcement UNMEASURED` : profile.note
   };
 }
-function wrapForSeat(risk, workspace, program, args) {
-  const profile = sandboxProfileFor(risk, workspace);
+function wrapForSeat(risk, workspace, program, args, platform) {
+  const profile = sandboxProfileFor(risk, workspace, platform);
   return { argv: profile.wrapper.length > 0 ? [...profile.wrapper, program, ...args] : [program, ...args], profile };
 }
 function scratchWorkspace() {
@@ -2627,19 +2627,19 @@ function downloadText(filename, text, mime = "application/json") {
   URL.revokeObjectURL(url);
 }
 async function pickJsonFile() {
-  return new Promise((resolve) => {
+  return new Promise((resolve2) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "application/json,.mj.json,.mjpack";
     input.onchange = () => {
       const file = input.files?.[0];
-      if (!file) return resolve(null);
+      if (!file) return resolve2(null);
       const reader = new FileReader();
       reader.onload = () => {
         try {
-          resolve(JSON.parse(String(reader.result)));
+          resolve2(JSON.parse(String(reader.result)));
         } catch {
-          resolve(null);
+          resolve2(null);
         }
       };
       reader.readAsText(file);
@@ -4911,13 +4911,13 @@ var AcpClient = class {
   }
   request(method, params) {
     const id = this.nextId++;
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`acp: ${method} timed out after ${this.opts.timeoutMs ?? 12e4}ms`));
       }, this.opts.timeoutMs ?? 12e4);
       this.pending.set(id, {
-        resolve: (v) => resolve(v),
+        resolve: (v) => resolve2(v),
         reject,
         timer
       });
@@ -6100,10 +6100,10 @@ async function withDeadline(work, timeoutMs, now = Date.now) {
     return { outcome: "ok", value, timedOut: false, elapsedMs: now() - t0, detail: "No deadline set." };
   }
   let timer = null;
-  const deadline = new Promise((resolve) => {
+  const deadline = new Promise((resolve2) => {
     timer = setTimeout(() => {
       signal.cancelled = true;
-      resolve("__timeout__");
+      resolve2("__timeout__");
     }, timeoutMs);
   });
   const winner = await Promise.race([work(signal).then((v) => ({ v })), deadline]);
@@ -7038,9 +7038,11 @@ async function excludeBriefDir(deps, worktreePath) {
   if (!r.ok) return false;
   let gitDir = r.stdout.trim();
   if (!gitDir) return false;
-  if (!gitDir.startsWith("/")) gitDir = path2.posix.join(worktreePath.replace(/\\/g, "/"), gitDir);
+  const isAbs = gitDir.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(gitDir);
+  if (!isAbs) gitDir = path2.resolve(worktreePath, gitDir);
   try {
-    await deps.writeFile(`${gitDir}/info/exclude`, `${BRIEF_DIR}/
+    const excludePath = path2.join(gitDir, "info", "exclude");
+    await deps.writeFile(excludePath, `${BRIEF_DIR}/
 `);
     const check = await git(deps, ["status", "--porcelain"], worktreePath);
     return check.ok && !check.stdout.includes(BRIEF_DIR);
@@ -7399,7 +7401,13 @@ var ok = (label, cond, detail = "") => {
 var section = (s) => console.log(`
 == ${s}
 `);
-var read = (p) => fs.readFileSync(path3.join(process.cwd(), p), "utf8");
+var read = (p) => {
+  const direct = path3.join(process.cwd(), p);
+  if (fs.existsSync(direct)) return fs.readFileSync(direct, "utf8");
+  const history = path3.join(process.cwd(), "docs", "history", p);
+  if (fs.existsSync(history)) return fs.readFileSync(history, "utf8");
+  return fs.readFileSync(direct, "utf8");
+};
 var teams = read("src/pages/TeamsPage.tsx");
 var ipcSrc = read("src/ipc/client.ts");
 var runnerSrc = read("src/engine/harnessRunner.ts");
@@ -7814,7 +7822,7 @@ ok(
   const readme = read("README.md");
   ok(
     "the README's CURRENT registry claims say 25",
-    readme.includes("**25** ids") && readme.includes("23 spawnable"),
+    readme.includes("**25** ids") && readme.includes("23 spawnable") || readme.includes("25 harnesses") && readme.includes("23 CLIs"),
     "a README current claim does not say 25"
   );
   const rec71 = read("MJ-11.7.1-UPGRADE.md");

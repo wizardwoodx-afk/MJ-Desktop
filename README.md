@@ -6,6 +6,9 @@ A desktop app for running agent organisations. Not a workflow builder with AI bo
 
 ![MJ — wiring two planners](docs/images/03-wiring.png)
 
+> 🎥 **Interactive Video Demo**: [Watch the walkthrough demo](docs/images/demo.mp4) (recorded with automated ghost-mouse and headless browser engine).
+
+
 ### Screenshots
 
 | Empty canvas | Node Library |

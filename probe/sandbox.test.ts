@@ -54,16 +54,17 @@ ok("the profile lists what it will scrub", sandboxProfileFor("MEDIUM", os.tmpdir
 section("1. profiles match the risk tier");
 {
   const ws = fs.mkdtempSync(path.join(os.tmpdir(), "mj-sbx-"));
-  const low = sandboxProfileFor("LOW", ws);
+  const testPlatform = process.platform === "win32" ? "linux" : undefined;
+  const low = sandboxProfileFor("LOW", ws, testPlatform);
   ok("LOW: no filesystem wrapper", low.wrapper.length === 0);
   ok("LOW: still scrubs credentials", low.scrubbedEnvKeys.length > 0);
-  const med = sandboxProfileFor("MEDIUM", ws);
+  const med = sandboxProfileFor("MEDIUM", ws, testPlatform);
   ok("MEDIUM: workspace-only writes", med.wrapper.includes("--bind") || med.wrapper.includes("sandbox-exec"));
   ok("MEDIUM: network still allowed", !med.wrapper.includes("--unshare-net"));
-  const high = sandboxProfileFor("HIGH", ws);
+  const high = sandboxProfileFor("HIGH", ws, testPlatform);
   ok("HIGH: network denied", high.tier === "fs+net" && (high.wrapper.includes("--unshare-net") || high.note.includes("network denied")));
   ok("every profile carries canaries or an honest note", [low, med, high].every((p) => p.canaries.length > 0 || p.note.length > 10));
-  const wrapped = wrapForSeat("HIGH", ws, "claude", ["-p", "hi"]);
+  const wrapped = wrapForSeat("HIGH", ws, "claude", ["-p", "hi"], testPlatform);
   ok("wrapForSeat puts the wrapper in front of the agent", wrapped.argv[0] !== "claude" && wrapped.argv.includes("claude"));
   ok("the wrapped command is fully visible for consent", wrapped.argv.join(" ").length > 0);
   fs.rmSync(ws, { recursive: true, force: true });

@@ -286,7 +286,11 @@ console.log("\n== the shapes real repos produce ==\n");
 {
   const dir = makeRepo("spaces");
   writeFileSync(join(dir, "a file with spaces.ts"), "x\n");
-  writeFileSync(join(dir, 'quote"mark.ts'), "y\n");
+  if (process.platform !== "win32") {
+    writeFileSync(join(dir, 'quote"mark.ts'), "y\n");
+  } else {
+    writeFileSync(join(dir, "quote'mark.ts"), "y\n");
+  }
   const st = await api.status(dir);
   ok(st.ok === true, "status succeeded");
   const names = st.entries.map((e) => e.path);

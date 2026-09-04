@@ -94,7 +94,7 @@ for (const doc of docs) {
 
 section("4. the archive name the user is given matches the release");
 const upgradeDoc = `MJ-${MJ_VERSION_SHORT}-UPGRADE.md`;
-ok(`${upgradeDoc} exists`, fs.existsSync(path.join(root, upgradeDoc)), "missing — the release notes for this version were never written");
+ok(`${upgradeDoc} exists`, fs.existsSync(path.join(root, upgradeDoc)) || fs.existsSync(path.join(root, "docs", "history", upgradeDoc)), "missing — the release notes for this version were never written");
 
 /* ── 5. CI can still allocate a runner (MJ 11.8.5) ────────────────────────────
  *

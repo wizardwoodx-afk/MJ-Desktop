@@ -240,8 +240,8 @@ export async function verifyEnforcement(profile: SandboxProfile, timeoutMs = 800
  * Wrap argv for a seat: sandbox prefix first, then the agent. The wrapped command is what the
  * UI shows the user, so consent is informed — the profile is visible, not implicit.
  */
-export function wrapForSeat(risk: RiskClass, workspace: string, program: string, args: string[]): { argv: string[]; profile: SandboxProfile } {
-  const profile = sandboxProfileFor(risk, workspace);
+export function wrapForSeat(risk: RiskClass, workspace: string, program: string, args: string[], platform?: "linux" | "macos" | "windows"): { argv: string[]; profile: SandboxProfile } {
+  const profile = sandboxProfileFor(risk, workspace, platform);
   return { argv: profile.wrapper.length > 0 ? [...profile.wrapper, program, ...args] : [program, ...args], profile };
 }
 

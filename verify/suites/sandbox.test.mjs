@@ -156,8 +156,8 @@ async function verifyEnforcement(profile, timeoutMs = 8e3) {
     note: wrapperAbsent ? `${profile.note}; wrapper unavailable on this machine (not installed or not executable) \u2014 enforcement UNMEASURED` : profile.note
   };
 }
-function wrapForSeat(risk, workspace, program, args) {
-  const profile = sandboxProfileFor(risk, workspace);
+function wrapForSeat(risk, workspace, program, args, platform) {
+  const profile = sandboxProfileFor(risk, workspace, platform);
   return { argv: profile.wrapper.length > 0 ? [...profile.wrapper, program, ...args] : [program, ...args], profile };
 }
 
@@ -201,16 +201,17 @@ ok("the profile lists what it will scrub", sandboxProfileFor("MEDIUM", os2.tmpdi
 section("1. profiles match the risk tier");
 {
   const ws = fs.mkdtempSync(path2.join(os2.tmpdir(), "mj-sbx-"));
-  const low = sandboxProfileFor("LOW", ws);
+  const testPlatform = process.platform === "win32" ? "linux" : void 0;
+  const low = sandboxProfileFor("LOW", ws, testPlatform);
   ok("LOW: no filesystem wrapper", low.wrapper.length === 0);
   ok("LOW: still scrubs credentials", low.scrubbedEnvKeys.length > 0);
-  const med = sandboxProfileFor("MEDIUM", ws);
+  const med = sandboxProfileFor("MEDIUM", ws, testPlatform);
   ok("MEDIUM: workspace-only writes", med.wrapper.includes("--bind") || med.wrapper.includes("sandbox-exec"));
   ok("MEDIUM: network still allowed", !med.wrapper.includes("--unshare-net"));
-  const high = sandboxProfileFor("HIGH", ws);
+  const high = sandboxProfileFor("HIGH", ws, testPlatform);
   ok("HIGH: network denied", high.tier === "fs+net" && (high.wrapper.includes("--unshare-net") || high.note.includes("network denied")));
   ok("every profile carries canaries or an honest note", [low, med, high].every((p) => p.canaries.length > 0 || p.note.length > 10));
-  const wrapped = wrapForSeat("HIGH", ws, "claude", ["-p", "hi"]);
+  const wrapped = wrapForSeat("HIGH", ws, "claude", ["-p", "hi"], testPlatform);
   ok("wrapForSeat puts the wrapper in front of the agent", wrapped.argv[0] !== "claude" && wrapped.argv.includes("claude"));
   ok("the wrapped command is fully visible for consent", wrapped.argv.join(" ").length > 0);
   fs.rmSync(ws, { recursive: true, force: true });

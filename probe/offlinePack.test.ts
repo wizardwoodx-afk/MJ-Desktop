@@ -151,7 +151,8 @@ ok(
   summaryMatch?.[0] ?? runOut.slice(-200),
 );
 ok("the offline runner exits 0", runCode === 0, `exit ${runCode}`);
-const verificationDoc = fs.readFileSync(path.join(root, "VERIFICATION.md"), "utf8");
+const verificationPath = [path.join(root, "VERIFICATION.md"), path.join(root, "docs", "VERIFICATION.md")].find((p) => fs.existsSync(p)) ?? path.join(root, "VERIFICATION.md");
+const verificationDoc = fs.readFileSync(verificationPath, "utf8");
 ok("VERIFICATION.md names the tier-1 command (node verify/run.mjs)",
   verificationDoc.includes("node verify/run.mjs"),
   "the doc does not name the offline command");

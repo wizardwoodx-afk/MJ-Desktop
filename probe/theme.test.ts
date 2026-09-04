@@ -102,7 +102,7 @@ ok("the #1B1B1D Nothing surface gray survives", themesCss.includes("#1b1b1d"), "
 ok("signal red #D71921 accent", /#d71921/i.test(themesCss), "missing #D71921");
 ok("all palettes define an accent signal (--accent)", (themesCss.match(/--accent: /g) ?? []).length >= 10, `got ${(themesCss.match(/--accent: /g) ?? []).length}`);
 ok("dot-matrix display font is wired via --font-doto", /--font-doto: "Doto"/.test(themesCss), "--font-doto never names Doto");
-ok("display surfaces read --font-doto (titlebar wordmark)", /\.titlebar \.logo \{\n  font-family: var\(--font-doto\)/.test(css), "titlebar wordmark not on --font-doto");
+ok("display surfaces read --font-doto (titlebar wordmark)", /\.titlebar \.logo \{\r?\n\s*font-family: var\(--font-doto\)/.test(css), "titlebar wordmark not on --font-doto");
 ok("themes.css is imported by mj.css", /@import "\.\/themes\.css";/.test(css), "missing import");
 
 section("2. the dot-matrix font is really bundled");
@@ -121,7 +121,7 @@ ok("App.tsx imports the version from the single source of truth",
   /import \{ MJ_VERSION_SHORT \} from "\.\/version"/.test(app), "no import found");
 ok("no hardcoded vX.Y host pill in App.tsx", !/v\d+\.\d+/.test(app), (app.match(/v\d+\.\d+/) ?? [""])[0]);
 ok(`the version.ts release is well formed (${MJ_VERSION})`, /^\d+\.\d+\.\d+$/.test(MJ_VERSION), MJ_VERSION);
-ok(`the release notes for MJ ${MJ_VERSION_SHORT} exist`, fs.existsSync(path.join(root, `MJ-${MJ_VERSION_SHORT}-UPGRADE.md`)), "missing");
+ok(`the release notes for MJ ${MJ_VERSION_SHORT} exist`, fs.existsSync(path.join(root, `MJ-${MJ_VERSION_SHORT}-UPGRADE.md`)) || fs.existsSync(path.join(root, "docs", "history", `MJ-${MJ_VERSION_SHORT}-UPGRADE.md`)), "missing");
 
 /* ── §V11.5: AURORA — the tenth palette, and the Meridian feel ───────────── */
 section("4. V11.5 aurora — the tenth palette, honestly dark");

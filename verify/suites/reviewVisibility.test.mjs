@@ -83,10 +83,10 @@ async function withDeadline(work, timeoutMs, now = Date.now) {
     return { outcome: "ok", value, timedOut: false, elapsedMs: now() - t0, detail: "No deadline set." };
   }
   let timer = null;
-  const deadline = new Promise((resolve) => {
+  const deadline = new Promise((resolve2) => {
     timer = setTimeout(() => {
       signal.cancelled = true;
-      resolve("__timeout__");
+      resolve2("__timeout__");
     }, timeoutMs);
   });
   const winner = await Promise.race([work(signal).then((v) => ({ v })), deadline]);
@@ -2567,9 +2567,11 @@ async function excludeBriefDir(deps, worktreePath) {
   if (!r.ok) return false;
   let gitDir = r.stdout.trim();
   if (!gitDir) return false;
-  if (!gitDir.startsWith("/")) gitDir = path.posix.join(worktreePath.replace(/\\/g, "/"), gitDir);
+  const isAbs = gitDir.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(gitDir);
+  if (!isAbs) gitDir = path.resolve(worktreePath, gitDir);
   try {
-    await deps.writeFile(`${gitDir}/info/exclude`, `${BRIEF_DIR}/
+    const excludePath = path.join(gitDir, "info", "exclude");
+    await deps.writeFile(excludePath, `${BRIEF_DIR}/
 `);
     const check = await git(deps, ["status", "--porcelain"], worktreePath);
     return check.ok && !check.stdout.includes(BRIEF_DIR);
@@ -2945,7 +2947,7 @@ var OPENCODE = process.env.MJ_OPENCODE_BIN ?? "/tmp/oc/node_modules/opencode-lin
 function realCliInvoke() {
   return async (req) => {
     if (fs.existsSync(OPENCODE)) {
-      return new Promise((resolve) => {
+      return new Promise((resolve2) => {
         const t02 = Date.now();
         const child = spawn(req.bin, req.argv, { cwd: req.cwd, env: { ...process.env, ...req.env }, stdio: ["ignore", "pipe", "pipe"] });
         let stdout = "";
@@ -2963,11 +2965,11 @@ function realCliInvoke() {
         });
         child.on("error", (e) => {
           clearTimeout(timer);
-          resolve({ exitCode: null, stdout, stderr: stderr + String(e.message), durationMs: Date.now() - t02, timedOut: killed });
+          resolve2({ exitCode: null, stdout, stderr: stderr + String(e.message), durationMs: Date.now() - t02, timedOut: killed });
         });
         child.on("close", (code) => {
           clearTimeout(timer);
-          resolve({ exitCode: code, stdout, stderr, durationMs: Date.now() - t02, timedOut: killed });
+          resolve2({ exitCode: code, stdout, stderr, durationMs: Date.now() - t02, timedOut: killed });
         });
       });
     }

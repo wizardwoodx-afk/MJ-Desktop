@@ -1304,7 +1304,7 @@ section("4. details on double-click, minimap normal/small (owner rules)");
 ok("single-click selects, it does not open details", canvas.includes("onClick={() => useGraphStore.getState().selectNode(node.id)}"), "single-click changed");
 ok("details open on DOUBLE-click only", canvas.includes("onDoubleClick={() => useGraphStore.getState().openDetails(node.id)}"), "no double-click handler");
 ok("the store keeps inspectorId separate from selection", storeSrc.includes("inspectorId: string | null") && storeSrc.includes("openDetails:"), "no inspectorId");
-ok("clearing the selection closes the details", /selectNode: \(id\) =>\n      set\(id \? \{ selectedNodeId: id, selectedIds: \[id\] \} : \{ selectedNodeId: null, inspectorId: null, selectedIds: \[\] \}\)/.test(storeSrc), "selection clear leaks details");
+ok("clearing the selection closes the details", /selectNode: \(id\) =>\r?\n\s+set\(id \? \{ selectedNodeId: id, selectedIds: \[id\] \} : \{ selectedNodeId: null, inspectorId: null, selectedIds: \[\] \}\)/.test(storeSrc), "selection clear leaks details");
 ok("App opens the Inspector on inspectorId, not on selection", read("src/App.tsx").includes("if (store.inspectorId) setInspectorOpen(true);"), "App still follows selection");
 ok("the shortcuts overlay documents the double-click rule", overlay.includes("Double-click") && overlay.includes("Open node details"), "not documented");
 ok("the minimap draws normal/small node rects (46\xD732 / 28\xD720)", canvas.includes('nodeHitRect(n, n.definitionId.startsWith("control."))'), "minimap rects not from geometry");

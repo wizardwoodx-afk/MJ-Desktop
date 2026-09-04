@@ -647,9 +647,11 @@ async function excludeBriefDir(deps: TeamRunnerDeps, worktreePath: string): Prom
   let gitDir = r.stdout.trim();
   if (!gitDir) return false;
   // --git-common-dir can be relative to the worktree (".git" when run in the main checkout).
-  if (!gitDir.startsWith("/")) gitDir = path.posix.join(worktreePath.replace(/\\/g, "/"), gitDir);
+  const isAbs = gitDir.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(gitDir);
+  if (!isAbs) gitDir = path.resolve(worktreePath, gitDir);
   try {
-    await deps.writeFile(`${gitDir}/info/exclude`, `${BRIEF_DIR}/\n`);
+    const excludePath = path.join(gitDir, "info", "exclude");
+    await deps.writeFile(excludePath, `${BRIEF_DIR}/\n`);
     // Prove it worked rather than assuming: if the briefings are still visible to git, the caller has
     // to know, because the alternative is committing them silently.
     const check = await git(deps, ["status", "--porcelain"], worktreePath);
