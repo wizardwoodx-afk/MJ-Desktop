@@ -177,6 +177,7 @@ pub fn skill_deactivate(state: State<Arc<AppState>>, skill_id: String) -> Result
     Ok(())
 }
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // Tauri commands take named args; 8 fields is the UI contract.
 pub fn skill_upsert(state: State<Arc<AppState>>, node_key: String, skill_id: Option<String>, name: String, description: String, procedure: String, origin: String, _score: Option<f64>) -> Result<Value, String> {
     let _ = skill_id;
     db::skill_upsert(&*lock_db(&state)?, &node_key, &name, &description, &procedure, &origin).map_err(|e| e.to_string())
@@ -474,7 +475,7 @@ fn is_within(child: &str, root: &str) -> bool {
 
 fn allowed_roots(state: &AppState) -> Vec<String> {
     let mut roots = vec![normalize_path_str(&state.data_dir.display().to_string())];
-    if let Ok(v) = db::workspace_root_list(&*lock_db(state).unwrap_or_else(|_| state.db.lock())) {
+    if let Ok(v) = db::workspace_root_list(&state.db.lock()) {
         if let Some(arr) = v.as_array() {
             for r in arr {
                 if let Some(p) = r["path"].as_str() {
@@ -911,6 +912,7 @@ pub async fn browser_navigate(session_id: String, url: String, timeout_ms: Optio
 /// as individually named arguments rather than one `args` value. `args` is still accepted for
 /// callers that wrap their payload, and explicit fields win when both are present.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // the flat invoke(...) surface is 10 named fields by design.
 pub async fn browser_act(
     args: Option<Value>,
     session_id: Option<String>,
@@ -1115,7 +1117,7 @@ fn build_fast_paths() -> Vec<std::path::PathBuf> {
 }
 
 fn push_unique(out: &mut Vec<std::path::PathBuf>, p: std::path::PathBuf) {
-    if !out.iter().any(|x| *x == p) { out.push(p); }
+    if !out.contains(&p) { out.push(p); }
 }
 
 /// What the user's login shell reports as PATH. Spawns a shell, so it can take ~1s; it is cached
@@ -1421,7 +1423,7 @@ pub fn cli_env() -> Value {
     let mut searched: Vec<String> = fast_paths().iter().map(|p| p.display().to_string()).collect();
     for p in login_shell_paths() {
         let t = p.display().to_string();
-        if !searched.iter().any(|x| *x == t) { searched.push(t); }
+        if !searched.contains(&t) { searched.push(t); }
     }
     let searched: Vec<String> = searched.into_iter().take(80).collect();
     json!({

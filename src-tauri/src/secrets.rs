@@ -29,14 +29,11 @@ impl SecretStore {
     }
 
     pub fn set(&self, secret_ref: &str, value: &str) -> Result<SecretLocation, String> {
-        match keyring::Entry::new(SERVICE, secret_ref) {
-            Ok(entry) => {
-                if entry.set_password(value).is_ok() {
-                    self.degraded.lock().remove(secret_ref);
-                    return Ok(SecretLocation::Keychain);
-                }
+        if let Ok(entry) = keyring::Entry::new(SERVICE, secret_ref) {
+            if entry.set_password(value).is_ok() {
+                self.degraded.lock().remove(secret_ref);
+                return Ok(SecretLocation::Keychain);
             }
-            Err(_) => {}
         }
         self.fallback.lock().insert(secret_ref.to_string(), value.to_string());
         self.degraded.lock().insert(secret_ref.to_string());
