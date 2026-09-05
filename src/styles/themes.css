@@ -51,7 +51,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) {
   --font-ui: "Inter", "Space Grotesk", system-ui, sans-serif;
   --font-mono: "Space Mono", "JetBrains Mono", ui-monospace, monospace;
@@ -578,7 +579,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) ::selection { background: var(--sel-bg); color: var(--sel-fg); }
 :is(
   [data-theme="inscribed"],
@@ -591,7 +593,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) ::-webkit-scrollbar-thumb { background: var(--scroll-thumb); }
 :is(
   [data-theme="inscribed"],
@@ -604,7 +607,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) ::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
 
 /* ── chrome ─────────────────────────────────────────────────────────────── */
@@ -619,7 +623,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) button {
   border-radius: var(--r-md);
   transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
@@ -635,7 +640,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) button:hover { border-style: dashed; background: transparent; transform: none; }
 :is(
   [data-theme="inscribed"],
@@ -648,7 +654,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
 :is(
   [data-theme="inscribed"],
@@ -661,7 +668,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) button.primary:hover { background: var(--accent-hot); border-style: solid; border-color: var(--accent-hot); }
 :is(
   [data-theme="inscribed"],
@@ -674,7 +682,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) button.danger { color: var(--red); }
 :is(
   [data-theme="inscribed"],
@@ -687,7 +696,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) button:focus-visible { outline: 1px dashed var(--accent); outline-offset: 2px; }
 
 :is(
@@ -701,7 +711,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .titlebar .logo i { color: var(--accent); }
 :is(
   [data-theme="inscribed"],
@@ -714,7 +725,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .titlebar .host-pill,
 :is(
   [data-theme="inscribed"],
@@ -727,7 +739,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .statusbar,
 :is(
   [data-theme="inscribed"],
@@ -740,7 +753,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .tabstrip .tab {
   font-family: var(--font-doto);
   font-weight: 500;
@@ -757,7 +771,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .tabstrip .tab.active { font-weight: 700; }
 :is(
   [data-theme="inscribed"],
@@ -770,7 +785,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .kbd { font-family: var(--font-doto); letter-spacing: 0.1em; border-radius: var(--r-md); }
 :is(
   [data-theme="inscribed"],
@@ -783,7 +799,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .titlebar .win-btns button:hover { background: var(--inset); border-style: solid; }
 :is(
   [data-theme="inscribed"],
@@ -796,7 +813,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .titlebar .win-btns .close:hover { background: var(--red); color: var(--sel-fg); }
 :is(
   [data-theme="inscribed"],
@@ -809,7 +827,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .traffic span { border-radius: var(--r-md); }
 :is(
   [data-theme="inscribed"],
@@ -822,7 +841,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .traffic .m { background: var(--accent); }
 
 :is(
@@ -836,7 +856,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .menubar .menu-item:hover,
 :is(
   [data-theme="inscribed"],
@@ -849,7 +870,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .menubar .menu-item.open { background: var(--menu-hover); box-shadow: inset 0 -2px 0 var(--accent); }
 :is(
   [data-theme="inscribed"],
@@ -862,7 +884,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .menu-fly button:hover { background: var(--menu-hover); }
 :is(
   [data-theme="inscribed"],
@@ -875,7 +898,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .menu-fly { border-radius: 0; }
 
 :is(
@@ -889,7 +913,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .tabstrip .tab.active { box-shadow: inset 0 2px 0 var(--accent); }
 :is(
   [data-theme="inscribed"],
@@ -902,7 +927,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .tabstrip .tab .x:hover { color: var(--accent-hot); }
 
 :is(
@@ -916,7 +942,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .rail button.active { background: var(--menu-hover); box-shadow: inset 2px 0 0 var(--accent); }
 :is(
   [data-theme="inscribed"],
@@ -929,7 +956,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .rail button:hover { background: var(--row-hover); }
 
 :is(
@@ -943,7 +971,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .statusbar .live { color: var(--accent); }
 :is(
   [data-theme="inscribed"],
@@ -956,7 +985,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .statusbar .live::before { background: var(--accent); border-radius: var(--r-md); }
 :is(
   [data-theme="inscribed"],
@@ -969,7 +999,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .statusbar .err { color: var(--red); }
 
 /* ── glyph interface: segmented ETA module reads like instrument LED strips ─ */
@@ -984,7 +1015,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .eta-seg { background: var(--seg-off); border-radius: 0; }
 :is(
   [data-theme="inscribed"],
@@ -997,7 +1029,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .eta-seg.on { background: var(--accent); }
 :is(
   [data-theme="inscribed"],
@@ -1010,7 +1043,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .eta-seg.hot { background: var(--red); }
 :is(
   [data-theme="inscribed"],
@@ -1023,7 +1057,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .eta-readout { color: var(--text); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
 /* ── canvas ─────────────────────────────────────────────────────────────── */
@@ -1038,7 +1073,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .canvas-grid {
   background-image:
     radial-gradient(circle, var(--dot-1) 1px, transparent 1px),
@@ -1056,7 +1092,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .wire { stroke: var(--wire); stroke-dasharray: 2 4; filter: none; }
 :is(
   [data-theme="inscribed"],
@@ -1069,7 +1106,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .wire.active { stroke: var(--wire-active) !important; stroke-dasharray: 9 8; }
 :is(
   [data-theme="inscribed"],
@@ -1082,7 +1120,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .wire.streaming { stroke: var(--wire-hot); }
 :is(
   [data-theme="inscribed"],
@@ -1095,7 +1134,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .wire.completed { stroke: var(--wire-done); }
 :is(
   [data-theme="inscribed"],
@@ -1108,7 +1148,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .wire.error { stroke: var(--red); }
 
 :is(
@@ -1122,7 +1163,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .node-card { border-radius: var(--r-lg); box-shadow: none !important; }
 :is(
   [data-theme="inscribed"],
@@ -1135,7 +1177,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .node-card:hover { border-color: var(--border-strong); }
 :is(
   [data-theme="inscribed"],
@@ -1148,7 +1191,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .node-card.selected { border-color: var(--accent); outline: 1px dashed var(--accent); outline-offset: 2px; }
 :is(
   [data-theme="inscribed"],
@@ -1161,7 +1205,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .node-card.agent .head .icon { color: var(--text); }
 :is(
   [data-theme="inscribed"],
@@ -1174,7 +1219,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .node-card .head { border-bottom: 1px solid var(--border); padding-bottom: 7px; }
 :is(
   [data-theme="inscribed"],
@@ -1187,7 +1233,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .node-card .title { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 
 /* The glyph light: a dot that turns accent when the node is alive. */
@@ -1202,7 +1249,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .glyph-light { border-radius: var(--r-md); background: var(--glyph-off); }
 :is(
   [data-theme="inscribed"],
@@ -1215,7 +1263,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .glyph-light.on { background: var(--glyph-on); box-shadow: 0 0 6px var(--accent-dim); }
 :is(
   [data-theme="inscribed"],
@@ -1228,7 +1277,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .glyph-light.err { background: var(--red); }
 :is(
   [data-theme="inscribed"],
@@ -1241,7 +1291,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .glyph-light.done { background: var(--text); }
 
 :is(
@@ -1255,7 +1306,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .port-anchor { border-radius: 50%; border-color: var(--port-edge); }
 :is(
   [data-theme="inscribed"],
@@ -1268,7 +1320,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .port-anchor:hover,
 :is(
   [data-theme="inscribed"],
@@ -1281,7 +1334,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .port-anchor.valid-target { border-color: var(--accent-hot); background: var(--accent); }
 :is(
   [data-theme="inscribed"],
@@ -1294,7 +1348,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .port-anchor.filled { background: var(--accent); border-color: var(--accent); }
 
 :is(
@@ -1308,7 +1363,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .sticky-note { border-left: 3px dotted var(--accent); background: var(--accent-dim); border-radius: 0; }
 :is(
   [data-theme="inscribed"],
@@ -1321,7 +1377,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .marquee-rect { border: 1px dashed var(--accent); background: var(--accent-dim); border-radius: 0; }
 :is(
   [data-theme="inscribed"],
@@ -1334,7 +1391,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .canvas-toolbar { border-radius: 0; }
 :is(
   [data-theme="inscribed"],
@@ -1347,7 +1405,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .minimap { border-radius: 0; }
 :is(
   [data-theme="inscribed"],
@@ -1360,7 +1419,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .canvas-empty { background-image: radial-gradient(circle, var(--dot-1) 1px, transparent 1px); background-size: 16px 16px; }
 :is(
   [data-theme="inscribed"],
@@ -1373,7 +1433,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .canvas-empty .ce-mark { color: var(--inset); }
 :is(
   [data-theme="inscribed"],
@@ -1386,7 +1447,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .canvas-empty .ce-title { font-family: var(--font-doto); letter-spacing: 0.1em; }
 
 /* ── panels & pages ─────────────────────────────────────────────────────── */
@@ -1401,7 +1463,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .card,
 :is(
   [data-theme="inscribed"],
@@ -1414,7 +1477,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .modal .card { border-radius: 0; box-shadow: none !important; }
 :is(
   [data-theme="inscribed"],
@@ -1427,7 +1491,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .modal { border-radius: 0; }
 :is(
   [data-theme="inscribed"],
@@ -1440,7 +1505,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .modal-overlay,
 :is(
   [data-theme="inscribed"],
@@ -1453,7 +1519,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .palette-overlay { background: var(--overlay); backdrop-filter: none; -webkit-backdrop-filter: none; }
 :is(
   [data-theme="inscribed"],
@@ -1466,7 +1533,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .library-drawer { border-radius: 0; }
 :is(
   [data-theme="inscribed"],
@@ -1479,7 +1547,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .lib-item:hover { background: var(--row-hover); }
 :is(
   [data-theme="inscribed"],
@@ -1492,7 +1561,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .inspector-head { background: var(--bg-panel); }
 :is(
   [data-theme="inscribed"],
@@ -1505,7 +1575,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .palette { border-radius: 0; }
 :is(
   [data-theme="inscribed"],
@@ -1518,7 +1589,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .palette input { font-family: var(--font-doto); letter-spacing: 0.04em; }
 :is(
   [data-theme="inscribed"],
@@ -1531,7 +1603,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .palette .result { border-radius: 0; }
 :is(
   [data-theme="inscribed"],
@@ -1544,7 +1617,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .palette .result:hover,
 :is(
   [data-theme="inscribed"],
@@ -1557,7 +1631,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .palette .result.hot { background: var(--menu-hover); box-shadow: inset 2px 0 0 var(--accent); }
 :is(
   [data-theme="inscribed"],
@@ -1570,7 +1645,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .toast { border-radius: 0; border-left: 3px solid var(--accent); }
 :is(
   [data-theme="inscribed"],
@@ -1583,7 +1659,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .toast.err { border-left-color: var(--red); }
 :is(
   [data-theme="inscribed"],
@@ -1596,7 +1673,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .assistant-panel { border-radius: 0; }
 :is(
   [data-theme="inscribed"],
@@ -1609,7 +1687,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .ctx-menu { border-radius: 0; }
 :is(
   [data-theme="inscribed"],
@@ -1622,7 +1701,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .stat { border-radius: 0; }
 :is(
   [data-theme="inscribed"],
@@ -1635,7 +1715,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .stat .n { color: var(--text); }
 :is(
   [data-theme="inscribed"],
@@ -1648,7 +1729,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .home-hero h1 span { color: var(--accent); }
 :is(
   [data-theme="inscribed"],
@@ -1661,7 +1743,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .pill { border-radius: var(--r-md); }
 :is(
   [data-theme="inscribed"],
@@ -1674,7 +1757,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .pill.ok { color: var(--text); border-color: var(--border-strong); }
 :is(
   [data-theme="inscribed"],
@@ -1687,7 +1771,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .pill.err { color: var(--red); border-color: var(--red-dim); }
 :is(
   [data-theme="inscribed"],
@@ -1700,7 +1785,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .gantt-bar { border-radius: 0; background: var(--accent); }
 :is(
   [data-theme="inscribed"],
@@ -1713,7 +1799,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .diff-add { color: var(--text); }
 :is(
   [data-theme="inscribed"],
@@ -1726,7 +1813,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .diff-del { color: var(--red); }
 
 /* ── typography: labels are instrument markings, not sentences ───────────── */
@@ -1741,7 +1829,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .card-title,
 :is(
   [data-theme="inscribed"],
@@ -1754,7 +1843,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .ev-kind,
 :is(
   [data-theme="inscribed"],
@@ -1767,7 +1857,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .lib-cat,
 :is(
   [data-theme="inscribed"],
@@ -1780,7 +1871,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .eta-readout {
   font-family: var(--font-mono);
   text-transform: uppercase;
@@ -1797,7 +1889,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .stat,
 :is(
   [data-theme="inscribed"],
@@ -1810,7 +1903,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
@@ -1826,7 +1920,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .canvas-empty .ce-mark {
   font-family: var(--font-doto);
   font-size: 40px;
@@ -1844,7 +1939,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) h1,
 :is(
   [data-theme="inscribed"],
@@ -1857,7 +1953,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) h2 {
   font-weight: 500;
   letter-spacing: -0.02em;
@@ -2097,7 +2194,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .pill::before {
   content: "";
   width: 4px;
@@ -2120,7 +2218,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
@@ -2146,7 +2245,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) input[type="checkbox"]::before {
   content: "";
   position: absolute;
@@ -2168,7 +2268,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) input[type="checkbox"]:hover { border-color: var(--accent); }
 :is(
   [data-theme="inscribed"],
@@ -2181,7 +2282,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) input[type="checkbox"]:checked { border-color: var(--accent); }
 :is(
   [data-theme="inscribed"],
@@ -2194,7 +2296,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) input[type="checkbox"]:checked::before {
   transform: translateX(14px);
   background: var(--accent);
@@ -2212,7 +2315,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) input[type="range"] {
   appearance: none;
   -webkit-appearance: none;
@@ -2234,7 +2338,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) input[type="range"]::-webkit-slider-thumb {
   appearance: none;
   -webkit-appearance: none;
@@ -2255,7 +2360,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) input[type="range"]::-moz-range-thumb {
   width: 10px;
   height: 10px;
@@ -2278,7 +2384,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .theme-chip { text-transform: lowercase; letter-spacing: 0.04em; }
 :is(
   [data-theme="inscribed"],
@@ -2291,7 +2398,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .theme-chip .tdot {
   width: 8px;
   height: 8px;
@@ -2311,7 +2419,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .theme-chip[data-t="inscribed"] .tdot { background: #d71921; border-color: #d71921; }
 :is(
   [data-theme="inscribed"],
@@ -2324,7 +2433,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .theme-chip[data-t="chalk"] .tdot { background: #1a1a1a; border-color: #1a1a1a; }
 :is(
   [data-theme="inscribed"],
@@ -2337,7 +2447,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .theme-chip[data-t="carbon"] .tdot { background: #35d07f; border-color: #35d07f; }
 :is(
   [data-theme="inscribed"],
@@ -2350,7 +2461,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .theme-chip[data-t="bone"] .tdot { background: #c05f3c; border-color: #c05f3c; }
 :is(
   [data-theme="inscribed"],
@@ -2363,7 +2475,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .theme-chip[data-t="indigo"] .tdot { background: #8ab4ff; border-color: #8ab4ff; }
 :is(
   [data-theme="inscribed"],
@@ -2376,7 +2489,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .theme-chip[data-t="sage"] .tdot { background: #3f6b52; border-color: #3f6b52; }
 :is(
   [data-theme="inscribed"],
@@ -2389,7 +2503,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .theme-chip.on { border-color: var(--accent); color: var(--text); }
 
 /* focus is a hairline ring, never a glow */
@@ -2404,7 +2519,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) :focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: 2px;
@@ -2422,7 +2538,8 @@
   [data-theme="orchid"],
   [data-theme="porcelain"],
   [data-theme="aurora"],
-  [data-theme="nth"]
+  [data-theme="nth"],
+  [data-theme="wabi"]
 ) .dot-rule {
   border: none;
   border-top: 1px dotted var(--border-strong);
@@ -2442,4 +2559,73 @@
     transition-duration: 1ms !important;
     animation-duration: 1ms !important;
   }
+}
+
+/* ── wabi — the twelfth palette: five-color minimal (MJ 11.9.4-Fixed) ──────
+ * Charcoal ground, washi ink, one kiln-terracotta signal, moss alive,
+ * berry error. Exactly five hues: every secondary tone is derived from
+ * them with color-mix, so the palette stays literally five colors by
+ * construction. Flat instrument panel — no gradients, no glow.
+ */
+[data-theme="wabi"] {
+  /* ground */
+  --bg: #141414;
+  --bg-elevated: color-mix(in oklab, #efeeea 7%, #141414);
+  --bg-panel: color-mix(in oklab, #efeeea 5%, #141414);
+  --bg-input: color-mix(in oklab, #efeeea 4%, #141414);
+  --border: color-mix(in oklab, #efeeea 16%, #141414);
+  --border-strong: color-mix(in oklab, #efeeea 28%, #141414);
+  --text: #efeeea;
+  --text-dim: color-mix(in oklab, #efeeea 80%, #141414);
+  --text-mute: color-mix(in oklab, #efeeea 56%, #141414);
+  --text-4: color-mix(in oklab, #efeeea 38%, #141414);
+  /* signature: kiln terracotta */
+  --amber: #e07a5f;
+  --amber-dim: rgba(224, 122, 95, 0.12);
+  --amber-hot: color-mix(in oklab, #e07a5f 68%, #efeeea);
+  /* functional errors only — never a brand color */
+  --danger: #d1495b;
+  --danger-dim: rgba(209, 73, 91, 0.18);
+  /* alive pulse: moss */
+  --ok: #81b29a;
+  --nk-black: #141414;
+  --nk-surface: color-mix(in oklab, #efeeea 7%, #141414);
+  --nk-surface-2: color-mix(in oklab, #efeeea 9%, #141414);
+  --nk-surface-3: color-mix(in oklab, #efeeea 13%, #141414);
+  --nk-input: color-mix(in oklab, #efeeea 4%, #141414);
+  --nk-border: color-mix(in oklab, #efeeea 28%, #141414);
+  --nk-border-strong: color-mix(in oklab, #efeeea 38%, #141414);
+  --nk-hairline: color-mix(in oklab, #efeeea 16%, #141414);
+  --white: #efeeea;
+  --text-1: #efeeea;
+  --text-2: color-mix(in oklab, #efeeea 80%, #141414);
+  --text-3: color-mix(in oklab, #efeeea 56%, #141414);
+  --red: #d1495b;
+  --red-dim: rgba(209, 73, 91, 0.14);
+  --silver: color-mix(in oklab, #efeeea 80%, #141414);
+  --silver-dim: rgba(239, 238, 234, 0.2);
+  --success: #81b29a;
+  --error: #d1495b;
+  --row-hover: color-mix(in oklab, #efeeea 9%, #141414);
+  --accent: #e07a5f;
+  --accent-hot: color-mix(in oklab, #e07a5f 68%, #efeeea);
+  --accent-contrast: #141414;
+  --accent-dim: rgba(224, 122, 95, 0.12);
+  --dot-1: rgba(239, 238, 234, 0.05);
+  --dot-2: rgba(224, 122, 95, 0.14);
+  --wire: rgba(239, 238, 234, 0.30);
+  --wire-active: #e07a5f;
+  --wire-hot: color-mix(in oklab, #e07a5f 68%, #efeeea);
+  --wire-done: rgba(129, 178, 154, 0.55);
+  --glyph-off: color-mix(in oklab, #efeeea 13%, #141414);
+  --glyph-on: #e07a5f;
+  --menu-hover: color-mix(in oklab, #efeeea 13%, #141414);
+  --seg-off: color-mix(in oklab, #efeeea 13%, #141414);
+  --overlay: rgba(20, 20, 20, 0.82);
+  --sel-bg: #e07a5f;
+  --sel-fg: #141414;
+  --scroll-thumb: color-mix(in oklab, #efeeea 24%, #141414);
+  --scroll-thumb-hover: color-mix(in oklab, #efeeea 36%, #141414);
+  --port-edge: color-mix(in oklab, #efeeea 80%, #141414);
+  --inset: color-mix(in oklab, #efeeea 13%, #141414);
 }

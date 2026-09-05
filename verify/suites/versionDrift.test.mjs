@@ -98,6 +98,21 @@ ok(
   /npm test/.test(releaseWf) && !/for f in versionDrift/.test(releaseWf),
   "release.yml still gates on a hand-picked subset"
 );
+section("6. README counts match the code");
+var rustFiles = fs.readdirSync(path.join(root, "src-tauri", "src")).filter((f) => f.endsWith(".rs")).sort();
+var commandCount = 0;
+for (const f of rustFiles) {
+  for (const line of read(path.join("src-tauri", "src", f)).split("\n")) {
+    if (line.trim().startsWith("#[tauri::command]")) commandCount += 1;
+  }
+}
+var readmeLayout = read("README.md");
+var readmeCount = readmeLayout.match(/#\s*(\d+)\s+Tauri commands/);
+ok(
+  `README layout names the real Tauri command count (${commandCount} across ${rustFiles.length} rust files)`,
+  readmeCount !== null && Number(readmeCount[1]) === commandCount,
+  readmeCount === null ? "README no longer names a count" : `README says ${readmeCount[1]}, code has ${commandCount}`
+);
 console.log(`
 ${passed} passed, ${failed} failed`);
 if (failed > 0) {

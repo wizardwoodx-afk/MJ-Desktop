@@ -51,7 +51,7 @@ section("0. one list of themes, obeyed everywhere");
 var row = settings.match(/\(\[([^\]]+)\] as const\)/);
 ok("SettingsPage declares its theme row as a const array", row !== null, "the ([..] as const) pattern was not found");
 var THEMES = row ? row[1].split(",").map((t) => t.trim().replace(/^"|"$/g, "")) : ["inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain"];
-ok(`the advertised set is the eleven-palette INSCRIBED set (${THEMES.length} themes)`, THEMES.length === 11, THEMES.join(","));
+ok(`the advertised set is the twelve-palette INSCRIBED set (${THEMES.length} themes)`, THEMES.length === 12, THEMES.join(","));
 ok(
   `themes.css has the expected token block count (got ${THEMES.filter((t) => !themesCss.includes(`[data-theme="${t}"]`)).length} missing)`,
   THEMES.every((t) => themesCss.includes(`[data-theme="${t}"]`)),
@@ -121,9 +121,26 @@ ok("nth active wires carry the brass signal", nt("wire-active") === "#b8a17b", n
 ok("nth is genuinely dark (bg luminance < 0.12)", lum(nt("bg")) < 0.12, String(lum(nt("bg"))));
 ok("nth text is genuinely bright (luminance > 0.55)", lum(nt("text")) > 0.55, String(lum(nt("text"))));
 ok("nth uses no gradients (flat instrument panel)", !/gradient\(/i.test(nthBlock), "gradient found");
-ok("nth is the default theme (editor prefs) and advertised in Settings", /theme: "nth"/.test(storeSrc) && settings.includes('"nth"'), "not wired as default");
+ok("wabi is the default theme (editor prefs) and nth stays advertised", /theme: "wabi"/.test(storeSrc) && settings.includes('"nth"'), "default not wired");
 ok("Settings copy names nth's character", /nth · carbon ground, cream ink, brass accent/.test(settings), "missing descriptor");
 ok("nth joins every shared selector group (not a bolt-on)", (themesCss.match(/\[data-theme="nth"\]/g) ?? []).length >= 100, `only ${(themesCss.match(/\[data-theme="nth"\]/g) ?? []).length} mentions`);
+section("3.6. WABI \u2014 the twelfth palette, five-color minimal (default)");
+var wabiBlock = themesCss.match(/\[data-theme="wabi"\] \{[^}]*\n\}/)?.[0] ?? "";
+var wt = (name) => wabiBlock.match(new RegExp(`--${name}: (#[0-9a-fA-F]{6})`))?.[1] ?? "";
+ok("the wabi token block exists", wabiBlock.length > 400, `block is ${wabiBlock.length} chars`);
+ok("wabi ground is charcoal (#141414)", wt("bg") === "#141414", wt("bg"));
+ok("wabi ink is washi (#efeeea)", wt("text") === "#efeeea", wt("text"));
+ok("wabi signal is kiln terracotta (#e07a5f)", wt("accent") === "#e07a5f", wt("accent"));
+ok("wabi alive pulse is moss (#81b29a)", wt("ok") === "#81b29a", wt("ok"));
+ok("wabi error is berry (#d1495b)", wt("danger") === "#d1495b", wt("danger"));
+ok("wabi derives its secondaries from the five (color-mix >= 20)", (wabiBlock.match(/color-mix\(/g) ?? []).length >= 20, `${(wabiBlock.match(/color-mix\(/g) ?? []).length} derivations`);
+ok("wabi selection inverts (kiln fill, charcoal text)", wt("sel-bg") === "#e07a5f" && wt("sel-fg") === "#141414", `${wt("sel-bg")} / ${wt("sel-fg")}`);
+ok("wabi active wires carry the kiln signal", wt("wire-active") === "#e07a5f", wt("wire-active"));
+ok("wabi is genuinely dark (bg luminance < 0.12)", lum(wt("bg")) < 0.12, String(lum(wt("bg"))));
+ok("wabi text is genuinely bright (luminance > 0.55)", lum(wt("text")) > 0.55, String(lum(wt("text"))));
+ok("wabi uses no gradients (flat instrument panel)", !/gradient\(/i.test(wabiBlock), "gradient found");
+ok("wabi joins every shared selector group (not a bolt-on)", (themesCss.match(/\[data-theme="wabi"\]/g) ?? []).length >= 100, `only ${(themesCss.match(/\[data-theme="wabi"\]/g) ?? []).length} mentions`);
+ok("Settings copy names wabi's character", /wabi · charcoal ground, washi ink, kiln signal/.test(settings), "missing descriptor");
 section("4. V11.5 aurora \u2014 the tenth palette, honestly dark");
 var auroraBlock = themesCss.match(/\[data-theme="aurora"\] \{[\s\S]*?\n\}/)?.[0] ?? "";
 var tok = (name) => auroraBlock.match(new RegExp(`--${name}: (#[0-9a-fA-F]{6})`))?.[1] ?? "";
@@ -144,6 +161,9 @@ ok("port anchors carry a 12.5px hit halo", /\.port-anchor::after \{[^}]*inset: -
 ok("wires are clickable across a 14px corridor", /\.wire-hit \{[^}]*stroke-width: 14/.test(css), "no corridor");
 ok("wires carry a Meridian midpoint dot (.wire-mid)", /\.wire-mid/.test(css), "no midpoint dot");
 ok("the Assist redesign styles exist (asst-*)", ["asst-prov", "asst-rail", "asst-quick", "asst-typing", "asst-foot"].every((c) => css.includes(`.${c}`)), "missing asst-* classes");
+ok("the 11.9.4(Fixed) motion system ships (node/wire/mid/spin keyframes)", ["mj-node-in", "mj-wire-draw", "mj-mid-in", "mj-spin"].every((k) => css.includes(`@keyframes ${k}`)), "missing motion keyframes");
+ok("reduced motion wins over the motion system", /prefers-reduced-motion[\s\S]*?mj-node-in[\s\S]*?animation: none/.test(css), "motion ignores reduced motion");
+ok("the boot splash ships in index.html with the wabi five", /mj-boot/.test(read("index.html")) && /#e07a5f/.test(read("index.html")) && /#81b29a/.test(read("index.html")), "no splash in index.html");
 console.log(`
 ${passed} passed, ${failed} failed`);
 if (failed > 0) {

@@ -4670,7 +4670,7 @@ var ipc = {
 };
 
 // src/graph/store.ts
-var THEME_IDS = ["nth", "inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain", "aurora"];
+var THEME_IDS = ["nth", "inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain", "aurora", "wabi"];
 var THEME_ALIASES = {
   nothing: "inscribed",
   "nothing-light": "chalk",
@@ -4692,7 +4692,7 @@ function getEditorPrefs() {
     if (raw) {
       const p2 = JSON.parse(raw);
       const stored = typeof p2.theme === "string" ? p2.theme : "";
-      const theme = THEME_IDS.includes(stored) ? stored : THEME_ALIASES[stored] ?? "nth";
+      const theme = THEME_IDS.includes(stored) ? stored : THEME_ALIASES[stored] ?? "wabi";
       return {
         snap: typeof p2.snap === "number" && p2.snap >= 0 ? p2.snap : 16,
         autosaveMs: typeof p2.autosaveMs === "number" && p2.autosaveMs >= 0 ? p2.autosaveMs : 1200,
@@ -4704,7 +4704,7 @@ function getEditorPrefs() {
     }
   } catch {
   }
-  return { snap: 16, autosaveMs: 1200, theme: "nth", showMinimap: true, showGrid: true, reducedMotion: false };
+  return { snap: 16, autosaveMs: 1200, theme: "wabi", showMinimap: true, showGrid: true, reducedMotion: false };
 }
 var emptyGraph = (id, name) => ({
   schemaVersion: GRAPH_SCHEMA_VERSION,

@@ -148,6 +148,35 @@ ok(
   "release.yml still gates on a hand-picked subset",
 );
 
+/* ── 6. README counts match the code (MJ 11.9.4-fix) ─────────────────────────
+ *
+ * The 11.9.4 audit found the README layout comment naming "92 Tauri commands"
+ * while src-tauri/ actually shipped 94 `#[tauri::command]`s. Nothing broke, so
+ * nothing caught it — the same disease as the V9 version drift, one layer up:
+ * prose counts rot exactly like version strings rot. Suite counts, harness
+ * counts and bundle counts are already held by probe-list.mjs, the harnesses
+ * probe and the offlinePack manifest; the Tauri command count had no holder.
+ * Now the README's number is asserted against the Rust source, so a renamed,
+ * added or removed command fails the gate until the doc is updated with it.
+ */
+section("6. README counts match the code");
+
+const rustFiles = fs.readdirSync(path.join(root, "src-tauri", "src")).filter((f) => f.endsWith(".rs")).sort();
+let commandCount = 0;
+for (const f of rustFiles) {
+  for (const line of read(path.join("src-tauri", "src", f)).split("\n")) {
+    // Only attribute lines count; a comment that quotes the attribute must not.
+    if (line.trim().startsWith("#[tauri::command]")) commandCount += 1;
+  }
+}
+const readmeLayout = read("README.md");
+const readmeCount = readmeLayout.match(/#\s*(\d+)\s+Tauri commands/);
+ok(
+  `README layout names the real Tauri command count (${commandCount} across ${rustFiles.length} rust files)`,
+  readmeCount !== null && Number(readmeCount[1]) === commandCount,
+  readmeCount === null ? "README no longer names a count" : `README says ${readmeCount[1]}, code has ${commandCount}`,
+);
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) {
   console.log("\nfailures:");

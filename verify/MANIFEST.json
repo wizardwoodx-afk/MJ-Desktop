@@ -20,7 +20,7 @@
     "diag2.test.mjs": "10d4acea40421e3da008493c111384360a314842db11145e4f922d2579123fff",
     "diag3.test.mjs": "3da1951007201672b771d00d015b61255adaf57b583aeb7383d7dd46d0728ad3",
     "engine.test.mjs": "d7131e942827635f699d6ecb5dcae0645f3a362623c8303f43f3d8422263f148",
-    "firstrun.test.mjs": "0314bfbbe004f6a6c2b0f94a09837a331e4d5ef2add77405a70b431964bfc1a0",
+    "firstrun.test.mjs": "6d9ab82d772b4401a612636deec6f24ff452d369736fe7916cbcd1b9d7f5440f",
     "gaps.test.mjs": "08012d6be6c58ea0da11067a41133a94bd81894c6b45e3f1824ff0677b198e93",
     "gitTs.test.mjs": "3bee3fb1edd4e9c871ac7ec1af2d056e95b7ba0cce6ee2545c5102882d19d446",
     "harnessPolicy.test.mjs": "e448f1862fb7b8dcef2e9d2999f1e2166ca971d31085525d1787fd87c66e97a4",
@@ -38,10 +38,10 @@
     "stubLedger.test.mjs": "cf9b2d3abf8529ff48ea17b37c7f47301afc973244cfb830a5933fa9ead39698",
     "teamBinding.test.mjs": "4190ee1e10d7a8573f7466c5720b963599fcf41e0a7a646b6bc4ed637ff4b70d",
     "teamEvolution.test.mjs": "1b2b6bf5fd279498e09ea7c19f1515ac549350f4483cc5487dac158737654592",
-    "theme.test.mjs": "aef2c6e1d4937fcef933d03c2114d3864db56aead747db0a6f1b2c7aa89bf414",
+    "theme.test.mjs": "3a22789c37a208bdaf0ea16b7e43e5d4b6ad2af08a8d201fd6903be9fc068f6c",
     "unit.test.mjs": "22ebdc998672d22df7222fffdfbdf7854df4949fafb6def00effb7c5902fdac6",
     "v10Page.test.mjs": "12d4c24a1bb07ce0867e206e05d67e847445729ecbc5f0e68de91b8c2256c698",
-    "versionDrift.test.mjs": "aa73cbb326d5ac408571f5e27157032f65fd80b4e3b9ef7117bd9b40a726c1e5",
+    "versionDrift.test.mjs": "d4635e53e632f4c476e50c8357684f4902542600f6ed8185b9a45a573a062f18",
     "wiring.test.mjs": "f6bc43ec8a189b98ce2783f204f699a135f2b464bc77d9a45f511873e7c0201c"
   }
 }
