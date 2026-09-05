@@ -35,7 +35,9 @@ const ok = (c: boolean, m: string) => {
 
 const git: GitRunner = async (args, cwd) => {
   try {
-    const stdout = execFileSync("git", args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+    // QA fix (audit W2): no git call here may ever hang the suite. A stuck credential helper,
+    // a wedged index.lock or an AV scan must surface as a failed assertion, not a dead run.
+    const stdout = execFileSync("git", args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, timeout: 30_000, killSignal: "SIGKILL" });
     return { ok: true, stdout, stderr: "", exitCode: 0, reason: null };
   } catch (e) {
     const err = e as { stdout?: string; stderr?: string; status?: number | null };
@@ -51,7 +53,7 @@ const git: GitRunner = async (args, cwd) => {
 
 function makeRepo(tag: string): string {
   const dir = mkdtempSync(join(tmpdir(), `mj-git-${tag}-`));
-  const g = (...a: string[]) => execFileSync("git", a, { cwd: dir, encoding: "utf8" });
+  const g = (...a: string[]) => execFileSync("git", a, { cwd: dir, encoding: "utf8", timeout: 30_000, killSignal: "SIGKILL" });
   g("init", "-q");
   g("config", "user.email", "mj@test");
   g("config", "user.name", "MJ");
@@ -92,8 +94,8 @@ console.log("\n== a real diff, parsed ==\n");
   // `git add -A` stages new and modified files but NOT deletions — that is `git add -u`, and `git rm`
   // stages its own removal. Without the rm the deletion never reaches the index and a --staged diff
   // legitimately omits it, so both are needed.
-  execFileSync("git", ["rm", "-q", "old name.ts"], { cwd: dir });
-  execFileSync("git", ["add", "-A"], { cwd: dir });
+  execFileSync("git", ["rm", "-q", "old name.ts"], { cwd: dir, timeout: 30_000, killSignal: "SIGKILL" });
+  execFileSync("git", ["add", "-A"], { cwd: dir, timeout: 30_000, killSignal: "SIGKILL" });
 
   const r = await api.diff(dir, { staged: true });
   ok(r.ok === true, "the diff call succeeded");
@@ -129,7 +131,7 @@ console.log("\n== the shapes real repos produce ==\n");
   // not be counted as a changed line.
   const dir = makeRepo("newline");
   writeFileSync(join(dir, "noeol.ts"), "one\ntwo");
-  execFileSync("git", ["add", "."], { cwd: dir });
+  execFileSync("git", ["add", "."], { cwd: dir, timeout: 30_000, killSignal: "SIGKILL" });
   const staged = await api.diff(dir, { staged: true });
   const f = staged.summary!.files.find((x) => x.path === "noeol.ts")!;
   ok(f.additions === 2, `a 2-line file with no trailing newline is +2, got +${f.additions} (the "\\ No newline" marker must not count)`);
@@ -139,7 +141,7 @@ console.log("\n== the shapes real repos produce ==\n");
 {
   const dir = makeRepo("binary");
   writeFileSync(join(dir, "blob.bin"), Buffer.from([0, 1, 2, 3, 255, 254, 0, 7]));
-  execFileSync("git", ["add", "."], { cwd: dir });
+  execFileSync("git", ["add", "."], { cwd: dir, timeout: 30_000, killSignal: "SIGKILL" });
   const r = await api.diff(dir, { staged: true });
   const b = r.summary!.files.find((x) => x.path === "blob.bin")!;
   ok(b.binary === true, "a binary file is detected as binary");
@@ -155,10 +157,10 @@ console.log("\n== the shapes real repos produce ==\n");
   // ~50% similar, so git legitimately calls it add+delete. Use a file big enough that a pure move
   // stays a rename — that is the case a reviewer needs to see as "moved", not "new file".
   writeFileSync(join(dir, "old name.ts"), Array.from({ length: 20 }, (_, i) => `line ${i}`).join("\n") + "\n");
-  execFileSync("git", ["add", "."], { cwd: dir });
-  execFileSync("git", ["commit", "-q", "-m", "bigger file"], { cwd: dir });
-  execFileSync("git", ["mv", "old name.ts", "new name.ts"], { cwd: dir });
-  execFileSync("git", ["add", "."], { cwd: dir });
+  execFileSync("git", ["add", "."], { cwd: dir, timeout: 30_000, killSignal: "SIGKILL" });
+  execFileSync("git", ["commit", "-q", "-m", "bigger file"], { cwd: dir, timeout: 30_000, killSignal: "SIGKILL" });
+  execFileSync("git", ["mv", "old name.ts", "new name.ts"], { cwd: dir, timeout: 30_000, killSignal: "SIGKILL" });
+  execFileSync("git", ["add", "."], { cwd: dir, timeout: 30_000, killSignal: "SIGKILL" });
   const r = await api.diff(dir, { staged: true });
   const f = r.summary!.files.find((x) => x.path.includes("new name.ts"))!;
   ok(f !== undefined, "the renamed file is found despite the space in its name");
@@ -229,8 +231,8 @@ console.log("\n== truncation for a prompt ==\n");
   const dir = makeRepo("big");
   const big: string = Array.from({ length: 4000 }, (_, i) => `const v${i} = ${i};`).join("\n") + "\n";
   for (let i = 0; i < 6; i += 1) writeFileSync(join(dir, `mod${i}.ts`), big);
-  execFileSync("git", ["add", "."], { cwd: dir });
-  execFileSync("git", ["commit", "-q", "-m", "mods"], { cwd: dir });
+  execFileSync("git", ["add", "."], { cwd: dir, timeout: 30_000, killSignal: "SIGKILL" });
+  execFileSync("git", ["commit", "-q", "-m", "mods"], { cwd: dir, timeout: 30_000, killSignal: "SIGKILL" });
   for (let i = 0; i < 6; i += 1) writeFileSync(join(dir, `mod${i}.ts`), big.replace(/= (\d+);/g, "= 999;"));
   const r = await api.diff(dir);
   ok(r.raw.length > 24000, `the real diff is ${r.raw.length} chars, over the prompt limit`);

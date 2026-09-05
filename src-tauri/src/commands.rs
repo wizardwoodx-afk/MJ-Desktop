@@ -427,19 +427,114 @@ pub async fn llm_chat(state: State<'_, Arc<AppState>>, req: Value) -> Result<Val
     Ok(json!({ "content": content, "model": model, "usage": j.get("usage").cloned().unwrap_or(json!({})), "duration_ms": 0 }))
 }
 
+// ---------------------------------------------------------------------------
+// QA fix (audit C2): filesystem sandbox.
+//
+// fs_read / fs_write / fs_list / fs_mkdir / fs_remove / shell_exec used to accept
+// ANY absolute path from the webview, which made every XSS in the frontend a
+// full-disk read/write/delete + arbitrary-execution primitive. Every path now
+// must resolve inside an allowed root:
+//   • the app data dir (always, it is MJ's own store), or
+//   • a user-registered workspace root (persisted in SQLite, managed by the
+//     workspace_root_* commands below — Teams registers the repo when a run starts).
+// Agents can be prompt-injected; the user-registered-root gate is what keeps an
+// injected tool call from reaching, say, ~/.ssh or C:\Windows.
+// ---------------------------------------------------------------------------
+
+fn normalize_parts(p: &str) -> Vec<String> {
+    let mut parts: Vec<String> = Vec::new();
+    for comp in p.replace('\\', "/").split('/') {
+        if comp.is_empty() || comp == "." {
+            continue;
+        }
+        if comp == ".." {
+            if parts.len() > 1 {
+                parts.pop();
+            }
+            continue;
+        }
+        parts.push(comp.to_string());
+    }
+    parts
+}
+
+fn normalize_path_str(p: &str) -> String {
+    normalize_parts(p).join("/")
+}
+
+fn is_within(child: &str, root: &str) -> bool {
+    let (c, r) = (normalize_path_str(child), normalize_path_str(root));
+    if c.eq_ignore_ascii_case(&r) {
+        return true;
+    }
+    let cc = format!("{c}/");
+    let rc = format!("{r}/");
+    cc.to_ascii_lowercase().starts_with(&rc.to_ascii_lowercase())
+}
+
+fn allowed_roots(state: &AppState) -> Vec<String> {
+    let mut roots = vec![normalize_path_str(&state.data_dir.display().to_string())];
+    if let Ok(v) = db::workspace_root_list(&*lock_db(state).unwrap_or_else(|_| state.db.lock())) {
+        if let Some(arr) = v.as_array() {
+            for r in arr {
+                if let Some(p) = r["path"].as_str() {
+                    roots.push(p.to_string());
+                }
+            }
+        }
+    }
+    roots
+}
+
+fn ensure_allowed(state: &AppState, path: &str) -> Result<String, String> {
+    let normalized = normalize_path_str(path);
+    if normalized.is_empty() {
+        return Err("sandbox: empty path".into());
+    }
+    if allowed_roots(state).iter().any(|root| is_within(&normalized, root)) {
+        Ok(normalized)
+    } else {
+        Err(format!(
+            "sandbox: path '{normalized}' is outside every registered workspace root. Register it first (Teams → runner repo, or workspace_root_add)."
+        ))
+    }
+}
+
 #[tauri::command]
-pub fn fs_read(path: String) -> Result<String, String> {
+pub fn workspace_root_add(state: State<Arc<AppState>>, root: String) -> Result<Value, String> {
+    let normalized = normalize_path_str(&root);
+    if normalized.is_empty() || !PathBuf::from(&root).is_dir() {
+        return Err(format!("sandbox: '{root}' is not an existing directory"));
+    }
+    db::workspace_root_add(&*lock_db(&state)?, &normalized).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn workspace_root_remove(state: State<Arc<AppState>>, root: String) -> Result<Value, String> {
+    db::workspace_root_remove(&*lock_db(&state)?, &root).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn workspace_root_list(state: State<Arc<AppState>>) -> Result<Value, String> {
+    db::workspace_root_list(&*lock_db(&state)?).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn fs_read(state: State<Arc<AppState>>, path: String) -> Result<String, String> {
+    let path = ensure_allowed(&state, &path)?;
     std::fs::read_to_string(&path).map_err(|e| e.to_string())
 }
 #[tauri::command]
-pub fn fs_write(path: String, content: String) -> Result<(), String> {
+pub fn fs_write(state: State<Arc<AppState>>, path: String, content: String) -> Result<(), String> {
+    let path = ensure_allowed(&state, &path)?;
     if let Some(parent) = std::path::Path::new(&path).parent() {
         let _ = std::fs::create_dir_all(parent);
     }
     std::fs::write(&path, content).map_err(|e| e.to_string())
 }
 #[tauri::command]
-pub fn fs_list(path: String) -> Result<Value, String> {
+pub fn fs_list(state: State<Arc<AppState>>, path: String) -> Result<Value, String> {
+    let path = ensure_allowed(&state, &path)?;
     let rd = std::fs::read_dir(&path).map_err(|e| e.to_string())?;
     let mut out = Vec::new();
     for e in rd.flatten() {
@@ -448,19 +543,27 @@ pub fn fs_list(path: String) -> Result<Value, String> {
     Ok(Value::Array(out))
 }
 #[tauri::command]
-pub fn fs_mkdir(path: String) -> Result<(), String> {
+pub fn fs_mkdir(state: State<Arc<AppState>>, path: String) -> Result<(), String> {
+    let path = ensure_allowed(&state, &path)?;
     std::fs::create_dir_all(&path).map_err(|e| e.to_string())
 }
 #[tauri::command]
-pub fn fs_remove(path: String, recursive: bool) -> Result<(), String> {
+pub fn fs_remove(state: State<Arc<AppState>>, path: String, recursive: bool) -> Result<(), String> {
+    let path = ensure_allowed(&state, &path)?;
     if recursive { std::fs::remove_dir_all(&path).or_else(|_| std::fs::remove_file(&path)).map_err(|e| e.to_string()) }
     else { std::fs::remove_file(&path).map_err(|e| e.to_string()) }
 }
 #[tauri::command]
-pub fn shell_exec(program: String, args: Vec<String>, cwd: Option<String>, timeout_secs: Option<u64>) -> Result<Value, String> {
+pub fn shell_exec(state: State<Arc<AppState>>, program: String, args: Vec<String>, cwd: Option<String>, timeout_secs: Option<u64>) -> Result<Value, String> {
+    // The working directory must be a registered root. No cwd given -> MJ's own data dir,
+    // which is always allowed (previously it silently inherited the install dir).
+    let cwd = match cwd {
+        Some(c) => ensure_allowed(&state, &c)?,
+        None => normalize_path_str(&state.data_dir.display().to_string()),
+    };
     let mut cmd = std::process::Command::new(&program);
     cmd.args(&args);
-    if let Some(c) = cwd { cmd.current_dir(c); }
+    cmd.current_dir(&cwd);
     let (stdout, stderr, code) = run_timeout(cmd, timeout_secs.unwrap_or(60))?;
     Ok(json!({ "stdout": stdout, "stderr": stderr, "code": code }))
 }

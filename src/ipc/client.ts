@@ -147,6 +147,9 @@ interface MjCommands {
   suite_save: Json;
   workflow_create: { id: string };
   workflow_delete: null;
+  workspace_root_add: { ok: boolean; path: string };
+  workspace_root_list: { path: string; addedAt: string }[];
+  workspace_root_remove: { ok: boolean; path: string };
   workflow_get: WorkflowRecord;
   workflow_list: WorkflowRecord[];
   workflow_save: null;
@@ -574,6 +577,21 @@ export const ipc = {
   shellExec: async (program: string, args: string[], cwd?: string, timeoutSecs?: number) => {
     if (useTauri()) return tauriInvoke("shell_exec", { program, args, cwd, timeoutSecs });
     throw new Error("Terminal is available in the native desktop build.");
+  },
+
+  // QA fix (audit C2): the native filesystem is sandboxed to the app data dir plus these
+  // user-registered workspace roots. Teams registers the runner repo when a run starts.
+  workspaceRootAdd: async (root: string) => {
+    if (!useTauri()) return { ok: false as boolean, path: root };
+    return tauriInvoke("workspace_root_add", { root });
+  },
+  workspaceRootRemove: async (root: string) => {
+    if (!useTauri()) return { ok: false as boolean, path: root };
+    return tauriInvoke("workspace_root_remove", { root });
+  },
+  workspaceRootList: async (): Promise<{ path: string; addedAt: string }[]> => {
+    if (!useTauri()) return [];
+    return tauriInvoke("workspace_root_list");
   },
 
   mcpServerList: async (): Promise<McpServerEntry[]> => {

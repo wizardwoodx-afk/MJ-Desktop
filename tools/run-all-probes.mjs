@@ -30,6 +30,13 @@ import { buildSync } from "esbuild";
 // dev gate and the shipped pack can never cover different sets of suites.
 import { listProbeSuites } from "./probe-list.mjs";
 
+// Per-suite watchdog. Some probes drive real `git` child processes; without a timeout one
+// environmental hang would previously kill the whole run silently (see the audit C1 note below).
+function suiteTimeoutMs() {
+  const n = Number(process.env.MJ_PROBE_TIMEOUT_MS);
+  return Number.isFinite(n) && n > 0 ? n : 120_000;
+}
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const probeDir = path.join(root, "probe");
 const files = listProbeSuites(probeDir);
@@ -55,12 +62,33 @@ for (const file of files) {
       outfile: outPath,
       logLevel: "error",
     });
-    execFileSync(process.execPath, [outPath], { stdio: "inherit", cwd: root });
+    // QA fix (audit C1): this used to be `stdio: "inherit"`. On Windows, when the runner's own
+    // output is redirected (npm logs, CI, any non-tty), the inherited handles deadlock the git
+    // child processes inside gitTs — and the whole runner died silently at suite 19 of 40: no
+    // FAIL line, no summary, and the .mjs bundle left behind because `finally` never ran.
+    // Piping the child's stdio avoids the handle-inheritance deadlock, and the per-suite
+    // timeout turns any future hang into a visible, attributable failure instead of a
+    // silently truncated run.
+    const stdout = execFileSync(process.execPath, [outPath], {
+      cwd: root,
+      timeout: suiteTimeoutMs(),
+      killSignal: "SIGKILL",
+      maxBuffer: 256 * 1024 * 1024,
+      encoding: "utf8",
+    });
+    process.stdout.write(stdout);
     console.log(`PASS: ${file}\n`);
     totalPass++;
   } catch (err) {
     console.log(`FAIL: ${file}`);
     const message = err && typeof err.message === "string" ? err.message : String(err);
+    // A timeout kill must be impossible to miss: the suite never printed a verdict.
+    if (message.includes("ETIMEDOUT")) {
+      console.log(`TIMED OUT after ${suiteTimeoutMs() / 1000}s (killed; see output below)`);
+    }
+    if (err && typeof err === "object" && "stdout" in err && typeof err.stdout === "string") {
+      process.stdout.write(err.stdout);
+    }
     console.log(message.split("\n").slice(0, 8).join("\n"));
     console.log("");
     failures.push(file);

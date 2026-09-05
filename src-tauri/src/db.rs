@@ -132,6 +132,10 @@ pub fn init(conn: &Connection) -> rusqlite::Result<()> {
             cases_json TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS workspace_roots (
+            path TEXT PRIMARY KEY,
+            added_at TEXT NOT NULL
+        );
         "
     )?;
     Ok(())
@@ -159,6 +163,54 @@ fn ensure_skill_usage_columns(conn: &Connection) -> rusqlite::Result<()> {
 fn now() -> String {
     chrono::Utc::now().to_rfc3339()
 }
+
+/// QA fix (audit C2): the filesystem sandbox's user-registered roots. The app data dir is always
+/// allowed; every other directory must be explicitly registered here (Teams does this when a run
+/// starts) before fs_* / shell_exec will touch it. Paths are stored normalized.
+pub fn workspace_root_list(conn: &Connection) -> rusqlite::Result<Value> {
+    let mut stmt = conn.prepare("SELECT path, added_at FROM workspace_roots ORDER BY path")?;
+    let rows = stmt.query_map([], |r| {
+        Ok(json!({ "path": r.get::<_, String>(0)?, "addedAt": r.get::<_, String>(1)? }))
+    })?;
+    let out: Vec<Value> = rows.collect::<Result<_, _>>()?;
+    Ok(Value::Array(out))
+}
+
+pub fn workspace_root_add(conn: &Connection, root: &str) -> rusqlite::Result<Value> {
+    let normalized = normalize_root(root);
+    conn.execute(
+        "INSERT OR IGNORE INTO workspace_roots (path, added_at) VALUES (?1, ?2)",
+        params![normalized, now()],
+    )?;
+    Ok(json!({ "ok": true, "path": normalized }))
+}
+
+pub fn workspace_root_remove(conn: &Connection, root: &str) -> rusqlite::Result<Value> {
+    let normalized = normalize_root(root);
+    conn.execute("DELETE FROM workspace_roots WHERE path = ?1", params![normalized])?;
+    Ok(json!({ "ok": true, "path": normalized }))
+}
+
+/// Lexical normalization shared with commands.rs: forward slashes, no trailing separator,
+/// no `.` / `..` components. Drive-letter case-insensitivity is handled by the checker.
+fn normalize_root(root: &str) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    for comp in root.replace('\\', "/").split('/') {
+        if comp.is_empty() || comp == "." {
+            continue;
+        }
+        if comp == ".." {
+            // Never pop the drive/prefix (first component like "C:"), never go above root.
+            if parts.len() > 1 {
+                parts.pop();
+            }
+            continue;
+        }
+        parts.push(comp.to_string());
+    }
+    parts.join("/")
+}
+
 
 fn nid(prefix: &str) -> String {
     format!("{prefix}-{}", Uuid::new_v4().simple())

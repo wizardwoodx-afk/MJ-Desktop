@@ -470,6 +470,8 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
     setDuelRunning(true);
     toast("Starting Red Team vs Blue Team Adversarial Arena Duel...");
     try {
+      // QA fix (audit C2): register the runner repo so the native fs/shell sandbox allows it.
+      await ipc.workspaceRootAdd(runnerRepo).catch(() => undefined);
       const rep = await runAdversarialDuel({
         objective: runnerObjective,
         defenderSeatId: "blue_builder",
@@ -722,6 +724,8 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
       }));
 
       const runId = uid("run");
+      // QA fix (audit C2): register the runner repo so the native fs/shell sandbox allows it.
+      await ipc.workspaceRootAdd(runnerRepo).catch(() => undefined);
       const res = await executeTeam(
         {
           team: selectedTeam,

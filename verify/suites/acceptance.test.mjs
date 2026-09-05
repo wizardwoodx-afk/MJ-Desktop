@@ -3408,6 +3408,20 @@ var init_client = __esm({
         if (useTauri()) return tauriInvoke("shell_exec", { program, args, cwd, timeoutSecs });
         throw new Error("Terminal is available in the native desktop build.");
       },
+      // QA fix (audit C2): the native filesystem is sandboxed to the app data dir plus these
+      // user-registered workspace roots. Teams registers the runner repo when a run starts.
+      workspaceRootAdd: async (root) => {
+        if (!useTauri()) return { ok: false, path: root };
+        return tauriInvoke("workspace_root_add", { root });
+      },
+      workspaceRootRemove: async (root) => {
+        if (!useTauri()) return { ok: false, path: root };
+        return tauriInvoke("workspace_root_remove", { root });
+      },
+      workspaceRootList: async () => {
+        if (!useTauri()) return [];
+        return tauriInvoke("workspace_root_list");
+      },
       mcpServerList: async () => {
         if (useTauri()) return tauriInvoke("mcp_server_list");
         return localDb.mcpList();

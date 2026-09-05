@@ -25,11 +25,25 @@ let fail = 0;
 const failures = [];
 for (const s of suites) {
   try {
-    execFileSync(process.execPath, [path.join(suitesDir, s)], { stdio: "inherit", cwd: root });
+    // QA fix (audit C1): `stdio: "inherit"` deadlocked on Windows whenever this runner's own
+    // output was redirected (npm logs, CI) — the git child processes inside gitTs stalled on
+    // the inherited handles and the whole gate died silently. Piping + a per-suite timeout
+    // turns any hang into a visible, attributable FAIL.
+    const stdout = execFileSync(process.execPath, [path.join(suitesDir, s)], {
+      cwd: root,
+      timeout: 120_000,
+      killSignal: "SIGKILL",
+      maxBuffer: 256 * 1024 * 1024,
+      encoding: "utf8",
+    });
+    process.stdout.write(stdout);
     console.log(`PASS: ${s}\n`);
     pass++;
-  } catch {
+  } catch (err) {
     console.log(`FAIL: ${s}\n`);
+    if (err && typeof err === "object" && "stdout" in err && typeof err.stdout === "string") {
+      process.stdout.write(err.stdout);
+    }
     failures.push(s);
     fail++;
   }
