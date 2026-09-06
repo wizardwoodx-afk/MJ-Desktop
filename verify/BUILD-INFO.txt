@@ -1,4 +1,4 @@
-MJ 11.9.7 — offline verification pack provenance
+MJ 11.9.8 — offline verification pack provenance
 =================================================
 
 Toolchain (certifying runtime)
@@ -6,7 +6,7 @@ Toolchain (certifying runtime)
                            under this runtime: fresh npm ci, tsc, live suites,
                            pack rebuild, offline gate, vite build)
   esbuild       0.25.12
-  MJ            11.9.7 (package.json + package-lock.json / version.ts /
+  MJ            11.9.8 (package.json + package-lock.json / version.ts /
                 tauri.conf.json / Cargo.toml / Cargo.lock / LICENSE)
 
 Honest scope
@@ -16,7 +16,7 @@ Honest scope
   versionDrift; the Rust sources themselves are unchanged since 11.9.4.
 
 The pack
-  verify/suites/*.mjs   46 self-contained bundles — every probe suite except
+  verify/suites/*.mjs   47 self-contained bundles — every probe suite except
                         probe/offlinePack.test.ts (the pack's own freshness gate,
                         which needs the dev toolchain and is therefore not packed)
   verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that built it
@@ -24,18 +24,18 @@ The pack
 
 Gates run on this tree (fresh npm ci, Node v22.23.2)
   tsc --noEmit          exit 0
-  npm test              ALL PROBES SUMMARY: 47 passed, 0 failed.
-                        (47 probe suites; harnesses 270 · webSearch · teamPower ·
-                        receipts · licensing · preflight · checkpoints · palette
-                        incl. the label-first ranking checks · offlinePack)
+  npm test              ALL PROBES SUMMARY: 48 passed, 0 failed.
+                        (48 probe suites; harnesses 270 · webSearch · teamPower ·
+                        receipts · licensing · preflight · checkpoints · palette · layout
+                        incl. the label-first ranking checks · layered-layout engine · offlinePack)
   vite build            exit 0
 
 Offline gate
   Command:     node verify/run.mjs
-  Result:      OFFLINE VERIFY SUMMARY: 46 passed, 0 failed., exit 0 (node v22.23.2)
+  Result:      OFFLINE VERIFY SUMMARY: 47 passed, 0 failed., exit 0 (node v22.23.2)
 
-  This pack was rebuilt from the 11.9.7 source under Node 22 immediately before
-  the run above, and suite #47 (offlinePack) confirms every bundle is
+  This pack was rebuilt from the 11.9.8 source under Node 22 immediately before
+  the run above, and suite #48 (offlinePack) confirms every bundle is
   byte-identical to a fresh rebuild AND that this file names the current
   bundle/suite counts — BUILD-INFO drift is now a failing gate, not a review
   finding.

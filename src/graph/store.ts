@@ -7,6 +7,8 @@ import { portsCompatible } from "../domain/dataTypes";
 import { ipc } from "../ipc/client";
 import { uid } from "../app/id";
 import { createNodeFromDef } from "./factory";
+import { layeredLayout } from "./layout";
+import { NODE_W, nodeH } from "../canvas/geometry";
 
 interface HistoryEntry {
   graph: WorkflowGraph;
@@ -600,41 +602,28 @@ export const useGraphStore = create<GraphState>((set, get) => {
 
     autoLayout: () => {
       const g = get().graph;
-      const indeg = new Map(g.nodes.map((n) => [n.id, 0]));
-      const adj = new Map(g.nodes.map((n) => [n.id, [] as string[]]));
-      for (const c of g.connections) {
-        adj.get(c.sourceNodeId)?.push(c.targetNodeId);
-        indeg.set(c.targetNodeId, (indeg.get(c.targetNodeId) ?? 0) + 1);
-      }
-      const layers: string[][] = [];
-      let frontier = g.nodes.filter((n) => (indeg.get(n.id) ?? 0) === 0).map((n) => n.id);
-      const placed = new Set<string>();
-      while (frontier.length) {
-        layers.push(frontier);
-        frontier.forEach((id) => placed.add(id));
-        const next: string[] = [];
-        for (const id of layers[layers.length - 1]) {
-          for (const nx of adj.get(id) ?? []) {
-            if (placed.has(nx)) continue;
-            const left = (indeg.get(nx) ?? 0) - 1;
-            indeg.set(nx, left);
-            if (left <= 0) next.push(nx);
+      if (g.nodes.length === 0) return;
+      /**
+       * 11.9.8: the naive frontier loop is replaced by the real layered engine (graph/layout.ts):
+       * longest-path layers, virtual nodes for long edges, deterministic barycenter crossing
+       * minimization, neighbour-smoothed coordinates, components stacked. Probed in layout.test.
+       */
+      const res = layeredLayout({
+        nodes: g.nodes.map((n) => ({
+          id: n.id,
+          w: n.definitionId.startsWith("control.") ? 140 : NODE_W,
+          h: nodeH(n),
+        })),
+        edges: g.connections.map((c) => [c.sourceNodeId, c.targetNodeId] as [string, string]),
+      });
+      withHistory("Auto layout", (graph) => {
+        for (const n of graph.nodes) {
+          const p = res.positions.get(n.id);
+          if (p) {
+            n.x = Math.round(p.x);
+            n.y = Math.round(p.y);
           }
         }
-        frontier = next.filter((id, i, a) => a.indexOf(id) === i);
-        if (layers.length > 40) break;
-      }
-      for (const n of g.nodes) if (!placed.has(n.id)) layers.push([n.id]);
-      withHistory("Auto layout", (graph) => {
-        layers.forEach((layer, i) => {
-          layer.forEach((id, j) => {
-            const n = graph.nodes.find((x) => x.id === id);
-            if (n) {
-              n.x = 80 + i * 320;
-              n.y = 80 + j * 200;
-            }
-          });
-        });
       });
     },
 

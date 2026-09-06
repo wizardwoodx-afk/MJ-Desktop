@@ -3813,7 +3813,7 @@ function detectHost() {
 }
 
 // src/version.ts
-var MJ_VERSION = "11.9.7";
+var MJ_VERSION = "11.9.8";
 var MJ_VERSION_SHORT = MJ_VERSION.split(".").slice(0, 2).join(".");
 var MJ_TITLE = `MJ ${MJ_VERSION_SHORT}`;
 
@@ -4669,6 +4669,260 @@ var ipc = {
   }
 };
 
+// src/graph/layout.ts
+var DEFAULTS = { gapX: 120, gapY: 48, componentGap: 96 };
+function findComponents(ids2, edges) {
+  const adj = new Map(ids2.map((id) => [id, []]));
+  for (const [a, b] of edges) {
+    if (adj.has(a) && adj.has(b) && a !== b) {
+      adj.get(a).push(b);
+      adj.get(b).push(a);
+    }
+  }
+  const seen = /* @__PURE__ */ new Set();
+  const comps = [];
+  for (const id of ids2) {
+    if (seen.has(id)) continue;
+    const comp = [];
+    const stack = [id];
+    seen.add(id);
+    while (stack.length) {
+      const cur = stack.pop();
+      comp.push(cur);
+      for (const nx of adj.get(cur) ?? []) {
+        if (!seen.has(nx)) {
+          seen.add(nx);
+          stack.push(nx);
+        }
+      }
+    }
+    comps.push(comp);
+  }
+  return comps;
+}
+function breakCycles(ids2, edges) {
+  const out = new Map(ids2.map((id) => [id, []]));
+  edges.forEach(([a, b], i) => {
+    if (out.has(a) && out.has(b) && a !== b) out.get(a).push([b, i]);
+  });
+  const WHITE = 0, GRAY = 1, BLACK = 2;
+  const color = new Map(ids2.map((id) => [id, WHITE]));
+  const backEdges = /* @__PURE__ */ new Set();
+  const dfs = (start) => {
+    const stack = [[start, 0]];
+    color.set(start, GRAY);
+    while (stack.length) {
+      const [cur, idx] = stack[stack.length - 1];
+      const nbrs = out.get(cur) ?? [];
+      if (idx < nbrs.length) {
+        stack[stack.length - 1] = [cur, idx + 1];
+        const [nx, edgeIdx] = nbrs[idx];
+        const c = color.get(nx);
+        if (c === GRAY) backEdges.add(edgeIdx);
+        else if (c === WHITE) {
+          color.set(nx, GRAY);
+          stack.push([nx, 0]);
+        }
+      } else {
+        color.set(cur, BLACK);
+        stack.pop();
+      }
+    }
+  };
+  for (const id of ids2) if (color.get(id) === WHITE) dfs(id);
+  const acyclic = edges.map(([a, b], i) => backEdges.has(i) ? [b, a] : [a, b]);
+  return { acyclic, reversed: backEdges.size };
+}
+function longestPathLayers(ids2, edges) {
+  const indeg = new Map(ids2.map((id) => [id, 0]));
+  const out = new Map(ids2.map((id) => [id, []]));
+  for (const [a, b] of edges) {
+    if (indeg.has(a) && indeg.has(b)) {
+      out.get(a).push(b);
+      indeg.set(b, (indeg.get(b) ?? 0) + 1);
+    }
+  }
+  const layer = new Map(ids2.map((id) => [id, 0]));
+  const queue = ids2.filter((id) => (indeg.get(id) ?? 0) === 0);
+  const remaining = new Map(indeg);
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const nx of out.get(cur) ?? []) {
+      layer.set(nx, Math.max(layer.get(nx) ?? 0, (layer.get(cur) ?? 0) + 1));
+      remaining.set(nx, (remaining.get(nx) ?? 0) - 1);
+      if ((remaining.get(nx) ?? 0) === 0) queue.push(nx);
+    }
+  }
+  return layer;
+}
+function countCrossings(upper, lower) {
+  const pairs = upper.map((u, i) => [u, lower[i]]);
+  let c = 0;
+  for (let i = 0; i < pairs.length; i++) {
+    for (let j = i + 1; j < pairs.length; j++) {
+      const [u1, l1] = pairs[i];
+      const [u2, l2] = pairs[j];
+      if (u1 < u2 && l1 > l2 || u1 > u2 && l1 < l2) c += 1;
+    }
+  }
+  return c;
+}
+function layoutComponent(ids2, nodeById, allEdges, o) {
+  const idSet = new Set(ids2);
+  const rawEdges = allEdges.filter(([a, b]) => idSet.has(a) && idSet.has(b) && a !== b);
+  const { acyclic, reversed } = breakCycles(ids2, rawEdges);
+  const layerOf = longestPathLayers(ids2, acyclic);
+  const layers = [];
+  const layerIndex = /* @__PURE__ */ new Map();
+  const ensureLayer = (i) => {
+    while (layers.length <= i) layers.push([]);
+  };
+  for (const id of ids2) {
+    const li = layerOf.get(id) ?? 0;
+    ensureLayer(li);
+    layers[li].push({ id, virtual: false });
+    layerIndex.set(id, li);
+  }
+  const virtualEdges = [];
+  let vseq = 0;
+  for (const [a, b] of acyclic) {
+    const la = layerOf.get(a) ?? 0;
+    const lb = layerOf.get(b) ?? 0;
+    if (lb - la <= 1) {
+      virtualEdges.push([a, b]);
+      continue;
+    }
+    let prev = a;
+    for (let li = la + 1; li < lb; li++) {
+      const vid = `__virtual_${vseq++}`;
+      ensureLayer(li);
+      layers[li].push({ id: vid, virtual: true });
+      layerIndex.set(vid, li);
+      virtualEdges.push([prev, vid]);
+      prev = vid;
+    }
+    virtualEdges.push([prev, b]);
+  }
+  const posInLayer = () => {
+    const pos2 = /* @__PURE__ */ new Map();
+    layers.forEach((layer) => layer.forEach((s, i) => pos2.set(s.id, i)));
+    return pos2;
+  };
+  const neighboursOf = /* @__PURE__ */ new Map();
+  for (const [a, b] of virtualEdges) {
+    if (!neighboursOf.has(a)) neighboursOf.set(a, []);
+    if (!neighboursOf.has(b)) neighboursOf.set(b, []);
+    neighboursOf.get(a).push(b);
+    neighboursOf.get(b).push(a);
+  }
+  const SWEEPS = 4;
+  for (let s = 0; s < SWEEPS * 2; s++) {
+    const down = s % 2 === 0;
+    const order = down ? layers.map((_, i) => i) : layers.map((_, i) => layers.length - 1 - i);
+    for (const li of order.slice(1)) {
+      const fixedLayer = layers[li + (down ? -1 : 1)];
+      const fixedPos = new Map(fixedLayer.map((slot, i) => [slot.id, i]));
+      const bary = /* @__PURE__ */ new Map();
+      for (const slot of layers[li]) {
+        const ns = (neighboursOf.get(slot.id) ?? []).filter((n2) => fixedPos.has(n2));
+        if (ns.length > 0) bary.set(slot.id, ns.reduce((acc, n2) => acc + (fixedPos.get(n2) ?? 0), 0) / ns.length);
+      }
+      layers[li].map((slot, i) => ({ slot, i })).sort((x2, y) => {
+        const bx = bary.has(x2.slot.id) ? bary.get(x2.slot.id) : x2.i;
+        const by = bary.has(y.slot.id) ? bary.get(y.slot.id) : y.i;
+        return bx !== by ? bx - by : x2.i - y.i;
+      }).forEach((entry, i) => {
+        layers[li][i] = entry.slot;
+      });
+    }
+  }
+  const pos = posInLayer();
+  let crossings = 0;
+  for (let li = 0; li + 1 < layers.length; li++) {
+    const upperIdx = [];
+    const lowerIdx = [];
+    for (const [a, b] of virtualEdges) {
+      if ((layerIndex.get(a) ?? -1) === li && (layerIndex.get(b) ?? -1) === li + 1) {
+        upperIdx.push(pos.get(a) ?? 0);
+        lowerIdx.push(pos.get(b) ?? 0);
+      }
+    }
+    crossings += countCrossings(upperIdx, lowerIdx);
+  }
+  const colX = [];
+  let x = 0;
+  for (let li = 0; li < layers.length; li++) {
+    colX.push(x);
+    const w = Math.max(140, ...layers[li].filter((sl) => !sl.virtual).map((sl) => nodeById.get(sl.id)?.w ?? 264));
+    x += w + o.gapX;
+  }
+  const heightOf = (slot) => slot.virtual ? 8 : nodeById.get(slot.id)?.h ?? 120;
+  const yOf = /* @__PURE__ */ new Map();
+  layers.forEach((layer) => {
+    let y = 0;
+    for (const slot of layer) {
+      yOf.set(slot.id, y);
+      y += heightOf(slot) + o.gapY;
+    }
+  });
+  for (let pass2 = 0; pass2 < 2; pass2++) {
+    for (let li = 0; li < layers.length; li++) {
+      let prevBottom = 0;
+      for (const slot of layers[li]) {
+        const ns = (neighboursOf.get(slot.id) ?? []).filter((n2) => yOf.has(n2));
+        const current = yOf.get(slot.id) ?? 0;
+        const target = ns.length > 0 ? ns.reduce((acc, n2) => acc + (yOf.get(n2) ?? 0), 0) / ns.length : current;
+        const want = Math.max(0, target - heightOf(slot) / 2);
+        const yy = Math.max(want, prevBottom);
+        yOf.set(slot.id, yy);
+        prevBottom = yy + heightOf(slot) + o.gapY;
+      }
+    }
+  }
+  const positions = /* @__PURE__ */ new Map();
+  let width = 0;
+  let height = 0;
+  layers.forEach((layer, li) => {
+    for (const slot of layer) {
+      if (slot.virtual) continue;
+      const n2 = nodeById.get(slot.id);
+      const px = colX[li];
+      const py = yOf.get(slot.id) ?? 0;
+      positions.set(slot.id, { x: px, y: py });
+      width = Math.max(width, px + (n2?.w ?? 264));
+      height = Math.max(height, py + (n2?.h ?? 120));
+    }
+  });
+  return { positions, layers: layers.length, crossings, reversed, width, height };
+}
+function layeredLayout(input, opts = {}) {
+  const o = { ...DEFAULTS, ...opts };
+  const nodeById = new Map(input.nodes.map((n2) => [n2.id, n2]));
+  const comps = findComponents(input.nodes.map((n2) => n2.id), input.edges);
+  const positions = /* @__PURE__ */ new Map();
+  let yOffset = 0;
+  let maxLayers = 0;
+  let totalCrossings = 0;
+  let totalReversed = 0;
+  for (const comp of comps) {
+    const r = layoutComponent(comp, nodeById, input.edges, o);
+    for (const [id, p2] of r.positions) positions.set(id, { x: p2.x, y: p2.y + yOffset });
+    yOffset += r.height + o.componentGap;
+    maxLayers = Math.max(maxLayers, r.layers);
+    totalCrossings += r.crossings;
+    totalReversed += r.reversed;
+  }
+  return { positions, layers: maxLayers, crossings: totalCrossings, reversedEdges: totalReversed, components: comps.length };
+}
+
+// src/canvas/geometry.ts
+var NODE_W = 264;
+function nodeH(n2) {
+  const ports = Math.max(n2.inputs.length, n2.outputs.length);
+  const isControl = n2.definitionId.startsWith("control.");
+  return isControl ? 52 : 85 + ports * 19;
+}
+
 // src/graph/store.ts
 var THEME_IDS = ["nth", "inscribed", "chalk", "carbon", "bone", "indigo", "sage", "hazard", "orchid", "porcelain", "aurora", "wabi", "cyanotype"];
 var THEME_ALIASES = {
@@ -5098,41 +5352,23 @@ var useGraphStore = create((set, get) => {
     },
     autoLayout: () => {
       const g2 = get().graph;
-      const indeg = new Map(g2.nodes.map((n2) => [n2.id, 0]));
-      const adj = new Map(g2.nodes.map((n2) => [n2.id, []]));
-      for (const c of g2.connections) {
-        adj.get(c.sourceNodeId)?.push(c.targetNodeId);
-        indeg.set(c.targetNodeId, (indeg.get(c.targetNodeId) ?? 0) + 1);
-      }
-      const layers = [];
-      let frontier = g2.nodes.filter((n2) => (indeg.get(n2.id) ?? 0) === 0).map((n2) => n2.id);
-      const placed = /* @__PURE__ */ new Set();
-      while (frontier.length) {
-        layers.push(frontier);
-        frontier.forEach((id) => placed.add(id));
-        const next = [];
-        for (const id of layers[layers.length - 1]) {
-          for (const nx of adj.get(id) ?? []) {
-            if (placed.has(nx)) continue;
-            const left = (indeg.get(nx) ?? 0) - 1;
-            indeg.set(nx, left);
-            if (left <= 0) next.push(nx);
+      if (g2.nodes.length === 0) return;
+      const res = layeredLayout({
+        nodes: g2.nodes.map((n2) => ({
+          id: n2.id,
+          w: n2.definitionId.startsWith("control.") ? 140 : NODE_W,
+          h: nodeH(n2)
+        })),
+        edges: g2.connections.map((c) => [c.sourceNodeId, c.targetNodeId])
+      });
+      withHistory("Auto layout", (graph) => {
+        for (const n2 of graph.nodes) {
+          const p2 = res.positions.get(n2.id);
+          if (p2) {
+            n2.x = Math.round(p2.x);
+            n2.y = Math.round(p2.y);
           }
         }
-        frontier = next.filter((id, i, a) => a.indexOf(id) === i);
-        if (layers.length > 40) break;
-      }
-      for (const n2 of g2.nodes) if (!placed.has(n2.id)) layers.push([n2.id]);
-      withHistory("Auto layout", (graph) => {
-        layers.forEach((layer, i) => {
-          layer.forEach((id, j) => {
-            const n2 = graph.nodes.find((x) => x.id === id);
-            if (n2) {
-              n2.x = 80 + i * 320;
-              n2.y = 80 + j * 200;
-            }
-          });
-        });
       });
     },
     checkpoint: (label) => {

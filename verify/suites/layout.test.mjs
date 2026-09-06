@@ -48,10 +48,10 @@ var require_react_production_min = __commonJS({
     var x = Symbol.for("react.memo");
     var y = Symbol.for("react.lazy");
     var z = Symbol.iterator;
-    function A(a2) {
-      if (null === a2 || "object" !== typeof a2) return null;
-      a2 = z && a2[z] || a2["@@iterator"];
-      return "function" === typeof a2 ? a2 : null;
+    function A(a) {
+      if (null === a || "object" !== typeof a) return null;
+      a = z && a[z] || a["@@iterator"];
+      return "function" === typeof a ? a : null;
     }
     var B = { isMounted: function() {
       return false;
@@ -61,26 +61,26 @@ var require_react_production_min = __commonJS({
     } };
     var C = Object.assign;
     var D = {};
-    function E(a2, b2, e) {
-      this.props = a2;
-      this.context = b2;
+    function E(a, b, e) {
+      this.props = a;
+      this.context = b;
       this.refs = D;
       this.updater = e || B;
     }
     E.prototype.isReactComponent = {};
-    E.prototype.setState = function(a2, b2) {
-      if ("object" !== typeof a2 && "function" !== typeof a2 && null != a2) throw Error("setState(...): takes an object of state variables to update or a function which returns an object of state variables.");
-      this.updater.enqueueSetState(this, a2, b2, "setState");
+    E.prototype.setState = function(a, b) {
+      if ("object" !== typeof a && "function" !== typeof a && null != a) throw Error("setState(...): takes an object of state variables to update or a function which returns an object of state variables.");
+      this.updater.enqueueSetState(this, a, b, "setState");
     };
-    E.prototype.forceUpdate = function(a2) {
-      this.updater.enqueueForceUpdate(this, a2, "forceUpdate");
+    E.prototype.forceUpdate = function(a) {
+      this.updater.enqueueForceUpdate(this, a, "forceUpdate");
     };
     function F() {
     }
     F.prototype = E.prototype;
-    function G(a2, b2, e) {
-      this.props = a2;
-      this.context = b2;
+    function G(a, b, e) {
+      this.props = a;
+      this.context = b;
       this.refs = D;
       this.updater = e || B;
     }
@@ -92,86 +92,86 @@ var require_react_production_min = __commonJS({
     var J = Object.prototype.hasOwnProperty;
     var K = { current: null };
     var L = { key: true, ref: true, __self: true, __source: true };
-    function M(a2, b2, e) {
+    function M(a, b, e) {
       var d, c = {}, k = null, h = null;
-      if (null != b2) for (d in void 0 !== b2.ref && (h = b2.ref), void 0 !== b2.key && (k = "" + b2.key), b2) J.call(b2, d) && !L.hasOwnProperty(d) && (c[d] = b2[d]);
+      if (null != b) for (d in void 0 !== b.ref && (h = b.ref), void 0 !== b.key && (k = "" + b.key), b) J.call(b, d) && !L.hasOwnProperty(d) && (c[d] = b[d]);
       var g = arguments.length - 2;
       if (1 === g) c.children = e;
       else if (1 < g) {
         for (var f = Array(g), m = 0; m < g; m++) f[m] = arguments[m + 2];
         c.children = f;
       }
-      if (a2 && a2.defaultProps) for (d in g = a2.defaultProps, g) void 0 === c[d] && (c[d] = g[d]);
-      return { $$typeof: l, type: a2, key: k, ref: h, props: c, _owner: K.current };
+      if (a && a.defaultProps) for (d in g = a.defaultProps, g) void 0 === c[d] && (c[d] = g[d]);
+      return { $$typeof: l, type: a, key: k, ref: h, props: c, _owner: K.current };
     }
-    function N(a2, b2) {
-      return { $$typeof: l, type: a2.type, key: b2, ref: a2.ref, props: a2.props, _owner: a2._owner };
+    function N2(a, b) {
+      return { $$typeof: l, type: a.type, key: b, ref: a.ref, props: a.props, _owner: a._owner };
     }
-    function O(a2) {
-      return "object" === typeof a2 && null !== a2 && a2.$$typeof === l;
+    function O(a) {
+      return "object" === typeof a && null !== a && a.$$typeof === l;
     }
-    function escape(a2) {
-      var b2 = { "=": "=0", ":": "=2" };
-      return "$" + a2.replace(/[=:]/g, function(a3) {
-        return b2[a3];
+    function escape(a) {
+      var b = { "=": "=0", ":": "=2" };
+      return "$" + a.replace(/[=:]/g, function(a2) {
+        return b[a2];
       });
     }
     var P = /\/+/g;
-    function Q(a2, b2) {
-      return "object" === typeof a2 && null !== a2 && null != a2.key ? escape("" + a2.key) : b2.toString(36);
+    function Q(a, b) {
+      return "object" === typeof a && null !== a && null != a.key ? escape("" + a.key) : b.toString(36);
     }
-    function R(a2, b2, e, d, c) {
-      var k = typeof a2;
-      if ("undefined" === k || "boolean" === k) a2 = null;
+    function R(a, b, e, d, c) {
+      var k = typeof a;
+      if ("undefined" === k || "boolean" === k) a = null;
       var h = false;
-      if (null === a2) h = true;
+      if (null === a) h = true;
       else switch (k) {
         case "string":
         case "number":
           h = true;
           break;
         case "object":
-          switch (a2.$$typeof) {
+          switch (a.$$typeof) {
             case l:
             case n2:
               h = true;
           }
       }
-      if (h) return h = a2, c = c(h), a2 = "" === d ? "." + Q(h, 0) : d, I(c) ? (e = "", null != a2 && (e = a2.replace(P, "$&/") + "/"), R(c, b2, e, "", function(a3) {
-        return a3;
-      })) : null != c && (O(c) && (c = N(c, e + (!c.key || h && h.key === c.key ? "" : ("" + c.key).replace(P, "$&/") + "/") + a2)), b2.push(c)), 1;
+      if (h) return h = a, c = c(h), a = "" === d ? "." + Q(h, 0) : d, I(c) ? (e = "", null != a && (e = a.replace(P, "$&/") + "/"), R(c, b, e, "", function(a2) {
+        return a2;
+      })) : null != c && (O(c) && (c = N2(c, e + (!c.key || h && h.key === c.key ? "" : ("" + c.key).replace(P, "$&/") + "/") + a)), b.push(c)), 1;
       h = 0;
       d = "" === d ? "." : d + ":";
-      if (I(a2)) for (var g = 0; g < a2.length; g++) {
-        k = a2[g];
+      if (I(a)) for (var g = 0; g < a.length; g++) {
+        k = a[g];
         var f = d + Q(k, g);
-        h += R(k, b2, e, f, c);
+        h += R(k, b, e, f, c);
       }
-      else if (f = A(a2), "function" === typeof f) for (a2 = f.call(a2), g = 0; !(k = a2.next()).done; ) k = k.value, f = d + Q(k, g++), h += R(k, b2, e, f, c);
-      else if ("object" === k) throw b2 = String(a2), Error("Objects are not valid as a React child (found: " + ("[object Object]" === b2 ? "object with keys {" + Object.keys(a2).join(", ") + "}" : b2) + "). If you meant to render a collection of children, use an array instead.");
+      else if (f = A(a), "function" === typeof f) for (a = f.call(a), g = 0; !(k = a.next()).done; ) k = k.value, f = d + Q(k, g++), h += R(k, b, e, f, c);
+      else if ("object" === k) throw b = String(a), Error("Objects are not valid as a React child (found: " + ("[object Object]" === b ? "object with keys {" + Object.keys(a).join(", ") + "}" : b) + "). If you meant to render a collection of children, use an array instead.");
       return h;
     }
-    function S(a2, b2, e) {
-      if (null == a2) return a2;
+    function S(a, b, e) {
+      if (null == a) return a;
       var d = [], c = 0;
-      R(a2, d, "", "", function(a3) {
-        return b2.call(e, a3, c++);
+      R(a, d, "", "", function(a2) {
+        return b.call(e, a2, c++);
       });
       return d;
     }
-    function T(a2) {
-      if (-1 === a2._status) {
-        var b2 = a2._result;
-        b2 = b2();
-        b2.then(function(b3) {
-          if (0 === a2._status || -1 === a2._status) a2._status = 1, a2._result = b3;
-        }, function(b3) {
-          if (0 === a2._status || -1 === a2._status) a2._status = 2, a2._result = b3;
+    function T(a) {
+      if (-1 === a._status) {
+        var b = a._result;
+        b = b();
+        b.then(function(b2) {
+          if (0 === a._status || -1 === a._status) a._status = 1, a._result = b2;
+        }, function(b2) {
+          if (0 === a._status || -1 === a._status) a._status = 2, a._result = b2;
         });
-        -1 === a2._status && (a2._status = 0, a2._result = b2);
+        -1 === a._status && (a._status = 0, a._result = b);
       }
-      if (1 === a2._status) return a2._result.default;
-      throw a2._result;
+      if (1 === a._status) return a._result.default;
+      throw a._result;
     }
     var U = { current: null };
     var V = { transition: null };
@@ -179,23 +179,23 @@ var require_react_production_min = __commonJS({
     function X() {
       throw Error("act(...) is not supported in production builds of React.");
     }
-    exports.Children = { map: S, forEach: function(a2, b2, e) {
-      S(a2, function() {
-        b2.apply(this, arguments);
+    exports.Children = { map: S, forEach: function(a, b, e) {
+      S(a, function() {
+        b.apply(this, arguments);
       }, e);
-    }, count: function(a2) {
-      var b2 = 0;
-      S(a2, function() {
-        b2++;
+    }, count: function(a) {
+      var b = 0;
+      S(a, function() {
+        b++;
       });
-      return b2;
-    }, toArray: function(a2) {
-      return S(a2, function(a3) {
-        return a3;
+      return b;
+    }, toArray: function(a) {
+      return S(a, function(a2) {
+        return a2;
       }) || [];
-    }, only: function(a2) {
-      if (!O(a2)) throw Error("React.Children.only expected to receive a single React element child.");
-      return a2;
+    }, only: function(a) {
+      if (!O(a)) throw Error("React.Children.only expected to receive a single React element child.");
+      return a;
     } };
     exports.Component = E;
     exports.Fragment = p2;
@@ -205,14 +205,14 @@ var require_react_production_min = __commonJS({
     exports.Suspense = w;
     exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = W;
     exports.act = X;
-    exports.cloneElement = function(a2, b2, e) {
-      if (null === a2 || void 0 === a2) throw Error("React.cloneElement(...): The argument must be a React element, but you passed " + a2 + ".");
-      var d = C({}, a2.props), c = a2.key, k = a2.ref, h = a2._owner;
-      if (null != b2) {
-        void 0 !== b2.ref && (k = b2.ref, h = K.current);
-        void 0 !== b2.key && (c = "" + b2.key);
-        if (a2.type && a2.type.defaultProps) var g = a2.type.defaultProps;
-        for (f in b2) J.call(b2, f) && !L.hasOwnProperty(f) && (d[f] = void 0 === b2[f] && void 0 !== g ? g[f] : b2[f]);
+    exports.cloneElement = function(a, b, e) {
+      if (null === a || void 0 === a) throw Error("React.cloneElement(...): The argument must be a React element, but you passed " + a + ".");
+      var d = C({}, a.props), c = a.key, k = a.ref, h = a._owner;
+      if (null != b) {
+        void 0 !== b.ref && (k = b.ref, h = K.current);
+        void 0 !== b.key && (c = "" + b.key);
+        if (a.type && a.type.defaultProps) var g = a.type.defaultProps;
+        for (f in b) J.call(b, f) && !L.hasOwnProperty(f) && (d[f] = void 0 === b[f] && void 0 !== g ? g[f] : b[f]);
       }
       var f = arguments.length - 2;
       if (1 === f) d.children = e;
@@ -221,82 +221,82 @@ var require_react_production_min = __commonJS({
         for (var m = 0; m < f; m++) g[m] = arguments[m + 2];
         d.children = g;
       }
-      return { $$typeof: l, type: a2.type, key: c, ref: k, props: d, _owner: h };
+      return { $$typeof: l, type: a.type, key: c, ref: k, props: d, _owner: h };
     };
-    exports.createContext = function(a2) {
-      a2 = { $$typeof: u, _currentValue: a2, _currentValue2: a2, _threadCount: 0, Provider: null, Consumer: null, _defaultValue: null, _globalName: null };
-      a2.Provider = { $$typeof: t, _context: a2 };
-      return a2.Consumer = a2;
+    exports.createContext = function(a) {
+      a = { $$typeof: u, _currentValue: a, _currentValue2: a, _threadCount: 0, Provider: null, Consumer: null, _defaultValue: null, _globalName: null };
+      a.Provider = { $$typeof: t, _context: a };
+      return a.Consumer = a;
     };
     exports.createElement = M;
-    exports.createFactory = function(a2) {
-      var b2 = M.bind(null, a2);
-      b2.type = a2;
-      return b2;
+    exports.createFactory = function(a) {
+      var b = M.bind(null, a);
+      b.type = a;
+      return b;
     };
     exports.createRef = function() {
       return { current: null };
     };
-    exports.forwardRef = function(a2) {
-      return { $$typeof: v, render: a2 };
+    exports.forwardRef = function(a) {
+      return { $$typeof: v, render: a };
     };
     exports.isValidElement = O;
-    exports.lazy = function(a2) {
-      return { $$typeof: y, _payload: { _status: -1, _result: a2 }, _init: T };
+    exports.lazy = function(a) {
+      return { $$typeof: y, _payload: { _status: -1, _result: a }, _init: T };
     };
-    exports.memo = function(a2, b2) {
-      return { $$typeof: x, type: a2, compare: void 0 === b2 ? null : b2 };
+    exports.memo = function(a, b) {
+      return { $$typeof: x, type: a, compare: void 0 === b ? null : b };
     };
-    exports.startTransition = function(a2) {
-      var b2 = V.transition;
+    exports.startTransition = function(a) {
+      var b = V.transition;
       V.transition = {};
       try {
-        a2();
+        a();
       } finally {
-        V.transition = b2;
+        V.transition = b;
       }
     };
     exports.unstable_act = X;
-    exports.useCallback = function(a2, b2) {
-      return U.current.useCallback(a2, b2);
+    exports.useCallback = function(a, b) {
+      return U.current.useCallback(a, b);
     };
-    exports.useContext = function(a2) {
-      return U.current.useContext(a2);
+    exports.useContext = function(a) {
+      return U.current.useContext(a);
     };
     exports.useDebugValue = function() {
     };
-    exports.useDeferredValue = function(a2) {
-      return U.current.useDeferredValue(a2);
+    exports.useDeferredValue = function(a) {
+      return U.current.useDeferredValue(a);
     };
-    exports.useEffect = function(a2, b2) {
-      return U.current.useEffect(a2, b2);
+    exports.useEffect = function(a, b) {
+      return U.current.useEffect(a, b);
     };
     exports.useId = function() {
       return U.current.useId();
     };
-    exports.useImperativeHandle = function(a2, b2, e) {
-      return U.current.useImperativeHandle(a2, b2, e);
+    exports.useImperativeHandle = function(a, b, e) {
+      return U.current.useImperativeHandle(a, b, e);
     };
-    exports.useInsertionEffect = function(a2, b2) {
-      return U.current.useInsertionEffect(a2, b2);
+    exports.useInsertionEffect = function(a, b) {
+      return U.current.useInsertionEffect(a, b);
     };
-    exports.useLayoutEffect = function(a2, b2) {
-      return U.current.useLayoutEffect(a2, b2);
+    exports.useLayoutEffect = function(a, b) {
+      return U.current.useLayoutEffect(a, b);
     };
-    exports.useMemo = function(a2, b2) {
-      return U.current.useMemo(a2, b2);
+    exports.useMemo = function(a, b) {
+      return U.current.useMemo(a, b);
     };
-    exports.useReducer = function(a2, b2, e) {
-      return U.current.useReducer(a2, b2, e);
+    exports.useReducer = function(a, b, e) {
+      return U.current.useReducer(a, b, e);
     };
-    exports.useRef = function(a2) {
-      return U.current.useRef(a2);
+    exports.useRef = function(a) {
+      return U.current.useRef(a);
     };
-    exports.useState = function(a2) {
-      return U.current.useState(a2);
+    exports.useState = function(a) {
+      return U.current.useState(a);
     };
-    exports.useSyncExternalStore = function(a2, b2, e) {
-      return U.current.useSyncExternalStore(a2, b2, e);
+    exports.useSyncExternalStore = function(a, b, e) {
+      return U.current.useSyncExternalStore(a, b, e);
     };
     exports.useTransition = function() {
       return U.current.useTransition();
@@ -576,8 +576,8 @@ var require_react_development = __commonJS({
           return refObject;
         }
         var isArrayImpl = Array.isArray;
-        function isArray(a2) {
-          return isArrayImpl(a2);
+        function isArray(a) {
+          return isArrayImpl(a);
         }
         function typeName(value) {
           {
@@ -2014,14 +2014,14 @@ var require_react_development = __commonJS({
               var thenableResult = result;
               var wasAwaited = false;
               var thenable = {
-                then: function(resolve2, reject) {
+                then: function(resolve, reject) {
                   wasAwaited = true;
                   thenableResult.then(function(returnValue2) {
                     popActScope(prevActScopeDepth);
                     if (actScopeDepth === 0) {
-                      recursivelyFlushAsyncActWork(returnValue2, resolve2, reject);
+                      recursivelyFlushAsyncActWork(returnValue2, resolve, reject);
                     } else {
-                      resolve2(returnValue2);
+                      resolve(returnValue2);
                     }
                   }, function(error2) {
                     popActScope(prevActScopeDepth);
@@ -2051,20 +2051,20 @@ var require_react_development = __commonJS({
                   ReactCurrentActQueue.current = null;
                 }
                 var _thenable = {
-                  then: function(resolve2, reject) {
+                  then: function(resolve, reject) {
                     if (ReactCurrentActQueue.current === null) {
                       ReactCurrentActQueue.current = [];
-                      recursivelyFlushAsyncActWork(returnValue, resolve2, reject);
+                      recursivelyFlushAsyncActWork(returnValue, resolve, reject);
                     } else {
-                      resolve2(returnValue);
+                      resolve(returnValue);
                     }
                   }
                 };
                 return _thenable;
               } else {
                 var _thenable2 = {
-                  then: function(resolve2, reject) {
-                    resolve2(returnValue);
+                  then: function(resolve, reject) {
+                    resolve(returnValue);
                   }
                 };
                 return _thenable2;
@@ -2080,7 +2080,7 @@ var require_react_development = __commonJS({
             actScopeDepth = prevActScopeDepth;
           }
         }
-        function recursivelyFlushAsyncActWork(returnValue, resolve2, reject) {
+        function recursivelyFlushAsyncActWork(returnValue, resolve, reject) {
           {
             var queue = ReactCurrentActQueue.current;
             if (queue !== null) {
@@ -2089,16 +2089,16 @@ var require_react_development = __commonJS({
                 enqueueTask(function() {
                   if (queue.length === 0) {
                     ReactCurrentActQueue.current = null;
-                    resolve2(returnValue);
+                    resolve(returnValue);
                   } else {
-                    recursivelyFlushAsyncActWork(returnValue, resolve2, reject);
+                    recursivelyFlushAsyncActWork(returnValue, resolve, reject);
                   }
                 });
               } catch (error2) {
                 reject(error2);
               }
             } else {
-              resolve2(returnValue);
+              resolve(returnValue);
             }
           }
         }
@@ -2346,46 +2346,250 @@ var init_core = __esm({
   }
 });
 
-// src/app/fuzzy.ts
-function fuzzyScore(query, text) {
-  const q = query.trim().toLowerCase();
-  const t = text.toLowerCase();
-  if (q.length === 0) return 0;
-  if (t === q) return 1e3;
-  if (t.startsWith(q)) return 900 + (10 - Math.min(10, t.length - q.length));
-  let score = 0;
-  let ti = 0;
-  let prevFound = -2;
-  for (let qi = 0; qi < q.length; qi++) {
-    const ch = q[qi];
-    let found = -1;
-    for (let i = ti; i < t.length; i++) {
-      if (t[i] === ch) {
-        found = i;
-        break;
+// src/graph/layout.ts
+var DEFAULTS = { gapX: 120, gapY: 48, componentGap: 96 };
+function findComponents(ids, edges) {
+  const adj = new Map(ids.map((id) => [id, []]));
+  for (const [a, b] of edges) {
+    if (adj.has(a) && adj.has(b) && a !== b) {
+      adj.get(a).push(b);
+      adj.get(b).push(a);
+    }
+  }
+  const seen = /* @__PURE__ */ new Set();
+  const comps2 = [];
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    const comp = [];
+    const stack = [id];
+    seen.add(id);
+    while (stack.length) {
+      const cur = stack.pop();
+      comp.push(cur);
+      for (const nx of adj.get(cur) ?? []) {
+        if (!seen.has(nx)) {
+          seen.add(nx);
+          stack.push(nx);
+        }
       }
     }
-    if (found === -1) return -1;
-    const atWordStart = found === 0 || /[^a-z0-9]/i.test(t[found - 1]);
-    score += atWordStart ? 24 : 8;
-    if (found === prevFound + 1) score += 10;
-    ti = found + 1;
-    prevFound = found;
+    comps2.push(comp);
   }
-  score -= Math.min(30, Math.floor(t.length / 8));
-  return score;
+  return comps2;
 }
-function paletteScore(query, label, group) {
-  const ls = fuzzyScore(query, label);
-  if (ls >= 0) return ls + 1e3;
-  const gs = group ? fuzzyScore(query, group) : -1;
-  return gs >= 0 ? Math.floor(gs * 0.35) : -1;
+function breakCycles(ids, edges) {
+  const out = new Map(ids.map((id) => [id, []]));
+  edges.forEach(([a, b], i) => {
+    if (out.has(a) && out.has(b) && a !== b) out.get(a).push([b, i]);
+  });
+  const WHITE = 0, GRAY = 1, BLACK = 2;
+  const color = new Map(ids.map((id) => [id, WHITE]));
+  const backEdges = /* @__PURE__ */ new Set();
+  const dfs = (start2) => {
+    const stack = [[start2, 0]];
+    color.set(start2, GRAY);
+    while (stack.length) {
+      const [cur, idx] = stack[stack.length - 1];
+      const nbrs = out.get(cur) ?? [];
+      if (idx < nbrs.length) {
+        stack[stack.length - 1] = [cur, idx + 1];
+        const [nx, edgeIdx] = nbrs[idx];
+        const c = color.get(nx);
+        if (c === GRAY) backEdges.add(edgeIdx);
+        else if (c === WHITE) {
+          color.set(nx, GRAY);
+          stack.push([nx, 0]);
+        }
+      } else {
+        color.set(cur, BLACK);
+        stack.pop();
+      }
+    }
+  };
+  for (const id of ids) if (color.get(id) === WHITE) dfs(id);
+  const acyclic = edges.map(([a, b], i) => backEdges.has(i) ? [b, a] : [a, b]);
+  return { acyclic, reversed: backEdges.size };
 }
-function rankFuzzy(items2, query, label) {
-  if (!query.trim()) return items2.map((item) => ({ item, score: 0 }));
-  const scored = items2.map((item) => ({ item, score: fuzzyScore(query, label(item)) })).filter((r) => r.score >= 0);
-  scored.sort((a2, b2) => b2.score - a2.score);
-  return scored;
+function longestPathLayers(ids, edges) {
+  const indeg = new Map(ids.map((id) => [id, 0]));
+  const out = new Map(ids.map((id) => [id, []]));
+  for (const [a, b] of edges) {
+    if (indeg.has(a) && indeg.has(b)) {
+      out.get(a).push(b);
+      indeg.set(b, (indeg.get(b) ?? 0) + 1);
+    }
+  }
+  const layer = new Map(ids.map((id) => [id, 0]));
+  const queue = ids.filter((id) => (indeg.get(id) ?? 0) === 0);
+  const remaining = new Map(indeg);
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const nx of out.get(cur) ?? []) {
+      layer.set(nx, Math.max(layer.get(nx) ?? 0, (layer.get(cur) ?? 0) + 1));
+      remaining.set(nx, (remaining.get(nx) ?? 0) - 1);
+      if ((remaining.get(nx) ?? 0) === 0) queue.push(nx);
+    }
+  }
+  return layer;
+}
+function countCrossings(upper, lower) {
+  const pairs = upper.map((u, i) => [u, lower[i]]);
+  let c = 0;
+  for (let i = 0; i < pairs.length; i++) {
+    for (let j = i + 1; j < pairs.length; j++) {
+      const [u1, l1] = pairs[i];
+      const [u2, l2] = pairs[j];
+      if (u1 < u2 && l1 > l2 || u1 > u2 && l1 < l2) c += 1;
+    }
+  }
+  return c;
+}
+function layoutComponent(ids, nodeById, allEdges, o) {
+  const idSet = new Set(ids);
+  const rawEdges = allEdges.filter(([a, b]) => idSet.has(a) && idSet.has(b) && a !== b);
+  const { acyclic, reversed } = breakCycles(ids, rawEdges);
+  const layerOf = longestPathLayers(ids, acyclic);
+  const layers = [];
+  const layerIndex = /* @__PURE__ */ new Map();
+  const ensureLayer = (i) => {
+    while (layers.length <= i) layers.push([]);
+  };
+  for (const id of ids) {
+    const li = layerOf.get(id) ?? 0;
+    ensureLayer(li);
+    layers[li].push({ id, virtual: false });
+    layerIndex.set(id, li);
+  }
+  const virtualEdges = [];
+  let vseq = 0;
+  for (const [a, b] of acyclic) {
+    const la = layerOf.get(a) ?? 0;
+    const lb = layerOf.get(b) ?? 0;
+    if (lb - la <= 1) {
+      virtualEdges.push([a, b]);
+      continue;
+    }
+    let prev = a;
+    for (let li = la + 1; li < lb; li++) {
+      const vid = `__virtual_${vseq++}`;
+      ensureLayer(li);
+      layers[li].push({ id: vid, virtual: true });
+      layerIndex.set(vid, li);
+      virtualEdges.push([prev, vid]);
+      prev = vid;
+    }
+    virtualEdges.push([prev, b]);
+  }
+  const posInLayer = () => {
+    const pos2 = /* @__PURE__ */ new Map();
+    layers.forEach((layer) => layer.forEach((s, i) => pos2.set(s.id, i)));
+    return pos2;
+  };
+  const neighboursOf = /* @__PURE__ */ new Map();
+  for (const [a, b] of virtualEdges) {
+    if (!neighboursOf.has(a)) neighboursOf.set(a, []);
+    if (!neighboursOf.has(b)) neighboursOf.set(b, []);
+    neighboursOf.get(a).push(b);
+    neighboursOf.get(b).push(a);
+  }
+  const SWEEPS = 4;
+  for (let s = 0; s < SWEEPS * 2; s++) {
+    const down = s % 2 === 0;
+    const order = down ? layers.map((_, i) => i) : layers.map((_, i) => layers.length - 1 - i);
+    for (const li of order.slice(1)) {
+      const fixedLayer = layers[li + (down ? -1 : 1)];
+      const fixedPos = new Map(fixedLayer.map((slot, i) => [slot.id, i]));
+      const bary = /* @__PURE__ */ new Map();
+      for (const slot of layers[li]) {
+        const ns = (neighboursOf.get(slot.id) ?? []).filter((n2) => fixedPos.has(n2));
+        if (ns.length > 0) bary.set(slot.id, ns.reduce((acc, n2) => acc + (fixedPos.get(n2) ?? 0), 0) / ns.length);
+      }
+      layers[li].map((slot, i) => ({ slot, i })).sort((x2, y) => {
+        const bx = bary.has(x2.slot.id) ? bary.get(x2.slot.id) : x2.i;
+        const by = bary.has(y.slot.id) ? bary.get(y.slot.id) : y.i;
+        return bx !== by ? bx - by : x2.i - y.i;
+      }).forEach((entry, i) => {
+        layers[li][i] = entry.slot;
+      });
+    }
+  }
+  const pos = posInLayer();
+  let crossings = 0;
+  for (let li = 0; li + 1 < layers.length; li++) {
+    const upperIdx = [];
+    const lowerIdx = [];
+    for (const [a, b] of virtualEdges) {
+      if ((layerIndex.get(a) ?? -1) === li && (layerIndex.get(b) ?? -1) === li + 1) {
+        upperIdx.push(pos.get(a) ?? 0);
+        lowerIdx.push(pos.get(b) ?? 0);
+      }
+    }
+    crossings += countCrossings(upperIdx, lowerIdx);
+  }
+  const colX = [];
+  let x = 0;
+  for (let li = 0; li < layers.length; li++) {
+    colX.push(x);
+    const w = Math.max(140, ...layers[li].filter((sl) => !sl.virtual).map((sl) => nodeById.get(sl.id)?.w ?? 264));
+    x += w + o.gapX;
+  }
+  const heightOf = (slot) => slot.virtual ? 8 : nodeById.get(slot.id)?.h ?? 120;
+  const yOf = /* @__PURE__ */ new Map();
+  layers.forEach((layer) => {
+    let y = 0;
+    for (const slot of layer) {
+      yOf.set(slot.id, y);
+      y += heightOf(slot) + o.gapY;
+    }
+  });
+  for (let pass2 = 0; pass2 < 2; pass2++) {
+    for (let li = 0; li < layers.length; li++) {
+      let prevBottom = 0;
+      for (const slot of layers[li]) {
+        const ns = (neighboursOf.get(slot.id) ?? []).filter((n2) => yOf.has(n2));
+        const current = yOf.get(slot.id) ?? 0;
+        const target = ns.length > 0 ? ns.reduce((acc, n2) => acc + (yOf.get(n2) ?? 0), 0) / ns.length : current;
+        const want = Math.max(0, target - heightOf(slot) / 2);
+        const yy = Math.max(want, prevBottom);
+        yOf.set(slot.id, yy);
+        prevBottom = yy + heightOf(slot) + o.gapY;
+      }
+    }
+  }
+  const positions = /* @__PURE__ */ new Map();
+  let width = 0;
+  let height = 0;
+  layers.forEach((layer, li) => {
+    for (const slot of layer) {
+      if (slot.virtual) continue;
+      const n2 = nodeById.get(slot.id);
+      const px2 = colX[li];
+      const py = yOf.get(slot.id) ?? 0;
+      positions.set(slot.id, { x: px2, y: py });
+      width = Math.max(width, px2 + (n2?.w ?? 264));
+      height = Math.max(height, py + (n2?.h ?? 120));
+    }
+  });
+  return { positions, layers: layers.length, crossings, reversed, width, height };
+}
+function layeredLayout(input2, opts = {}) {
+  const o = { ...DEFAULTS, ...opts };
+  const nodeById = new Map(input2.nodes.map((n2) => [n2.id, n2]));
+  const comps2 = findComponents(input2.nodes.map((n2) => n2.id), input2.edges);
+  const positions = /* @__PURE__ */ new Map();
+  let yOffset = 0;
+  let maxLayers = 0;
+  let totalCrossings = 0;
+  let totalReversed = 0;
+  for (const comp of comps2) {
+    const r = layoutComponent(comp, nodeById, input2.edges, o);
+    for (const [id, p2] of r.positions) positions.set(id, { x: p2.x, y: p2.y + yOffset });
+    yOffset += r.height + o.componentGap;
+    maxLayers = Math.max(maxLayers, r.layers);
+    totalCrossings += r.crossings;
+    totalReversed += r.reversed;
+  }
+  return { positions, layers: maxLayers, crossings: totalCrossings, reversedEdges: totalReversed, components: comps2.length };
 }
 
 // node_modules/zustand/esm/vanilla.mjs
@@ -3619,7 +3823,7 @@ var localDb = {
     localStorage.removeItem(KEY);
   },
   workflowList() {
-    return load().workflows.slice().sort((a2, b2) => b2.updatedAt.localeCompare(a2.updatedAt));
+    return load().workflows.slice().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   },
   workflowGet(id) {
     const w = load().workflows.find((x) => x.id === id);
@@ -3630,7 +3834,7 @@ var localDb = {
     const db = load();
     const id = uid("wf");
     const now = nowIso();
-    const graph = {
+    const graph2 = {
       schemaVersion: GRAPH_SCHEMA_VERSION,
       id,
       name,
@@ -3640,17 +3844,17 @@ var localDb = {
       groups: [],
       notes: []
     };
-    db.workflows.unshift({ id, name, description, graph, createdAt: now, updatedAt: now, tags: [] });
+    db.workflows.unshift({ id, name, description, graph: graph2, createdAt: now, updatedAt: now, tags: [] });
     save(db);
     return { id };
   },
-  workflowSave(id, name, description, graph) {
+  workflowSave(id, name, description, graph2) {
     const db = load();
     const w = db.workflows.find((x) => x.id === id);
     if (!w) throw new Error("workflow not found");
     w.name = name;
     w.description = description;
-    w.graph = graph;
+    w.graph = graph2;
     w.updatedAt = nowIso();
     save(db);
   },
@@ -3851,7 +4055,7 @@ var localDb = {
     return { ok: true };
   },
   approvalList() {
-    return load().approvals.filter((a2) => a2.status === "OPEN");
+    return load().approvals.filter((a) => a.status === "OPEN");
   },
   approvalRequest(executionId, nodeKey, summary, payload) {
     const db = load();
@@ -3863,15 +4067,15 @@ var localDb = {
   },
   approvalDecide(id, decision) {
     const db = load();
-    const a2 = db.approvals.find((x) => x.id === id);
-    if (a2) {
-      a2.status = decision;
+    const a = db.approvals.find((x) => x.id === id);
+    if (a) {
+      a.status = decision;
       save(db);
     }
   },
   approvalGet(executionId, nodeKey) {
-    const a2 = load().approvals.find((x) => x.executionId === executionId && x.nodeKey === nodeKey && x.status !== "OPEN");
-    return a2 ? { decided: true, status: a2.status } : { decided: false };
+    const a = load().approvals.find((x) => x.executionId === executionId && x.nodeKey === nodeKey && x.status !== "OPEN");
+    return a ? { decided: true, status: a.status } : { decided: false };
   },
   dlqList() {
     return load().dlq.filter((d) => d.status === "OPEN");
@@ -3906,9 +4110,9 @@ var localDb = {
   },
   runTake() {
     const db = load();
-    const items2 = db.runQueue.splice(0);
+    const items = db.runQueue.splice(0);
     save(db);
-    return items2;
+    return items;
   }
 };
 
@@ -3959,9 +4163,9 @@ var ipc = {
     if (useTauri()) return tauriInvoke("workflow_delete", { workflowId });
     localDb.workflowDelete(workflowId);
   },
-  workflowSave: async (workflowId, name, description, graph) => {
-    if (useTauri()) return tauriInvoke("workflow_save", { workflowId, name, description, graph });
-    localDb.workflowSave(workflowId, name, description, graph);
+  workflowSave: async (workflowId, name, description, graph2) => {
+    if (useTauri()) return tauriInvoke("workflow_save", { workflowId, name, description, graph: graph2 });
+    localDb.workflowSave(workflowId, name, description, graph2);
   },
   // V7 fix (bug T): the browser fallbacks for versioning fabricated an id and a constant
   // `version: 1`, so the version history UI showed a plausible list of versions that were never
@@ -4176,23 +4380,23 @@ var ipc = {
     if (!key) throw new Error(`secret not found: ${req.secret_ref}`);
     throw new Error("Cloud LLM calls from the web host require the native desktop build (CORS). Use Local LLM / Ollama or run `npm run tauri`.");
   },
-  fsRead: async (path2) => {
-    if (useTauri()) return tauriInvoke("fs_read", { path: path2 });
+  fsRead: async (path) => {
+    if (useTauri()) return tauriInvoke("fs_read", { path });
     throw new Error("Filesystem is available in the native desktop build.");
   },
-  fsWrite: async (path2, content) => {
-    if (useTauri()) return tauriInvoke("fs_write", { path: path2, content });
+  fsWrite: async (path, content) => {
+    if (useTauri()) return tauriInvoke("fs_write", { path, content });
     throw new Error("Filesystem is available in the native desktop build.");
   },
-  fsList: async (path2) => {
-    if (useTauri()) return tauriInvoke("fs_list", { path: path2 });
+  fsList: async (path) => {
+    if (useTauri()) return tauriInvoke("fs_list", { path });
     return [];
   },
-  fsMkdir: async (path2) => {
-    if (useTauri()) return tauriInvoke("fs_mkdir", { path: path2 });
+  fsMkdir: async (path) => {
+    if (useTauri()) return tauriInvoke("fs_mkdir", { path });
   },
-  fsRemove: async (path2, recursive) => {
-    if (useTauri()) return tauriInvoke("fs_remove", { path: path2, recursive });
+  fsRemove: async (path, recursive) => {
+    if (useTauri()) return tauriInvoke("fs_remove", { path, recursive });
   },
   shellExec: async (program, args, cwd, timeoutSecs) => {
     if (useTauri()) return tauriInvoke("shell_exec", { program, args, cwd, timeoutSecs });
@@ -4468,252 +4672,6 @@ function createNodeFromDef(def, id, x, y) {
     node.permissions.providerExecute = true;
   }
   return node;
-}
-
-// src/graph/layout.ts
-var DEFAULTS = { gapX: 120, gapY: 48, componentGap: 96 };
-function findComponents(ids, edges) {
-  const adj = new Map(ids.map((id) => [id, []]));
-  for (const [a2, b2] of edges) {
-    if (adj.has(a2) && adj.has(b2) && a2 !== b2) {
-      adj.get(a2).push(b2);
-      adj.get(b2).push(a2);
-    }
-  }
-  const seen = /* @__PURE__ */ new Set();
-  const comps = [];
-  for (const id of ids) {
-    if (seen.has(id)) continue;
-    const comp = [];
-    const stack = [id];
-    seen.add(id);
-    while (stack.length) {
-      const cur = stack.pop();
-      comp.push(cur);
-      for (const nx of adj.get(cur) ?? []) {
-        if (!seen.has(nx)) {
-          seen.add(nx);
-          stack.push(nx);
-        }
-      }
-    }
-    comps.push(comp);
-  }
-  return comps;
-}
-function breakCycles(ids, edges) {
-  const out = new Map(ids.map((id) => [id, []]));
-  edges.forEach(([a2, b2], i) => {
-    if (out.has(a2) && out.has(b2) && a2 !== b2) out.get(a2).push([b2, i]);
-  });
-  const WHITE = 0, GRAY = 1, BLACK = 2;
-  const color = new Map(ids.map((id) => [id, WHITE]));
-  const backEdges = /* @__PURE__ */ new Set();
-  const dfs = (start) => {
-    const stack = [[start, 0]];
-    color.set(start, GRAY);
-    while (stack.length) {
-      const [cur, idx] = stack[stack.length - 1];
-      const nbrs = out.get(cur) ?? [];
-      if (idx < nbrs.length) {
-        stack[stack.length - 1] = [cur, idx + 1];
-        const [nx, edgeIdx] = nbrs[idx];
-        const c = color.get(nx);
-        if (c === GRAY) backEdges.add(edgeIdx);
-        else if (c === WHITE) {
-          color.set(nx, GRAY);
-          stack.push([nx, 0]);
-        }
-      } else {
-        color.set(cur, BLACK);
-        stack.pop();
-      }
-    }
-  };
-  for (const id of ids) if (color.get(id) === WHITE) dfs(id);
-  const acyclic = edges.map(([a2, b2], i) => backEdges.has(i) ? [b2, a2] : [a2, b2]);
-  return { acyclic, reversed: backEdges.size };
-}
-function longestPathLayers(ids, edges) {
-  const indeg = new Map(ids.map((id) => [id, 0]));
-  const out = new Map(ids.map((id) => [id, []]));
-  for (const [a2, b2] of edges) {
-    if (indeg.has(a2) && indeg.has(b2)) {
-      out.get(a2).push(b2);
-      indeg.set(b2, (indeg.get(b2) ?? 0) + 1);
-    }
-  }
-  const layer = new Map(ids.map((id) => [id, 0]));
-  const queue = ids.filter((id) => (indeg.get(id) ?? 0) === 0);
-  const remaining = new Map(indeg);
-  while (queue.length) {
-    const cur = queue.shift();
-    for (const nx of out.get(cur) ?? []) {
-      layer.set(nx, Math.max(layer.get(nx) ?? 0, (layer.get(cur) ?? 0) + 1));
-      remaining.set(nx, (remaining.get(nx) ?? 0) - 1);
-      if ((remaining.get(nx) ?? 0) === 0) queue.push(nx);
-    }
-  }
-  return layer;
-}
-function countCrossings(upper, lower) {
-  const pairs = upper.map((u, i) => [u, lower[i]]);
-  let c = 0;
-  for (let i = 0; i < pairs.length; i++) {
-    for (let j = i + 1; j < pairs.length; j++) {
-      const [u1, l1] = pairs[i];
-      const [u2, l2] = pairs[j];
-      if (u1 < u2 && l1 > l2 || u1 > u2 && l1 < l2) c += 1;
-    }
-  }
-  return c;
-}
-function layoutComponent(ids, nodeById, allEdges, o) {
-  const idSet = new Set(ids);
-  const rawEdges = allEdges.filter(([a2, b2]) => idSet.has(a2) && idSet.has(b2) && a2 !== b2);
-  const { acyclic, reversed } = breakCycles(ids, rawEdges);
-  const layerOf = longestPathLayers(ids, acyclic);
-  const layers = [];
-  const layerIndex = /* @__PURE__ */ new Map();
-  const ensureLayer = (i) => {
-    while (layers.length <= i) layers.push([]);
-  };
-  for (const id of ids) {
-    const li = layerOf.get(id) ?? 0;
-    ensureLayer(li);
-    layers[li].push({ id, virtual: false });
-    layerIndex.set(id, li);
-  }
-  const virtualEdges = [];
-  let vseq = 0;
-  for (const [a2, b2] of acyclic) {
-    const la = layerOf.get(a2) ?? 0;
-    const lb = layerOf.get(b2) ?? 0;
-    if (lb - la <= 1) {
-      virtualEdges.push([a2, b2]);
-      continue;
-    }
-    let prev = a2;
-    for (let li = la + 1; li < lb; li++) {
-      const vid = `__virtual_${vseq++}`;
-      ensureLayer(li);
-      layers[li].push({ id: vid, virtual: true });
-      layerIndex.set(vid, li);
-      virtualEdges.push([prev, vid]);
-      prev = vid;
-    }
-    virtualEdges.push([prev, b2]);
-  }
-  const posInLayer = () => {
-    const pos2 = /* @__PURE__ */ new Map();
-    layers.forEach((layer) => layer.forEach((s, i) => pos2.set(s.id, i)));
-    return pos2;
-  };
-  const neighboursOf = /* @__PURE__ */ new Map();
-  for (const [a2, b2] of virtualEdges) {
-    if (!neighboursOf.has(a2)) neighboursOf.set(a2, []);
-    if (!neighboursOf.has(b2)) neighboursOf.set(b2, []);
-    neighboursOf.get(a2).push(b2);
-    neighboursOf.get(b2).push(a2);
-  }
-  const SWEEPS = 4;
-  for (let s = 0; s < SWEEPS * 2; s++) {
-    const down = s % 2 === 0;
-    const order = down ? layers.map((_, i) => i) : layers.map((_, i) => layers.length - 1 - i);
-    for (const li of order.slice(1)) {
-      const fixedLayer = layers[li + (down ? -1 : 1)];
-      const fixedPos = new Map(fixedLayer.map((slot, i) => [slot.id, i]));
-      const bary = /* @__PURE__ */ new Map();
-      for (const slot of layers[li]) {
-        const ns = (neighboursOf.get(slot.id) ?? []).filter((n2) => fixedPos.has(n2));
-        if (ns.length > 0) bary.set(slot.id, ns.reduce((acc, n2) => acc + (fixedPos.get(n2) ?? 0), 0) / ns.length);
-      }
-      layers[li].map((slot, i) => ({ slot, i })).sort((x2, y) => {
-        const bx = bary.has(x2.slot.id) ? bary.get(x2.slot.id) : x2.i;
-        const by = bary.has(y.slot.id) ? bary.get(y.slot.id) : y.i;
-        return bx !== by ? bx - by : x2.i - y.i;
-      }).forEach((entry, i) => {
-        layers[li][i] = entry.slot;
-      });
-    }
-  }
-  const pos = posInLayer();
-  let crossings = 0;
-  for (let li = 0; li + 1 < layers.length; li++) {
-    const upperIdx = [];
-    const lowerIdx = [];
-    for (const [a2, b2] of virtualEdges) {
-      if ((layerIndex.get(a2) ?? -1) === li && (layerIndex.get(b2) ?? -1) === li + 1) {
-        upperIdx.push(pos.get(a2) ?? 0);
-        lowerIdx.push(pos.get(b2) ?? 0);
-      }
-    }
-    crossings += countCrossings(upperIdx, lowerIdx);
-  }
-  const colX = [];
-  let x = 0;
-  for (let li = 0; li < layers.length; li++) {
-    colX.push(x);
-    const w = Math.max(140, ...layers[li].filter((sl) => !sl.virtual).map((sl) => nodeById.get(sl.id)?.w ?? 264));
-    x += w + o.gapX;
-  }
-  const heightOf = (slot) => slot.virtual ? 8 : nodeById.get(slot.id)?.h ?? 120;
-  const yOf = /* @__PURE__ */ new Map();
-  layers.forEach((layer) => {
-    let y = 0;
-    for (const slot of layer) {
-      yOf.set(slot.id, y);
-      y += heightOf(slot) + o.gapY;
-    }
-  });
-  for (let pass2 = 0; pass2 < 2; pass2++) {
-    for (let li = 0; li < layers.length; li++) {
-      let prevBottom = 0;
-      for (const slot of layers[li]) {
-        const ns = (neighboursOf.get(slot.id) ?? []).filter((n2) => yOf.has(n2));
-        const current = yOf.get(slot.id) ?? 0;
-        const target = ns.length > 0 ? ns.reduce((acc, n2) => acc + (yOf.get(n2) ?? 0), 0) / ns.length : current;
-        const want = Math.max(0, target - heightOf(slot) / 2);
-        const yy = Math.max(want, prevBottom);
-        yOf.set(slot.id, yy);
-        prevBottom = yy + heightOf(slot) + o.gapY;
-      }
-    }
-  }
-  const positions = /* @__PURE__ */ new Map();
-  let width = 0;
-  let height = 0;
-  layers.forEach((layer, li) => {
-    for (const slot of layer) {
-      if (slot.virtual) continue;
-      const n2 = nodeById.get(slot.id);
-      const px = colX[li];
-      const py = yOf.get(slot.id) ?? 0;
-      positions.set(slot.id, { x: px, y: py });
-      width = Math.max(width, px + (n2?.w ?? 264));
-      height = Math.max(height, py + (n2?.h ?? 120));
-    }
-  });
-  return { positions, layers: layers.length, crossings, reversed, width, height };
-}
-function layeredLayout(input, opts = {}) {
-  const o = { ...DEFAULTS, ...opts };
-  const nodeById = new Map(input.nodes.map((n2) => [n2.id, n2]));
-  const comps = findComponents(input.nodes.map((n2) => n2.id), input.edges);
-  const positions = /* @__PURE__ */ new Map();
-  let yOffset = 0;
-  let maxLayers = 0;
-  let totalCrossings = 0;
-  let totalReversed = 0;
-  for (const comp of comps) {
-    const r = layoutComponent(comp, nodeById, input.edges, o);
-    for (const [id, p2] of r.positions) positions.set(id, { x: p2.x, y: p2.y + yOffset });
-    yOffset += r.height + o.componentGap;
-    maxLayers = Math.max(maxLayers, r.layers);
-    totalCrossings += r.crossings;
-    totalReversed += r.reversed;
-  }
-  return { positions, layers: maxLayers, crossings: totalCrossings, reversedEdges: totalReversed, components: comps.length };
 }
 
 // src/canvas/geometry.ts
@@ -5001,7 +4959,7 @@ var useGraphStore = create((set, get) => {
       if (!get().canConnect(sourceNodeId, sourcePortId, targetNodeId, targetPortId)) return false;
       const src = get().graph.nodes.find((n2) => n2.id === sourceNodeId);
       const sp = src.outputs.find((p2) => p2.id === sourcePortId);
-      const conn = {
+      const conn2 = {
         id: uid("c"),
         sourceNodeId,
         sourcePortId,
@@ -5010,7 +4968,7 @@ var useGraphStore = create((set, get) => {
         dataType: sp.dataType,
         status: "idle"
       };
-      withHistory("Connect", (g) => g.connections.push(conn));
+      withHistory("Connect", (g) => g.connections.push(conn2));
       return true;
     },
     /**
@@ -5121,8 +5079,8 @@ var useGraphStore = create((set, get) => {
       const maxY = Math.max(...ys);
       const cx = (minX + maxX) / 2;
       const cy = (minY + maxY) / 2;
-      const sortedX = [...nodes].sort((a2, b2) => a2.x - b2.x);
-      const sortedY = [...nodes].sort((a2, b2) => a2.y - b2.y);
+      const sortedX = [...nodes].sort((a, b) => a.x - b.x);
+      const sortedY = [...nodes].sort((a, b) => a.y - b.y);
       withHistory(`Align ${mode}`, (g) => {
         for (const n2 of g.nodes) {
           if (!ids.includes(n2.id)) continue;
@@ -5134,16 +5092,16 @@ var useGraphStore = create((set, get) => {
           if (mode === "vcenter") n2.y = cy;
         }
         if (mode === "hdist" && sortedX.length > 2) {
-          const span = sortedX[sortedX.length - 1].x - sortedX[0].x;
-          const step = span / (sortedX.length - 1);
+          const span2 = sortedX[sortedX.length - 1].x - sortedX[0].x;
+          const step = span2 / (sortedX.length - 1);
           sortedX.forEach((n2, i) => {
             const t = g.nodes.find((x) => x.id === n2.id);
             if (t) t.x = sortedX[0].x + step * i;
           });
         }
         if (mode === "vdist" && sortedY.length > 2) {
-          const span = sortedY[sortedY.length - 1].y - sortedY[0].y;
-          const step = span / (sortedY.length - 1);
+          const span2 = sortedY[sortedY.length - 1].y - sortedY[0].y;
+          const step = span2 / (sortedY.length - 1);
           sortedY.forEach((n2, i) => {
             const t = g.nodes.find((x) => x.id === n2.id);
             if (t) t.y = sortedY[0].y + step * i;
@@ -5162,8 +5120,8 @@ var useGraphStore = create((set, get) => {
         })),
         edges: g.connections.map((c) => [c.sourceNodeId, c.targetNodeId])
       });
-      withHistory("Auto layout", (graph) => {
-        for (const n2 of graph.nodes) {
+      withHistory("Auto layout", (graph2) => {
+        for (const n2 of graph2.nodes) {
           const p2 = res.positions.get(n2.id);
           if (p2) {
             n2.x = Math.round(p2.x);
@@ -5197,9 +5155,7 @@ var useGraphStore = create((set, get) => {
   };
 });
 
-// probe/palette.test.ts
-import * as fs from "node:fs";
-import * as path from "node:path";
+// probe/layout.test.ts
 var pass = 0;
 var fail = 0;
 var failures = [];
@@ -5215,53 +5171,95 @@ var ok = (label, cond, detail = "") => {
 };
 var section = (t) => console.log(`
 == ${t} ==`);
-section("1. the fuzzy scorer ranks like a launcher");
-ok("exact match beats everything", fuzzyScore("run", "run") === 1e3, String(fuzzyScore("run", "run")));
-ok("prefix beats subsequence", fuzzyScore("run", "Run workflow") > fuzzyScore("rw", "Run workflow"), "");
-ok("word-boundary letters beat mid-word letters", fuzzyScore("rw", "Run Workflow") > fuzzyScore("un", "Run workflow"), `${fuzzyScore("rw", "Run Workflow")} vs ${fuzzyScore("un", "Run workflow")}`);
-ok("a non-subsequence is rejected (negative)", fuzzyScore("xyz", "Run workflow") < 0, String(fuzzyScore("xyz", "Run workflow")));
-ok("empty query matches everything neutrally", fuzzyScore("", "anything") === 0, "");
-ok("contiguous runs score above scattered letters", fuzzyScore("work", "Run workflow") > fuzzyScore("wfk", "Run workflow"), "");
-section("1.5 label-first palette scoring (11.9.6 review fix)");
-ok("a label hit is the label score lifted above any group score (group never inflates it)", paletteScore("fit", "Fit view", "Canvas") === fuzzyScore("fit", "Fit view") + 1e3, `${paletteScore("fit", "Fit view", "Canvas")} vs ${fuzzyScore("fit", "Fit view")}`);
-ok("a label hit always out-ranks a group-only hit", paletteScore("canvas", "Open canvas", "Navigate") > paletteScore("canvas", "Auto layout", "Canvas"), `${paletteScore("canvas", "Open canvas", "Navigate")} vs ${paletteScore("canvas", "Auto layout", "Canvas")}`);
-ok("a group-only query still surfaces, but damped (never outranks labels)", (() => {
-  const groupOnly = paletteScore("nodes", "Jump to node: Coder", "Nodes");
-  const labelHit = paletteScore("nodes", "Open nodes page", void 0);
-  return groupOnly >= 0 && labelHit > groupOnly;
+var N = (id) => ({ id, w: 264, h: 120 });
+var xy = (r, id) => r.positions.get(id);
+section("0. honest emptiness");
+var empty2 = layeredLayout({ nodes: [], edges: [] });
+ok("no nodes \u2192 no positions, zero everything", empty2.positions.size === 0 && empty2.layers === 0 && empty2.components === 0, JSON.stringify({ layers: empty2.layers }));
+section("1. chains flow left \u2192 right, one column per layer");
+var chain = layeredLayout({ nodes: [N("a"), N("b"), N("c")], edges: [["a", "b"], ["b", "c"]] });
+ok("three layers for a 3-chain", chain.layers === 3, `${chain.layers}`);
+ok("x increases strictly along the chain", xy(chain, "a").x < xy(chain, "b").x && xy(chain, "b").x < xy(chain, "c").x, JSON.stringify([xy(chain, "a"), xy(chain, "b"), xy(chain, "c")]));
+ok("a clean chain has zero crossings", chain.crossings === 0, `${chain.crossings}`);
+ok("no edges were reversed in a DAG", chain.reversedEdges === 0, `${chain.reversedEdges}`);
+section("2. diamonds: siblings share a column, never a position");
+var diamond = layeredLayout({ nodes: [N("a"), N("b"), N("c"), N("d")], edges: [["a", "b"], ["a", "c"], ["b", "d"], ["c", "d"]] });
+ok("siblings b and c share one layer column", xy(diamond, "b").x === xy(diamond, "c").x, `${xy(diamond, "b").x} vs ${xy(diamond, "c").x}`);
+ok("siblings are separated vertically", xy(diamond, "b").y !== xy(diamond, "c").y, "");
+ok("d lands strictly after its parents", xy(diamond, "d").x > xy(diamond, "b").x && xy(diamond, "d").x > xy(diamond, "c").x, "");
+ok("a diamond is planar \u2014 zero crossings", diamond.crossings === 0, `${diamond.crossings}`);
+section("3. crossing minimization is real, and measured");
+var xShaped = layeredLayout({ nodes: [N("s1"), N("s2"), N("t1"), N("t2")], edges: [["s1", "t2"], ["s2", "t1"]] });
+ok("an X of wires is untangled to zero crossings by the sweep", xShaped.crossings === 0, `${xShaped.crossings}`);
+ok("the crossing counter itself is honest (parallel = 0, X = 1)", countCrossings([0, 1], [0, 1]) === 0 && countCrossings([0, 1], [1, 0]) === 1, "");
+section("4. long edges normalize through virtual layers");
+var long = layeredLayout({ nodes: [N("a"), N("b"), N("c")], edges: [["a", "b"], ["b", "c"], ["a", "c"]] });
+ok("a\u2192c spanning two layers still keeps flow direction", xy(long, "a").x < xy(long, "c").x, "");
+ok("the span reports three layer columns", long.layers === 3, `${long.layers}`);
+section("5. cycles are insurance, not a crash");
+var cyclic = layeredLayout({ nodes: [N("a"), N("b")], edges: [["a", "b"], ["b", "a"]] });
+ok("a hostile 2-cycle still yields positions for both nodes", cyclic.positions.has("a") && cyclic.positions.has("b"), "");
+ok("the reversal is reported, not hidden", cyclic.reversedEdges >= 1, `${cyclic.reversedEdges}`);
+section("6. determinism \u2014 the same graph ALWAYS lays out the same way");
+var input = { nodes: [N("a"), N("b"), N("c"), N("d"), N("e")], edges: [["a", "c"], ["b", "c"], ["c", "d"], ["a", "e"], ["e", "d"]] };
+var r1 = layeredLayout(input);
+var r2 = layeredLayout(input);
+ok("two runs agree on every coordinate", [...r1.positions.entries()].every(([id, p2]) => {
+  const q = r2.positions.get(id);
+  return q !== void 0 && q.x === p2.x && q.y === p2.y;
+}), "");
+section("7. components stack with a gutter");
+var comps = layeredLayout({ nodes: [N("a"), N("b"), N("c"), N("d")], edges: [["a", "b"], ["c", "d"]] });
+ok("two components are detected", comps.components === 2, `${comps.components}`);
+var ab = [xy(comps, "a"), xy(comps, "b")];
+var cd = [xy(comps, "c"), xy(comps, "d")];
+var span = (pts) => [Math.min(...pts.map((p2) => p2.y)), Math.max(...pts.map((p2) => p2.y)) + 120];
+var [a0, a1] = span(ab);
+var [c0, c1] = span(cd);
+ok("component y-ranges never interleave", a1 <= c0 || c1 <= a0, `[${a0},${a1}] vs [${c0},${c1}]`);
+section("8. no two cards ever overlap");
+var crowded = layeredLayout({
+  nodes: [N("s"), N("m1"), N("m2"), N("m3"), N("t")],
+  edges: [["s", "m1"], ["s", "m2"], ["s", "m3"], ["m1", "t"], ["m2", "t"], ["m3", "t"]]
+});
+var rects = [...crowded.positions.entries()].map(([id, p2]) => ({ id, x: p2.x, y: p2.y, w: 264, h: 120 }));
+var overlaps = rects.filter((r, i) => rects.slice(i + 1).some((q) => r.x < q.x + q.w && q.x < r.x + r.w && r.y < q.y + q.h && q.y < r.y + r.h));
+ok("every card keeps its own space", overlaps.length === 0, JSON.stringify(overlaps.map((o) => o.id)));
+ok("the fan-out middle layer stays zero-crossing", crowded.crossings === 0, `${crowded.crossings}`);
+section("9. the store consumes the engine for real");
+var mkNode = (defId, id) => createNodeFromDef(DEFINITIONS_BY_ID.get(defId), id, 5e3, 5e3);
+var conn = (id, sn, sp, tn, tp) => ({
+  id,
+  sourceNodeId: sn.id,
+  sourcePortId: sp,
+  targetNodeId: tn.id,
+  targetPortId: tp,
+  dataType: sn.outputs.find((p2) => p2.id === sp)?.dataType ?? "any",
+  status: "idle"
+});
+var start = mkNode("control.start", "s");
+var planner = mkNode("agent.planner", "p");
+var coder = mkNode("agent.coder", "k");
+var graph = {
+  schemaVersion: GRAPH_SCHEMA_VERSION,
+  id: "wf-layout",
+  name: "layout",
+  nodes: [start, planner, coder],
+  connections: [conn("c1", start, "payload", planner, "goal"), conn("c2", planner, "summary", coder, "task")],
+  viewport: { x: 0, y: 0, zoom: 1 },
+  groups: [],
+  notes: []
+};
+useGraphStore.getState().loadWorkflow({ id: "wf-layout", name: "layout", description: "", graph });
+useGraphStore.getState().autoLayout();
+var laid = useGraphStore.getState().graph.nodes;
+var px = (id) => laid.find((n2) => n2.id === id).x;
+ok("autoLayout moved the nodes out of their dumped pile", laid.every((n2) => n2.x !== 5e3 || n2.y !== 5e3), "");
+ok("the wired chain lands in left\u2192right columns", px("s") < px("p") && px("p") < px("k"), `${px("s")} \u2192 ${px("p")} \u2192 ${px("k")}`);
+ok("undo restores the pre-layout positions (layout rides history)", (() => {
+  useGraphStore.getState().undo();
+  return useGraphStore.getState().graph.nodes.find((n2) => n2.id === "s").x === 5e3;
 })(), "");
-ok("label miss + group miss stays rejected", paletteScore("zzq", "Fit view", "Canvas") < 0, "");
-section("2. rankFuzzy filters AND orders");
-var items = ["Run workflow", "Save workflow", "Open settings", "Auto layout", "Jump to node: Coder"];
-var ranked = rankFuzzy(items, "run", (s) => s).map((r) => r.item);
-ok("matching items survive, ranked best-first", ranked[0] === "Run workflow" && ranked.includes("Auto layout") === false, JSON.stringify(ranked));
-ok("no query keeps original order (recent-first belongs to the UI)", rankFuzzy(items, "  ", (s) => s).map((r) => r.item).join("|") === items.join("|"), "");
-ok("garbage query yields an honest empty list", rankFuzzy(items, "qqzz", (s) => s).length === 0, "");
-section("2.5 provenance \u2014 the shipped palette ranks labels, not category text");
-var ROOT = ".".length > 0 ? "." : path.resolve(import.meta.dirname ?? ".", "..");
-var paletteSrc = fs.readFileSync(path.join(ROOT, "src", "panels", "CommandPalette.tsx"), "utf8");
-ok("the palette no longer concatenates the group into the search text", !paletteSrc.includes("${a.group"), "concatenated ranking text found");
-ok("the palette composes through paletteScore (label-first)", /paletteScore\(q, item\.label, item\.group\)/.test(paletteSrc), "");
-section("3. connectRefusal \u2014 the wire fix speaks in reasons");
-var store = useGraphStore.getState();
-var a = store.addNode("agent.planner", 0, 0);
-var b = store.addNode("agent.coder", 400, 0);
-ok("two real nodes landed on the probe graph", Boolean(a && b), `${a},${b}`);
-var na = useGraphStore.getState().graph.nodes.find((n2) => n2.id === a);
-var nb = useGraphStore.getState().graph.nodes.find((n2) => n2.id === b);
-var outA = "summary";
-var inB = "task";
-ok("a self-wire is refused in words", useGraphStore.getState().connectRefusal(a, outA, a, inB) === "A node cannot wire to itself.", String(useGraphStore.getState().connectRefusal(a, outA, a, inB)));
-ok("a ghost port is refused in words", /does not exist/.test(useGraphStore.getState().connectRefusal(a, "nope", b, inB) ?? ""), String(useGraphStore.getState().connectRefusal(a, "nope", b, inB)));
-var preRefusal = useGraphStore.getState().connectRefusal(a, outA, b, inB);
-var first = useGraphStore.getState().connect(a, outA, b, inB);
-ok("a legal wire: silence before, success after", preRefusal === null && first === true, `pre=${preRefusal} first=${first}`);
-var second = useGraphStore.getState().connect(a, outA, b, inB);
-ok("the duplicate is refused, not silently dropped", second === false && /already has a wire|Type mismatch|loop/.test(useGraphStore.getState().connectRefusal(a, outA, b, inB) ?? "NULL"), String(useGraphStore.getState().connectRefusal(a, outA, b, inB)));
-var outB = "result";
-var inA = "goal";
-var loopRefusal = useGraphStore.getState().connectRefusal(b, outB, a, inA);
-ok("a loop is refused BEFORE it is drawn", /loop/.test(loopRefusal ?? ""), String(loopRefusal));
 console.log(`
 ${pass} passed, ${fail} failed`);
 if (fail > 0) {
