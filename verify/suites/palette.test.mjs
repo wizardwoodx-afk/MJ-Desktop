@@ -3547,7 +3547,7 @@ function detectHost() {
 }
 
 // src/version.ts
-var MJ_VERSION = "11.10.5";
+var MJ_VERSION = "11.10.7";
 var MJ_VERSION_SHORT = MJ_VERSION.split(".").slice(0, 2).join(".");
 var MJ_TITLE = `MJ ${MJ_VERSION_SHORT}`;
 

@@ -146,6 +146,18 @@ export async function runCheck(spec: CheckSpec, repoDir: string, run: RunFn, can
     }
   }
 
+  // 11.10.7 — the same refusal for pytest. A bare `python3` without the pytest package exits 1
+  // with "No module named pytest" — an interpreter error, not a test result. Recording that as a
+  // failing suite is exactly the phantom failure this runner exists to prevent (it is also what
+  // turned CI red on GitHub's ubuntu-24.04/macos-15 images, which ship python3 without pytest
+  // while the Windows image ships neither, masking the gap entirely).
+  if (spec.command === "python3" && spec.args.includes("pytest")) {
+    const probe = await run("python3", ["-m", "pytest", "--version"], repoDir, 30);
+    if (probe.code !== 0) {
+      return finish({ didRun: false, exitCode: null, output: "", reason: "python3 is present but the pytest package is not installed; MJ will not run an install for you, so this check was not performed" });
+    }
+  }
+
   try {
     const r = await run(spec.command, spec.args, repoDir, spec.timeoutSecs);
     const output = [r.stdout, r.stderr].filter((s) => s && s.trim()).join("\n").trim();

@@ -2409,7 +2409,7 @@ var MJ_VERSION, MJ_VERSION_SHORT, MJ_TITLE;
 var init_version = __esm({
   "src/version.ts"() {
     "use strict";
-    MJ_VERSION = "11.10.5";
+    MJ_VERSION = "11.10.7";
     MJ_VERSION_SHORT = MJ_VERSION.split(".").slice(0, 2).join(".");
     MJ_TITLE = `MJ ${MJ_VERSION_SHORT}`;
   }
@@ -3374,6 +3374,12 @@ async function runCheck(spec, repoDir, run, canRun2, exists = existsNative) {
   if (/^(npm|npx|yarn|pnpm)$/.test(spec.command)) {
     if (!await exists(join(repoDir, "node_modules"))) {
       return finish({ didRun: false, exitCode: null, output: "", reason: "node_modules is absent; MJ will not run an install for you, so this check was not performed" });
+    }
+  }
+  if (spec.command === "python3" && spec.args.includes("pytest")) {
+    const probe = await run("python3", ["-m", "pytest", "--version"], repoDir, 30);
+    if (probe.code !== 0) {
+      return finish({ didRun: false, exitCode: null, output: "", reason: "python3 is present but the pytest package is not installed; MJ will not run an install for you, so this check was not performed" });
     }
   }
   try {

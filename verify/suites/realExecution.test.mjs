@@ -39,7 +39,7 @@ var MJ_VERSION, MJ_VERSION_SHORT, MJ_TITLE;
 var init_version = __esm({
   "src/version.ts"() {
     "use strict";
-    MJ_VERSION = "11.10.5";
+    MJ_VERSION = "11.10.7";
     MJ_VERSION_SHORT = MJ_VERSION.split(".").slice(0, 2).join(".");
     MJ_TITLE = `MJ ${MJ_VERSION_SHORT}`;
   }
@@ -9649,6 +9649,12 @@ async function runCheck(spec, repoDir, run, canRun, exists = existsNative) {
       return finish({ didRun: false, exitCode: null, output: "", reason: "node_modules is absent; MJ will not run an install for you, so this check was not performed" });
     }
   }
+  if (spec.command === "python3" && spec.args.includes("pytest")) {
+    const probe = await run("python3", ["-m", "pytest", "--version"], repoDir, 30);
+    if (probe.code !== 0) {
+      return finish({ didRun: false, exitCode: null, output: "", reason: "python3 is present but the pytest package is not installed; MJ will not run an install for you, so this check was not performed" });
+    }
+  }
   try {
     const r = await run(spec.command, spec.args, repoDir, spec.timeoutSecs);
     const output = [r.stdout, r.stderr].filter((s) => s && s.trim()).join("\n").trim();
@@ -12164,18 +12170,27 @@ var ok = (c, m) => {
     console.log(`  FAIL ${m}`);
   }
 };
-var CARGO_BIN = "/home/user/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin";
-var envPath = `${CARGO_BIN}:${process.env.PATH ?? ""}`;
+var HOME_DIR = process.env.HOME ?? process.env.USERPROFILE ?? "";
+var ENV_PATH = [HOME_DIR ? join4(HOME_DIR, ".cargo", "bin") : null, process.env.PATH].filter((p2) => typeof p2 === "string" && p2.length > 0).join(process.platform === "win32" ? ";" : ":");
 function have(cmd) {
   try {
-    execSync(`command -v ${cmd}`, { stdio: "ignore", env: { ...process.env, PATH: envPath } });
-    process.env.PATH = envPath;
+    execSync(`command -v ${cmd}`, { stdio: "ignore", env: { ...process.env, PATH: ENV_PATH } });
+    process.env.PATH = ENV_PATH;
     return true;
   } catch {
     return false;
   }
 }
-var HAS_PYTEST = have("python3");
+function havePytest() {
+  try {
+    execSync("python3 -m pytest --version", { stdio: "ignore", env: { ...process.env, PATH: ENV_PATH } });
+    return true;
+  } catch {
+    return false;
+  }
+}
+var HAS_PYTHON = have("python3");
+var HAS_PYTEST = HAS_PYTHON && havePytest();
 var HAS_CARGO = have("cargo");
 function mkrepo(name, files) {
   const dir = join4(tmpdir2(), `mj7-${name}-${Date.now()}`);
@@ -12190,8 +12205,20 @@ function mkrepo(name, files) {
 var PYPROJECT = "[project]\nname = 'target'\nversion = '0.1.0'\n";
 console.log("\n== real commands, real exit codes ==\n");
 if (!HAS_PYTEST) {
-  skipped += 1;
-  console.log("  SKIP python3 unavailable \u2014 real verification not exercisable here");
+  if (HAS_PYTHON) {
+    const bare = mkrepo("bare", { "pyproject.toml": PYPROJECT, "test_thing.py": "def test_ok():\n    assert True\n" });
+    const results = await runAllChecks(bare);
+    const test = results.find((r) => r.spec.source === "TEST_RUN");
+    ok(Boolean(test), "the pytest check must still be discovered from pyproject.toml");
+    ok(test?.didRun === false, "without the pytest package the check must REFUSE, not run (didRun=false)");
+    ok(test?.exitCode === null, "a refusal carries no exit code (no verdict was measured)");
+    ok(/pytest package is not installed/.test(test?.reason ?? ""), `the reason must explain precisely: ${test?.reason}`);
+    console.log(`       bare repo: refused honestly \u2014 ${test?.reason}`);
+    rmSync(bare, { recursive: true, force: true });
+  } else {
+    skipped += 1;
+    console.log("  SKIP python3 unavailable \u2014 real verification not exercisable here");
+  }
 } else {
   const green = mkrepo("green", {
     "pyproject.toml": PYPROJECT,

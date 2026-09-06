@@ -1,29 +1,41 @@
 # MJ
 
-A desktop runtime for agent organisations. You give it an outcome; it plans the work, picks the agents, runs them in worktrees, checks the result, and remembers why.
+**A desktop runtime for agent organisations.** Give it an outcome; it plans the work, forms the team, runs the agents in isolated git worktrees, checks the result adversarially, merges what survives — and keeps signed receipts for all of it.
 
-MJ is local-first, source-available, and opinionated about proof. A run only counts as done when a different agent than the writer reviewed the work, the check is measured, the merge is gated, and the receipt is issuer-signed. A merge that actually happened carries a signed provenance statement; a deployer can prove the AI Bill of Materials and the retention floor it ran under.
+MJ is local-first, source-available, and opinionated about one thing: **proof**. A run only counts as done when an agent *other than* the writer reviewed the work, the check is measured (exit codes, not vibes), the merge is gated, and the receipt is issuer-signed. Nothing here claims more than it can show.
 
-## What it does
+## Why it exists
 
-- **Missions own teams.** A mission is the source of truth. The team is formed from the plan, not the other way around.
-- **25 harnesses, no lock-in.** 23 CLIs (Claude Code, Codex, Gemini, Grok, Cursor, OpenCode, AMP, Auggie, Warp, Aider, Continue, Cody, Cline, OpenHands, Swe-agent, MentatBot, Plandex, Goose, Forge, Hermes, Engraver) plus the `llm` fallback and the `custom` slot. Each harness has a researched install and argv; the policy that builds the argv comes from the same registry.
-- **Verification that the writer didn't grade itself.** The adversarial verification gate (11.9.9) blocks a run from completing on a self-check. The merge gate (11.10) ties the verdict to the actual merge path: STRICT blocks, ADVISORY allows with the failure recorded, the only way past STRICT is a human override logged to the audit ledger.
-- **Snapshot-bound evidence.** Every verifier's reviewed-snapshot SHA is checked against the writer's snapshot, so "Codex approved" means Codex approved *that work*, not a base ref.
-- **The gate becomes a merge.** The merge executor (11.10.1) runs the gated plan's real git steps — pre-flight `merge-tree` conflict checks first, then the merges, then the repo's own post-merge check — and records the resulting merge-commit sha in a signed attestation. A blocked gate is a hard stop, not a warning.
-- **Commit-bound provenance (11.10.5).** Every real merge issues an in-toto-shaped, Ed25519-signed statement whose subject digest *is* the actual merge-commit sha. The statement names the builder, the AI materials (writer seats with harness and a deterministic identity digest `sha256(seatId|role|harness)`), the cross-harness gate verdict, the review-snapshot sha as independent approval, and the executed merge. A simulated or refused merge produces no statement — provenance exists only for what happened.
-- **The AI Bill of Materials (11.10.5).** The AIBOM auditors ask for, built from receipts: components, roles, missions, seat identities, last-used. Approval status is the user's own Role Board declaration (owned → approved, else not-declared). Model versions are honestly marked "not measured". Exports as JSON and a paste-ready Markdown table.
-- **Deployer retention floor (11.10.5).** Art. 26(6)-shaped — defaults to 6 months, with a 6/12/24 selector on the Proof page. The floor is declared, named in every evidence pack, and visible per-record in the vault UI.
-- **Receipts that survive an audit.** Ed25519 issuer-signed (11.10.1), SHA-256 hash-chained, JSONL, externally verifiable with zero MJ state. An auditor with the public key can verify MJ issued the receipt and that no event was tampered with, in three steps. The evidence pack assembles receipts, attestations, the SIEM bundle, the AIBOM, the provenance statements, the retention declaration, and a control crosswalk (EU AI Act / ISO 42001 / SOC 2 / SOX 404 / NIST 800-218A) into one JSON for compliance.
-- **Checks that measure.** Cost and tokens come from the CLI's NDJSON or are reported as `unmeasured` — never `chars/4`. Sandbox wrappers are proven with canaries that must fail; verdicts are exit-code first.
-- **Autonomy engines.** Web-evidence Researcher (primary/secondary source kinds, honest about provider failure), elastic seat scaling (mode-gated), and bandit-routed evolution (UCB1 with a stagnation jump-arm).
-- **Local first.** SQLite, OS keychain for secrets, child processes over stdio. No sidecar HTTP. Ollama at `127.0.0.1:11434` is yours.
+Every agent orchestrator solves *coordination*. Almost none solve *evidence*: the writer grades its own work, "it ran" is the only artifact, and the merge goes out on trust. MJ closes that gap end-to-end:
+
+- **Adversarial verification gate.** A run is verified only if a different harness than the writer checked it — cross-vendor, cross-seat, self-verification, or unverified. STRICT mode blocks; ADVISORY marks; the only way past a STRICT block is a human override on the audit ledger.
+- **Snapshot-bound review.** Every verifier's reviewed-snapshot SHA is checked against the writer snapshot, so "Codex approved" means Codex approved *that code* — not a base ref.
+- **The gate owns the merge.** The merge executor runs the gated plan's real git steps — pre-flight `merge-tree` conflict checks, then the merges, then the repo's own post-merge check — and records the merge-commit SHA in a signed attestation. A blocked gate is a hard stop, not a warning.
+- **Commit-bound provenance.** Every executed merge issues an in-toto-shaped, Ed25519-signed statement whose subject *is* the merge commit: builder, AI materials (writer seats + harness + deterministic identity digest), the gate verdict, the executed merge. A simulated or refused merge produces no statement — provenance exists only for what happened.
+- **The AI Bill of Materials.** The AIBOM auditors ask for, built from receipts: components, roles, missions, seat identities, last-used. Approval status is your own Role Board declaration; what MJ cannot measure (model versions, for instance) is marked *not measured*, never invented.
+- **Receipts that survive an audit.** Ed25519 issuer-signed, SHA-256 hash-chained JSONL, externally verifiable with zero MJ state. The evidence pack wraps receipts, attestations, SIEM bundle, AIBOM, provenance statements, the retention declaration, and a control crosswalk (EU AI Act / ISO 42001 / SOC 2 / SOX 404 / NIST 800-218A) into one JSON. MJ supports compliance work; it is not itself "compliant", and the provenance is MJ-shaped, not SLSA certification.
+- **Checks that measure.** Cost and tokens come from the CLI's NDJSON or are reported `unmeasured` — never `chars/4`. A check runner that cannot run honestly (no executor, missing dependencies, pytest not installed) **refuses with a named reason** instead of recording a phantom failure.
+
+## Harnesses — no lock-in
+
+25 harnesses: 23 CLIs with researched installs and argv (Claude Code, Codex, Gemini, Grok, Cursor, OpenCode, AMP, Auggie, Warp, Aider, Continue, Cody, Cline, OpenHands, SWE-agent, MentatBot, Plandex, Goose, Forge, Hermes, Engraver) plus the `llm` fallback and a `custom` slot. Each has a researched install and argv, and the policy that builds the argv comes from the same registry — with a probe suite pinning the turn flags so drift fails loudly.
+
+## Autonomy
+
+- **Missions own teams.** The mission is the source of truth; the team is formed from the plan, not the other way round.
+- **Role Board.** You declare the harnesses you own and cast them; MJ flags unowned assignments and self-verification risk before the run starts.
+- **Mission Control.** Live fleet board, measured per-harness cost ledger, stagnation alerts, unified approval inbox — every figure derived from events the runner actually emitted.
+- **Researcher, elastic seats, bandit-evolution.** Web-evidence research (honest about provider failure), mode-gated seat scaling, UCB1 evolution with a stagnation jump-arm.
+
+## Local first
+
+SQLite on disk, secrets in the OS keychain, child processes over stdio. No sidecar HTTP. Your Ollama at `127.0.0.1:11434` stays yours.
 
 ## Stack
 
-Tauri v2 (Rust) + React 18 / Vite 6 / TypeScript 5.6 / Zustand. Python `vendor/evolution-service` over stdio for the evolve loop. Vanilla CSS, self-hosted fonts, OLED-frameless shell.
+Tauri v2 (Rust) · React 18 · Vite 6 · TypeScript 5.6 · Zustand · a Python `vendor/evolution-service` over stdio. Vanilla CSS, self-hosted fonts, an OLED-frameless shell.
 
-## Run it
+## Quick start
 
 ```bash
 npm ci
@@ -31,36 +43,34 @@ npm run typecheck   # tsc --noEmit
 npm test            # 59 suites
 npm run build       # vite build
 
-npm run tauri dev     # desktop window
-npm run tauri:build   # nsis / dmg / appimage
+npm run tauri dev       # desktop window
+npm run tauri:build     # nsis / dmg / appimage
 
-node verify/run.mjs   # reviewer gate — 58 bundles, no install
+node verify/run.mjs     # reviewer gate — 58 bundles, zero install, byte-pinned
 ```
 
-The Rust engine compiles the first time you run `tauri dev` or `tauri:build`. Everything else works on Node 22 alone.
+The Rust engine compiles the first time you run `tauri dev`. Everything else works on Node 22 alone.
 
 ## Layout
 
 ```
-src/         React — pages, canvas, mission runtime, harness, engines
-src-tauri/   91 Tauri commands, SQLite, keyring, MCP/ACP bridges, git
-probe/       59 Vitest suites (59/59)
-verify/      offline pack — 58 bundles + runner, byte-pinned
+src/         React — pages, canvas, mission runtime, harness adapters, engines
+src-tauri/   # 94 Tauri commands, SQLite, keyring, MCP/ACP bridges, git
+probe/       59 probe suites — the live gate
+verify/      offline pack — 58 bundles + runner, byte-pinned against the sources
 vendor/      mcp-servers-reference, mcp-github, evolution-service
-docs/        verification, history
+docs/        verification notes, release history
 ```
 
 ## Tests
 
-`npm test` runs 59 suites including 270+ assertions on the harness suite (turn-flag drift caught and pinned), `verifyGate` (cross-vendor/cross-seat/self-verification tiers), `mergeGate` (gate-over-merge on a real git repo with stubbed CLIs), `mergeExecutor` (pre-flight conflict check, real git merges, signed merge-attestation with the merge-commit sha), `signing` (Ed25519 issuer identity, `mj-proof-receipt/2` round-trip, v1 backward compat), `evidencePack` (re-verify at export, EU AI Act / ISO 42001 / SOC 2 / SOX 404 / NIST 800-218A crosswalk), `provenance` (commit-bound statements on a real git merge: subject-digest-is-the-real-sha, authorship digests, signature tamper detection, no-statement-for-simulated), `aibom` (Role-Board-declared approval, honest "not measured" model versions, empty-vault → empty inventory, paste-ready Markdown), `retention` (declared floor, satisfied-only-when-elapsed), `receiptVault` (chain verification, tamper detection, SIEM shape), and `fleet` (Mission Control state, cost-ledger honesty, isDecided). The typed `MjCommands` registry in `src/ipc/client.ts` makes a renamed Rust command a compile error.
+`npm test` runs the full probe surface: the harness registry (turn-flag drift pinned), `verifyGate` (cross-vendor / cross-seat / self-verification tiers), `mergeGate` and `mergeExecutor` (on real git repositories with stubbed CLIs), `signing` (Ed25519 round-trips, v1 receipt backward compatibility), `evidencePack` (re-verify at export, tamper-flagging), `provenance` (subject-digest-is-the-real-SHA, no statement for a simulated merge), `aibom`, `retention`, `receiptVault`, `fleet`, and `realExecution` (real pytest/cargo runs where the tools genuinely exist — and a named refusal where they don't).
 
-`node verify/run.mjs` is the reviewer gate — same suites as bundles, no install, byte-pinned via `verify/MANIFEST.json`. The `offlinePack` probe refuses to pass if `verify/BUILD-INFO.txt` does not name the current bundle and suite counts.
-
-See `docs/VERIFICATION.md` and `verify/BUILD-INFO.txt`.
+`node verify/run.mjs` is the reviewer gate: the same suites shipped as self-contained bundles, byte-pinned via `verify/MANIFEST.json`, runnable from the extracted archive with nothing but Node. A rebuild that isn't byte-identical fails the `offlinePack` suite, and `versionDrift` fails if any manifest, document, or CI runner label falls out of step — including this README's counts.
 
 ## History
 
-5.0 → 11.10.5 in about a year. Notable fixes: vacuous harness gate (11.7.0), turn-flag drift (11.8.0), exit-code-first verdicts (11.8.1), typed Rust↔TS boundary (11.8.5), proof receipts (11.9.4 Redesign), the offline reviewer gate (11.7.1), the adversarial verification gate (11.9.9), the merge-record gate (11.10), the completion release (11.10.1 — Ed25519 issuer signatures on every receipt, the merge executor that actually performs and records the merge, and the evidence pack that wraps it all for auditors), and the compliance vertical (11.10.5 — commit-bound provenance, the AI Bill of Materials, the deployer retention floor, and the upgraded evidence pack with SOC 2 CC8.1 / SOX 404 / NIST 800-218A mappings).
+5.0 → 11.10.7 in about a year. Recent chapters: the vacuous-gate fix (11.7.0), the offline reviewer gate (11.7.1), exit-code-first verdicts (11.8.1), the typed Rust↔TS boundary (11.8.5), the adversarial verification gate (11.9.9), gate-over-merge (11.10.0), the completion release (11.10.1 — issuer signatures, the real merge executor, the evidence pack), the compliance vertical (11.10.5 — provenance, AIBOM, retention floor), and the green-CI release (11.10.7 — the pytest-environment refusal CI itself caught, see `docs/history/MJ-11.10.7-CI-FIX.md`).
 
 Full notes in `CHANGELOG.md` and `docs/history/`.
 
@@ -73,24 +83,12 @@ Full notes in `CHANGELOG.md` and `docs/history/`.
 | `BUILD-NATIVE.md` | Toolchain and the exact build steps |
 | `LOCAL-WORKLIST.md` | What was verified, what still needs your machine |
 | `UPGRADE.md` | How the major versions differ |
-| `WHAT-CHANGED.md` | 11.10.1 → 11.10.5 delta, defects fixed, honest list |
-| `V6-SPEC.md` | The 11.10.5 specification this build implements |
-| `NEXT-UPGRADES.md` | Research-backed roadmap |
-| `ACCEPTANCE-RUN.md` | Captured probe run output |
-| `UNIT-RUN.md` | Captured unit-test run output |
-| `DEPLOY-VERCEL.md` | Ship the web edition to Vercel (zero-config) |
-| `VENDOR.md` | What MJ vendors and why |
-| `docs/VERIFICATION.md` | How to verify a release |
-| `docs/DEEP-DEBUG-REPORT.md` | The audit that found and closed the `as never` casts |
-| `docs/FUNDING.md` | Investor memo (pre-seed) |
-| `docs/history/` | Per-version release notes |
+| `WHAT-CHANGED.md` | The 11.10-series delta, defects fixed, honest list |
+| `V6-SPEC.md` | The specification this build implements |
+| `NEXT-UPGRADES.md` | The research-backed roadmap |
+| `docs/VERIFICATION.md` | How to verify a build yourself |
+| `VENDOR.md` | What MJ bundles and why |
 
 ## License
 
-Source-available under **PolyForm Noncommercial 1.0.0** — free to run, free to study, not for commercial products, not for AI training. Commercial licenses available; open an issue.
-
-Vendored components (`NOTICE`, `VENDOR.md`) ship under their own permissive terms.
-
----
-
-Built by **Sree Harshen** — MJ is a real desktop app we ship. The verification gates are how you confirm that without taking my word for it.
+Source-available — see `LICENSE` and `NOTICE`.

@@ -1,4 +1,4 @@
-# Deploying MJ 11.10.5 to Vercel (web edition)
+# Deploying MJ to Vercel (web edition)
 
 MJ's frontend is a pure Vite + React SPA. The desktop shell (Tauri/Rust) is optional:
 on any web host MJ runs as its **browser edition**, and its honesty design carries
