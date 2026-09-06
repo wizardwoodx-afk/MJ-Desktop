@@ -1,0 +1,78 @@
+MJ 11.10.5 — offline verification pack provenance
+==================================================
+
+Release identity: MJ 11.10.5 — "Verified AI Delivery V1" (the compliance vertical).
+
+Toolchain (certifying runtime)
+  node          v22.23.2  (Node 22 LTS "Jod" — every gate below was executed
+                           under this runtime: fresh npm ci, tsc, live suites,
+                           pack rebuild, offline gate, vite build)
+  esbuild       0.25.12
+  MJ            11.10.5 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml / Cargo.lock / LICENSE)
+
+Honest scope
+  Rust/Tauri shell compilation was NOT re-run in the certifying environment
+  (no cargo toolchain there). The typed TS↔Rust command boundary is covered
+  by the probe suites (controlPlane) and the version manifests are pinned by
+  versionDrift; the Rust sources themselves are unchanged since 11.9.4.
+
+The pack
+  verify/suites/*.mjs   58 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness gate,
+                        which needs the dev toolchain and is therefore not packed)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that built it
+  verify/run.mjs        zero-dependency runner (node: builtins only)
+
+Gates run on this tree (fresh npm ci, Node v22.23.2)
+  tsc --noEmit          exit 0
+  npm test              ALL PROBES SUMMARY: 59 passed, 0 failed.
+                        (59 probe suites; harnesses 270 · webSearch · teamPower ·
+                        receipts · licensing · preflight · checkpoints · palette · layout ·
+                        verifyGate · roleBoard · receiptVault · fleet · mergeGate ·
+                        signing · mergeExecutor · evidencePack ·
+                        NEW 11.10.5: provenance · aibom · retention)
+  vite build            exit 0
+
+Offline gate
+  Command:     node verify/run.mjs
+  Result:      OFFLINE VERIFY SUMMARY: 58 passed, 0 failed., exit 0 (node v22.23.2)
+
+  This pack was rebuilt from the 11.10.5 source under Node 22 immediately before
+  the run above, and the offlinePack suite confirms every bundle is
+  byte-identical to a fresh rebuild AND that this file names the current
+  bundle/suite counts — BUILD-INFO drift is now a failing gate, not a review
+  finding.
+
+11.10.5 — what the three new suites pin (Verified AI Delivery V1)
+  #57 provenance     commit-bound AI-authorship statements on a REAL git merge: the
+                     statement's subject digest IS the real merge-commit sha; materials
+                     carry the writer harness + the deterministic identity digest
+                     sha256(seatId|role|harness); the Ed25519 signature verifies and a
+                     laundered subject is rejected; a simulated/refused merge yields NO
+                     statement (provenance exists only for what happened).
+  #58 aibom          the AI Bill of Materials is measurement, not self-report: entries
+                     from receipts with roles/missions/seat identities; approval status
+                     is the user's OWN Role Board declaration (owned → approved, else
+                     not-declared); model versions honestly "not measured"; empty vault
+                     → empty inventory; Markdown renders a paste-ready audit table.
+  #59 retention      the deployer retention floor (Art. 26(6)-shaped): defaults to 6
+                     months, only declared options accepted, satisfied-only-when-elapsed
+                     semantics; the evidence pack names the floor and carries the AIBOM +
+                     provenance statements + the new SOX 404 / NIST 800-218A mappings.
+  evidencePack probe extended: pack assembly now passes the Role Board ownership list.
+
+11.10.5(r1) — same version, re-cut after independent review (no feature changes)
+  Two enforcement-quality fixes from the 9.9/10 review:
+  1. probe/reviewVisibility.test.ts is now HERMETIC: the base branch is read from the
+     repo instead of hardcoded "master" (git init's default differs across reviewer
+     environments — the exact fragility that made this path time out twice in
+     independent runs), and every git call sets GIT_TERMINAL_PROMPT=0 + empty
+     GIT_TEMPLATE_DIR so nothing can prompt or inject hooks. Verified 36/36 under BOTH
+     init.defaultBranch=master and init.defaultBranch=main.
+  2. The evidence-pack disclaimer now states the review's caveats verbatim: MJ is not
+     "EU AI Act compliant" and is not a compliance product (it SUPPORTS compliance
+     work; applicability depends on system and use case), and the provenance statements
+     are MJ-specific provenance shaped on in-toto conventions — NOT SLSA certification.
+  Gates re-run for the re-cut under Node v22.23.2: tsc 0, 59/59 live, 58/58 offline,
+  vite build 0, archive re-verified from the extracted zip.

@@ -1,0 +1,21 @@
+import { MissionRuntime, createServices, graphFromSteps } from "../src/mission/missionRuntime";
+import { instantiateTemplate } from "../src/mission/templates";
+import { DEFAULT_BOUNDARY, DEFAULT_BUDGET, DEFAULT_POLICY } from "../src/mission/types";
+import { validateWorkflow } from "../src/graph/validation";
+import { classifyRisk } from "../src/mission/riskPolicy";
+
+const m = instantiateTemplate("tpl.software-development", { objective: "Build a production-ready SaaS billing feature in TypeScript", name: "p", workspace: "." });
+m.budget = { ...DEFAULT_BUDGET, maxCostUsd: 5, maxRetriesPerTask: 3, maxGraphMutations: 4 };
+m.riskPolicy = { ...DEFAULT_POLICY, autonomy: "SUPERVISED", approvalThreshold: "HIGH" };
+m.boundary = { ...DEFAULT_BOUNDARY, shell: true, filesystemWrite: true };
+const rt = new MissionRuntime(m, createServices(), { allowSimulated: true, installed: { "local-test": true } });
+const plan = rt.prepare();
+for (const s of plan.steps) console.log(`${s.id} kind=${s.kind} risk=${s.risk} appr=${s.requiresApproval} def=${s.agentDefId} :: ${s.title}`);
+console.log("approvalCheckpoints:", JSON.stringify(plan.approvalCheckpoints));
+console.log("classify deploy:", JSON.stringify(classifyRisk("Deploy the billing service to production")));
+console.log("classify ship:", JSON.stringify(classifyRisk("Ship release to production")));
+const g = graphFromSteps(m, plan.steps);
+console.log("graph nodes:", g.nodes.length, "wires:", g.connections.length);
+const v = validateWorkflow(g);
+console.log("validation issues:", JSON.stringify(v, null, 1));
+for (const n of g.nodes) console.log("  node", n.id, n.definitionId, "| purpose set:", n.purpose.trim().length > 0);
