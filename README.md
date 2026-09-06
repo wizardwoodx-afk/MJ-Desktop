@@ -1,88 +1,96 @@
-# MJ — Agent Organization Runtime
+# MJ
 
-A desktop app for running agent organisations. Not a workflow builder with AI bolted on.
+A desktop runtime for agent organisations. You give it an outcome; it plans the work, picks the agents, runs them in worktrees, checks the result, and remembers why.
 
-> I kept running into workflows that *looked* successful but weren't. MJ is my take on fixing that — you give it an outcome, it plans the work, picks the right agent for each task, actually checks if it worked, and remembers why.
+MJ is local-first, source-available, and opinionated about proof. A run only counts as done when a different agent than the writer reviewed the work, the check is measured, the merge is gated, and the receipt is issuer-signed. A merge that actually happened carries a signed provenance statement; a deployer can prove the AI Bill of Materials and the retention floor it ran under.
 
-![MJ — wiring two planners](docs/images/03-wiring.png)
+## What it does
 
-### Screenshots
+- **Missions own teams.** A mission is the source of truth. The team is formed from the plan, not the other way around.
+- **25 harnesses, no lock-in.** 23 CLIs (Claude Code, Codex, Gemini, Grok, Cursor, OpenCode, AMP, Auggie, Warp, Aider, Continue, Cody, Cline, OpenHands, Swe-agent, MentatBot, Plandex, Goose, Forge, Hermes, Engraver) plus the `llm` fallback and the `custom` slot. Each harness has a researched install and argv; the policy that builds the argv comes from the same registry.
+- **Verification that the writer didn't grade itself.** The adversarial verification gate (11.9.9) blocks a run from completing on a self-check. The merge gate (11.10) ties the verdict to the actual merge path: STRICT blocks, ADVISORY allows with the failure recorded, the only way past STRICT is a human override logged to the audit ledger.
+- **Snapshot-bound evidence.** Every verifier's reviewed-snapshot SHA is checked against the writer's snapshot, so "Codex approved" means Codex approved *that work*, not a base ref.
+- **The gate becomes a merge.** The merge executor (11.10.1) runs the gated plan's real git steps — pre-flight `merge-tree` conflict checks first, then the merges, then the repo's own post-merge check — and records the resulting merge-commit sha in a signed attestation. A blocked gate is a hard stop, not a warning.
+- **Commit-bound provenance (11.10.5).** Every real merge issues an in-toto-shaped, Ed25519-signed statement whose subject digest *is* the actual merge-commit sha. The statement names the builder, the AI materials (writer seats with harness and a deterministic identity digest `sha256(seatId|role|harness)`), the cross-harness gate verdict, the review-snapshot sha as independent approval, and the executed merge. A simulated or refused merge produces no statement — provenance exists only for what happened.
+- **The AI Bill of Materials (11.10.5).** The AIBOM auditors ask for, built from receipts: components, roles, missions, seat identities, last-used. Approval status is the user's own Role Board declaration (owned → approved, else not-declared). Model versions are honestly marked "not measured". Exports as JSON and a paste-ready Markdown table.
+- **Deployer retention floor (11.10.5).** Art. 26(6)-shaped — defaults to 6 months, with a 6/12/24 selector on the Proof page. The floor is declared, named in every evidence pack, and visible per-record in the vault UI.
+- **Receipts that survive an audit.** Ed25519 issuer-signed (11.10.1), SHA-256 hash-chained, JSONL, externally verifiable with zero MJ state. An auditor with the public key can verify MJ issued the receipt and that no event was tampered with, in three steps. The evidence pack assembles receipts, attestations, the SIEM bundle, the AIBOM, the provenance statements, the retention declaration, and a control crosswalk (EU AI Act / ISO 42001 / SOC 2 / SOX 404 / NIST 800-218A) into one JSON for compliance.
+- **Checks that measure.** Cost and tokens come from the CLI's NDJSON or are reported as `unmeasured` — never `chars/4`. Sandbox wrappers are proven with canaries that must fail; verdicts are exit-code first.
+- **Autonomy engines.** Web-evidence Researcher (primary/secondary source kinds, honest about provider failure), elastic seat scaling (mode-gated), and bandit-routed evolution (UCB1 with a stagnation jump-arm).
+- **Local first.** SQLite, OS keychain for secrets, child processes over stdio. No sidecar HTTP. Ollama at `127.0.0.1:11434` is yours.
 
-| Empty canvas | Node Library |
-|---|---|
-| ![Empty](docs/images/01-empty-canvas.png) | ![Library](docs/images/02-node-library.png) |
-| Dotted grid, hint `DRAG FROM A PORT...` — start blank, no demo data | Planner, Researcher, Browser, Coder, Debugger, Tester, QA — search and drag onto canvas |
+## Stack
 
-| Wired workflow | With library closed |
-|---|---|
-| ![Wiring](docs/images/03-wiring.png) | ![Final](docs/images/04-wiring-final.png) |
-| Two Planners wired port-to-port | Same graph, library collapsed — canvas is the source of truth |
+Tauri v2 (Rust) + React 18 / Vite 6 / TypeScript 5.6 / Zustand. Python `vendor/evolution-service` over stdio for the evolve loop. Vanilla CSS, self-hosted fonts, OLED-frameless shell.
 
-*Tauri desktop build (OLED, frameless). Browser fallback renders the same shell.*
-
----
-
-### What it does
-
-- **Mission owns the org, not the other way around.** The plan is the source of truth — MJ forms the team from it.
-- **25 harnesses, no lock-in.** Works with claude, codex, gemini, grok, cursor, opencode, amp, auggie, warp ... 23 CLIs + hermes + llm. Each has a researched install + argv. The policy that builds the argv comes from the same registry, so they can't drift.
-- **Teams that actually review.** Writers work in worktrees, reviewers get a snapshot of the writers' branches — they review what was written, not the base.
-- **Checks what matters.** Cost/tokens come from the CLI's own NDJSON or it's `unmeasured` — never `chars/4`. Sandbox wrappers are proven with canaries that *must* fail, verdicts are exit-code first.
-- **Local first.** SQLite, OS keychain for secrets, child processes over stdio. No sidecar HTTP. Ollama at `127.0.0.1:11434` is yours if you have it.
-
-### Stack
-
-Tauri v2 (Rust 1.80) + React 18 / Vite 6 / TypeScript 5.6 / Zustand on top, Python `vendor/evolution-service` (`mj_evolution.stdio_server`) for the evolve loop. Vanilla CSS, self-hosted fonts.
-
-### Run it
+## Run it
 
 ```bash
-# Node 22 + Rust stable (WebKit/GTK on Linux)
 npm ci
 npm run typecheck   # tsc --noEmit
 npm test            # 59 suites
 npm run build       # vite build
 
-# dev
-npm run tauri dev
+npm run tauri dev     # desktop window
 npm run tauri:build   # nsis / dmg / appimage
 
-# quick check without node_modules (~25s)
-node verify/run.mjs
+node verify/run.mjs   # reviewer gate — 58 bundles, no install
 ```
 
-### Layout
+The Rust engine compiles the first time you run `tauri dev` or `tauri:build`. Everything else works on Node 22 alone.
+
+## Layout
 
 ```
-src/         # React — pages, canvas, mission runtime, domain/harness, engines
-src-tauri/   # 94 Tauri commands, SQLite, keyring, MCP/ACP bridges, evolution-service, git
-probe/       # 59 suites (59/59)
-verify/      # offline pack — 58 bundles + runner, byte-pinned
-vendor/      # mcp-servers-reference, mcp-github, evolution-service (hermes-agent + its self-evolution agent de-vendored in 11.9)
-docs/        # history + verification
+src/         React — pages, canvas, mission runtime, harness, engines
+src-tauri/   91 Tauri commands, SQLite, keyring, MCP/ACP bridges, git
+probe/       59 Vitest suites (59/59)
+verify/      offline pack — 58 bundles + runner, byte-pinned
+vendor/      mcp-servers-reference, mcp-github, evolution-service
+docs/        verification, history
 ```
 
-### Tests
+## Tests
 
-`npm test` does 59 suites — harnesses 270 assertions (the `iff` on turn-flags for all 25), checkRunner, sandbox, theme, canvasGeometry, etc. There's a typed `MjCommands` in `src/ipc/client.ts` so a renamed Rust command is a compile error, not a runtime surprise.
+`npm test` runs 59 suites including 270+ assertions on the harness suite (turn-flag drift caught and pinned), `verifyGate` (cross-vendor/cross-seat/self-verification tiers), `mergeGate` (gate-over-merge on a real git repo with stubbed CLIs), `mergeExecutor` (pre-flight conflict check, real git merges, signed merge-attestation with the merge-commit sha), `signing` (Ed25519 issuer identity, `mj-proof-receipt/2` round-trip, v1 backward compat), `evidencePack` (re-verify at export, EU AI Act / ISO 42001 / SOC 2 / SOX 404 / NIST 800-218A crosswalk), `provenance` (commit-bound statements on a real git merge: subject-digest-is-the-real-sha, authorship digests, signature tamper detection, no-statement-for-simulated), `aibom` (Role-Board-declared approval, honest "not measured" model versions, empty-vault → empty inventory, paste-ready Markdown), `retention` (declared floor, satisfied-only-when-elapsed), `receiptVault` (chain verification, tamper detection, SIEM shape), and `fleet` (Mission Control state, cost-ledger honesty, isDecided). The typed `MjCommands` registry in `src/ipc/client.ts` makes a renamed Rust command a compile error.
 
-`node verify/run.mjs` is the reviewer gate — same suites as bundles, no install.
+`node verify/run.mjs` is the reviewer gate — same suites as bundles, no install, byte-pinned via `verify/MANIFEST.json`. The `offlinePack` probe refuses to pass if `verify/BUILD-INFO.txt` does not name the current bundle and suite counts.
 
-More in `docs/VERIFICATION.md` and `verify/BUILD-INFO.txt`.
+See `docs/VERIFICATION.md` and `verify/BUILD-INFO.txt`.
 
-### History
+## History
 
-5.0 → 11.9.4 over about a year. Biggest fixes: vacuous gate (args reversed), turn-flag drift, wrapper `EACCES` mis-classified as enforced, browser `require('fs')` that broke in ESM, shipping the vendored engines, then typing the whole Rust↔TS boundary and killing every `as never` in `src/`. 11.9 then de-vendored the Hermes agent engines, shipped the minimal/unique **NTH** theme (obsidian ground, electro-violet volt, plasma pulse — no gimmicky motion), 11.9.4 re-cut it on the v3 atlas **FOUNDRY** identity (carbon ground, cream ink, brass accent — frontend-only), and fixed the four canvas integrity bugs the review found: wires now land on their port anchors via rendered bounding-box measurement, overlapping cards own their stacking contexts, ports are inset into the card edge, and agent cards are a consistent `264px`. **11.9.4(Fixed)** then reworked the feel: the five-color-minimal **wabi** palette (charcoal / washi / kiln / moss / berry) became the twelfth theme and the new default, and a transform-only motion system landed — boot splash, staggered node entrance, wire draw-in, port hover, keyed page transitions — all behind `prefers-reduced-motion`. **11.9.4(Major)** added three autonomy engines (web-evidence Researcher, elastic seats, bandit-routed evolution), and **11.9.4(Major+)** wired all three into the real execution path — bandit arms modulate each run's briefings and wave plan, runs settle measured outcomes back into the shared autonomy store, elastic scaling acts mode-gated — with source-kind-honest web providers, pull-honest seeding, and BUILD-INFO provenance pinned by a gate. **11.9.4(Redesign)** is the differentiation release: **Proof Receipts** (`mission/receipts.ts`) — every mission can export a SHA-256 hash-chained, externally verifiable receipt (JSONL, sealed) aimed squarely at the Aug-2026 EU AI Act tamper-evidence enforcement, verified with no MJ state and probed by suite 44; elastic seats now inherit a harness the team already runs (no vendor default); and a full structural **redesign layer** (`styles/redesign.css`, loaded after mj.css) re-cuts radii, elevation, display type (Space Grotesk), canvas chrome and a mature spring/deceleration motion system — token-pure, so every shipped theme inherits it. **11.9.5** is the craft release: the wire fix (drag-release connections with a port magnet + spoken refusal reasons via `connectRefusal`), the **Preflight lint** (`graph/lint.ts` — ESLint-for-the-graph, researched on FlowLint/n8n-workflow-validator), the **Raycast-grade command palette** (fuzzy ranking, groups, node jumps, recents), **Checkpoints** (`graph/checkpoints.ts` — LangGraph-shaped named time travel, undoable restore), the **Assist recut**, the thirteenth five-color palette **cyanotype** (Prussian ground, paper ink, exposure-cyan signal), and three new probe suites. **11.9.6** is the certification release: palette ranking is label-first (`paletteScore` — category text can surface a command but never out-rank a visible-label hit, review-fixed and probed), and the entire shipped pack was re-certified under **Node 22 LTS (v22.23.2)** — fresh `npm ci`, typecheck, 47 live suites, pack rebuild and the offline gate all executed on Node 22. **11.9.7** is provenance polish: module headers that claimed a single version now state their full lineage (fuzzy core 11.9.5 → label-first `paletteScore` 11.9.6), historical release markers stay as facts, and the whole pack is re-certified under Node v22.23.2 once more — the rule going forward: a header names what shipped WHEN, never a stale 'current'. **11.9.8** is the editor-quality release: the naive frontier auto-layout is replaced by a real **layered (Sugiyama) engine** (`graph/layout.ts`, researched on ELK/OGDF/dagre) — longest-path layers, virtual nodes for long edges, deterministic barycenter crossing minimization with measured crossing counts, neighbour-smoothed coordinates, stacked components — wired into `autoLayout` (Layout button, Ctrl+Shift+L, palette) and pinned by 23 probe assertions (suite #48). **11.9.9** is the verified-agent-factory release, built on 2026 fleet-orchestration research (every competitor solves coordination; nobody solves proof): the **Adversarial Verification Gate** (`mission/verifyGate.ts` — a run is not verified unless a DIFFERENT harness than the writer checked it; STRICT blocks, ADVISORY marks), the **Receipt & Compliance Center** (the Proof page is now `mission/receiptVault.ts` — a local ledger of issued receipts with self-audit, SIEM export and an EU-AI-Act-mapped one-pager; receipts gain the gate verdict in-chain), **Mission Control** (new Control page over `mission/fleet.ts` — live fleet board, measured per-harness/per-role cost ledger, stagnation alerts, approval inbox), and the **Role Board** (`mission/roleBoard.ts` — nothing fixed: each user declares the harnesses they own and decides which plays which role; User 1 runs Claude Code, User 2 runs Grok Build, both valid) — four new probe suites (#49–52) pin the spine. **11.10** is the enforcement release, answering the 9.8/10 review's two gaps head-on: the adversarial gate now **owns the merge path** — evaluated INSIDE `executeTeam`, not after it, so a STRICT-blocked run's branches cannot merge without a recorded human override from Mission Control (`verifyGate.enforceMergeGate`, `teamExecutor.merge.gate`) — and its verdict is **bound to the reviewed-snapshot evidence**: every verifier's `reviewedSha` is checked against the snapshot sha, so the receipt says "verified against snapshot abc123", not merely "the verifier ran"; the runner emits real per-turn fleet heartbeats, merge-blocks open real approval requests in the inbox, the stale 11.9.4 counts in `docs/FUNDING.md` are corrected, and new suite #53 proves gate-over-merge on a real git repository. **11.10.1** is the completion release that turns the merge authority into a merge engine: **Ed25519 issuer signatures** (`mission/signing.ts`) sign every proof receipt's final chain hash (`mj-proof-receipt/2`; an unsigned receipt says so in writing, never silently) and each seat gains a deterministic identity digest `sha256(seatId|role|harness)` in-chain; the **Merge Executor** (`mission/mergeExecutor.ts`) runs the gated plan's real git steps — pre-flight `merge-tree` conflict checks first, serialized merges, the repo's own post-merge check — refuses anything the gate blocked without a recorded human override, never claims a merge on a host without git, and issues a signed merge attestation carrying the merge-commit sha; and the **Evidence Pack** (`mission/evidencePack.ts`) exports one JSON bundle — every receipt re-verified at export, the attestations, the SIEM bundle, the one-pager, and an EU AI Act Art. 12 / ISO 42001 / SOC 2 crosswalk flagged as a convenience, not legal advice. Three new probe suites (#54 signing, #55 mergeExecutor on a real git repo, #56 evidencePack) pin it. **11.10.5 — Verified AI Delivery V1** opens the compliance vertical: auditors now ask who authored AI-generated code and whether it was independently validated (SOC 2 CC8.1 / SOX 404 assumptions; SLSA v1.2 and NIST SP 800-218A have no AI-authorship category), so MJ emits **commit-bound provenance statements** (`mission/provenance.ts` — in-toto-shaped, Ed25519-signed; the merge commit is the subject, the predicate names the writer seats' harnesses + identity digests, the cross-harness gate verdict + snapshot sha as independent approval — and exists ONLY for merges that actually happened), an **AIBOM** (`mission/aibom.ts` — every AI component observed in receipts, with the approval status taken from the user's own Role Board declaration and model versions honestly marked 'not measured'), a **deployer retention floor** (Art. 26(6)-shaped, default 6 months, declared not pretended), and an Evidence Pack upgraded with all three plus SOX 404 / NIST 800-218A control mappings. Probe suites #57–59 pin it on a real git repository.
+5.0 → 11.10.5 in about a year. Notable fixes: vacuous harness gate (11.7.0), turn-flag drift (11.8.0), exit-code-first verdicts (11.8.1), typed Rust↔TS boundary (11.8.5), proof receipts (11.9.4 Redesign), the offline reviewer gate (11.7.1), the adversarial verification gate (11.9.9), the merge-record gate (11.10), the completion release (11.10.1 — Ed25519 issuer signatures on every receipt, the merge executor that actually performs and records the merge, and the evidence pack that wraps it all for auditors), and the compliance vertical (11.10.5 — commit-bound provenance, the AI Bill of Materials, the deployer retention floor, and the upgraded evidence pack with SOC 2 CC8.1 / SOX 404 / NIST 800-218A mappings).
 
-Short version in `CHANGELOG.md`, full notes in `docs/history/`.
+Full notes in `CHANGELOG.md` and `docs/history/`.
 
-### Docs & License
+## Documents
 
-- Setup: `DESKTOP-NATIVE.md` / `BUILD-NATIVE.md` / `INSTALL-ON-LAPTOP.md`
-- What MJ wraps: `VENDOR.md` · `NOTICE`
+| File | What it is |
+|---|---|
+| `INSTALL-ON-LAPTOP.md` | Build the desktop installer on Windows |
+| `DESKTOP-NATIVE.md` | Full native install, per-OS deps, risk→sandbox mapping |
+| `BUILD-NATIVE.md` | Toolchain and the exact build steps |
+| `LOCAL-WORKLIST.md` | What was verified, what still needs your machine |
+| `UPGRADE.md` | How the major versions differ |
+| `WHAT-CHANGED.md` | 11.10.1 → 11.10.5 delta, defects fixed, honest list |
+| `V6-SPEC.md` | The 11.10.5 specification this build implements |
+| `NEXT-UPGRADES.md` | Research-backed roadmap |
+| `ACCEPTANCE-RUN.md` | Captured probe run output |
+| `UNIT-RUN.md` | Captured unit-test run output |
+| `DEPLOY-VERCEL.md` | Ship the web edition to Vercel (zero-config) |
+| `VENDOR.md` | What MJ vendors and why |
+| `docs/VERIFICATION.md` | How to verify a release |
+| `docs/DEEP-DEBUG-REPORT.md` | The audit that found and closed the `as never` casts |
+| `docs/FUNDING.md` | Investor memo (pre-seed) |
+| `docs/history/` | Per-version release notes |
 
-Source-available under **PolyForm Noncommercial 1.0.0** — free to run and study, not for commercial products or AI training. See `LICENSE`. **Commercial edition:** the copyright holder dual-licenses MJ Pro (signed-key desktop license, see `src/mission/licensing.ts`); the in-app gate is honest about being a soft gate, and vendored components (`NOTICE`, `VENDOR.md`) ship under their own permissive terms. Want a commercial license? Open an issue.
+## License
+
+Source-available under **PolyForm Noncommercial 1.0.0** — free to run, free to study, not for commercial products, not for AI training. Commercial licenses available; open an issue.
+
+Vendored components (`NOTICE`, `VENDOR.md`) ship under their own permissive terms.
 
 ---
 
-Built by **Sree Harshen** — MJ is a real desktop app we ship. Feedback and PRs welcome.
+Built by **Sree Harshen** — MJ is a real desktop app we ship. The verification gates are how you confirm that without taking my word for it.
