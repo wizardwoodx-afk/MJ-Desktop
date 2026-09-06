@@ -6,8 +6,13 @@
  * actual MissionRuntime. If MJ claims a mission is verified, this is the test that decides whether
  * that claim means anything.
  *
- * Skips cleanly (rather than passing vacuously) when python3/pytest or cargo is unavailable, and
- * says so.
+ * Environment honesty (11.10.7): "python3 exists" is NOT "pytest exists". GitHub's ubuntu-24.04 and
+ * macos-15 images ship an interpreter with no pytest package, which used to fake three red
+ * assertions here (and one bundled offline suite with them) while Windows — no `python3` on PATH at
+ * all — sailed through on the skip. This suite now (a) exercises the real green/red/refusal paths
+ * when pytest is importable, and (b) when the interpreter has no pytest, asserts the checkRunner's
+ * REFUSAL (didRun=false, named reason) instead of passing vacuously. It only skips, saying so, when
+ * no interpreter exists at all. Same rule for cargo.
  */
 
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
@@ -30,21 +35,34 @@ const ok = (c: boolean, m: string) => {
   }
 };
 
-/** A rustup toolchain often has no shims on PATH; add its bin dir if present. */
-const CARGO_BIN = "/home/user/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin";
-const envPath = `${CARGO_BIN}:${process.env.PATH ?? ""}`;
+/** A rustup/cargo toolchain often has no shims on PATH; add the user's cargo bin dir if present. */
+const HOME_DIR = process.env.HOME ?? process.env.USERPROFILE ?? "";
+const ENV_PATH = [HOME_DIR ? join(HOME_DIR, ".cargo", "bin") : null, process.env.PATH]
+  .filter((p): p is string => typeof p === "string" && p.length > 0)
+  .join(process.platform === "win32" ? ";" : ":");
 
 function have(cmd: string): boolean {
   try {
-    execSync(`command -v ${cmd}`, { stdio: "ignore", env: { ...process.env, PATH: envPath } });
-    process.env.PATH = envPath; // so the spawned check command can find it too
+    execSync(`command -v ${cmd}`, { stdio: "ignore", env: { ...process.env, PATH: ENV_PATH } });
+    process.env.PATH = ENV_PATH; // so the spawned check command can find it too
     return true;
   } catch {
     return false;
   }
 }
 
-const HAS_PYTEST = have("python3");
+/** 11.10.7 — the only honest pytest gate: the interpreter must be able to IMPORT the package. */
+function havePytest(): boolean {
+  try {
+    execSync("python3 -m pytest --version", { stdio: "ignore", env: { ...process.env, PATH: ENV_PATH } });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const HAS_PYTHON = have("python3");
+const HAS_PYTEST = HAS_PYTHON && havePytest();
 const HAS_CARGO = have("cargo");
 
 function mkrepo(name: string, files: Record<string, string>): string {
@@ -63,8 +81,23 @@ const PYPROJECT = "[project]\nname = 'target'\nversion = '0.1.0'\n";
 console.log("\n== real commands, real exit codes ==\n");
 
 if (!HAS_PYTEST) {
-  skipped += 1;
-  console.log("  SKIP python3 unavailable — real verification not exercisable here");
+  if (HAS_PYTHON) {
+    // Python exists but pytest does not (GitHub's ubuntu-24.04 / macos-15 images are exactly
+    // this). The honest outcome is a REFUSAL, not a failure and not a vacuous pass — the same
+    // contract as the node_modules rule.
+    const bare = mkrepo("bare", { "pyproject.toml": PYPROJECT, "test_thing.py": "def test_ok():\n    assert True\n" });
+    const results = await runAllChecks(bare);
+    const test = results.find((r) => r.spec.source === "TEST_RUN");
+    ok(Boolean(test), "the pytest check must still be discovered from pyproject.toml");
+    ok(test?.didRun === false, "without the pytest package the check must REFUSE, not run (didRun=false)");
+    ok(test?.exitCode === null, "a refusal carries no exit code (no verdict was measured)");
+    ok(/pytest package is not installed/.test(test?.reason ?? ""), `the reason must explain precisely: ${test?.reason}`);
+    console.log(`       bare repo: refused honestly — ${test?.reason}`);
+    rmSync(bare, { recursive: true, force: true });
+  } else {
+    skipped += 1;
+    console.log("  SKIP python3 unavailable — real verification not exercisable here");
+  }
 } else {
   const green = mkrepo("green", {
     "pyproject.toml": PYPROJECT,

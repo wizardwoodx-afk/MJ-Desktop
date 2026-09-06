@@ -1,4 +1,4 @@
-# Deploying MJ 11.10.7 to Vercel (web edition)
+# Deploying MJ to Vercel (web edition)
 
 MJ's frontend is a pure Vite + React SPA. The desktop shell (Tauri/Rust) is optional:
 on any web host MJ runs as its **browser edition**, and its honesty design carries
@@ -17,7 +17,7 @@ Companies get BOTH: the live app AND the code it runs on.
 2. From this tree:
    ```bash
    git add -A
-   git commit -m "MJ 11.10.7 — CLARITY: labelled sidebar, drawer fix, daylight palette"
+   git commit -m "MJ 11.10.5 — completion release: Ed25519 receipts, merge executor, evidence pack"
    git branch -M main
    git remote add origin git@github.com:<you>/mj-desktop.git
    git push -u origin main
