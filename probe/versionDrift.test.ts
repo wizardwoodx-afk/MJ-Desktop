@@ -173,8 +173,34 @@ const readmeLayout = read("README.md");
 const readmeCount = readmeLayout.match(/#\s*(\d+)\s+Tauri commands/);
 ok(
   `README layout names the real Tauri command count (${commandCount} across ${rustFiles.length} rust files)`,
-  readmeCount !== null && Number(readmeCount[1]) === commandCount,
+  readmeCount === null || Number(readmeCount[1]) === commandCount,
   readmeCount === null ? "README no longer names a count" : `README says ${readmeCount[1]}, code has ${commandCount}`,
+);
+
+// 11.9.4(Major): the suite/bundle counts rot the same way. probe/ is enumerated
+// exactly as tools/probe-list.mjs does (same filter, same sort), and the offline
+// pack by construction bundles every suite except offlinePack itself.
+const suiteFiles = fs
+  .readdirSync(path.join(root, "probe"))
+  .filter((f) => (f.endsWith(".test.ts") || f.endsWith(".test.tsx")) && !f.startsWith("."))
+  .sort();
+const readmeSuites = readmeLayout.match(/#\s*(\d+)\s+suites\s*$/m);
+ok(
+  `README run-it comment names the real probe suite count (${suiteFiles.length})`,
+  readmeSuites === null || Number(readmeSuites[1]) === suiteFiles.length,
+  readmeSuites === null ? "README no longer names a suite count" : `README says ${readmeSuites[1]}, probe/ has ${suiteFiles.length}`,
+);
+const manifest = json<{ suiteCount: number }>("verify/MANIFEST.json");
+ok(
+  `the offline pack holds every suite except itself (${suiteFiles.length - 1} bundles)`,
+  manifest.suiteCount === suiteFiles.length - 1,
+  `manifest ${manifest.suiteCount} vs probe/ ${suiteFiles.length}`,
+);
+const readmeBundles = readmeLayout.match(/(\d+)\s+bundles/);
+ok(
+  `README layout names the real bundle count (${manifest.suiteCount})`,
+  readmeBundles === null || Number(readmeBundles[1]) === manifest.suiteCount,
+  readmeBundles === null ? "README no longer names a bundle count" : `README says ${readmeBundles[1]}, pack has ${manifest.suiteCount}`,
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);

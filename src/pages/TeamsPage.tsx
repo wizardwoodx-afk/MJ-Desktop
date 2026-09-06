@@ -31,6 +31,7 @@ import { resolveCaps } from "../mission/agentCapabilities";
 import { planWorktrees, type WorktreePlan } from "../mission/collaboration";
 import { CapLedger } from "../mission/caps";
 import { executeTeam, type SeatRecord, type TeamRunReport, type TeamRunnerDeps } from "../mission/teamExecutor";
+import { prepareAutonomy, settleAutonomyAfterRun, type SettleResult } from "../mission/autonomyRuntime";
 import { getHarness } from "../mission/harnessAdapters";
 import {
   applyTeamFeedback,
@@ -163,6 +164,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
   const [runnerTestCmd, setRunnerTestCmd] = useState("npm test");
   const [runnerRunning, setRunnerRunning] = useState(false);
   const [runnerResult, setRunnerResult] = useState<TeamRunReport | null>(null);
+  const [runnerAutonomy, setRunnerAutonomy] = useState<SettleResult | null>(null);
   /* V11.4 — the runId the evolution fold used, so operator feedback correlates with the
    * same run in the ledger instead of a synthetic `run-<startedAt>` that matches nothing. */
   const [runnerRunId, setRunnerRunId] = useState<string | null>(null);
@@ -726,6 +728,8 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
       const runId = uid("run");
       // QA fix (audit C2): register the runner repo so the native fs/shell sandbox allows it.
       await ipc.workspaceRootAdd(runnerRepo).catch(() => undefined);
+      // 11.9.4(Major+): the bandit router picks this run's strategy arms before it starts.
+      const autonomy = prepareAutonomy();
       const res = await executeTeam(
         {
           team: selectedTeam,
@@ -736,6 +740,7 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
           objective: runnerObjective,
           ledger,
           testCommand: runnerTestCmd.split(" "),
+          autonomy,
         },
         deps,
       );
@@ -780,6 +785,33 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
         }
       } catch (evErr) {
         console.error("team evolution fold failed", evErr);
+      }
+      // 11.9.4(Major+): settle the autonomy engines on the SAME measured report the
+      // evolution loop consumed — bandit posteriors update on the arms this run
+      // actually executed, and the elastic policy may act on the team (mode-gated).
+      try {
+        const mode = (loadTeamEvoStore().byTeam[selectedTeam.id]?.mode ?? "SUGGEST") as TeamEvolveMode;
+        const anySim = res.seats.some((s) => getHarness(s.harness)?.simulated ?? false);
+        const settled = settleAutonomyAfterRun({
+          team: selectedTeam,
+          report: {
+            status: res.status,
+            seats: res.seats.map((s) => ({ seatId: s.seatId, role: s.role, outcome: s.outcome, verified: s.verified })),
+            autonomyArms: res.autonomyArms,
+            reviewedBySnapshot: res.snapshot.built,
+          },
+          mode,
+          simulated: anySim,
+        });
+        setRunnerAutonomy(settled);
+        if (settled.applied && settled.updatedTeam) {
+          saveCliTeams(upsertTeam(cliTeams, settled.updatedTeam));
+          toast(`Elastic seats (${mode}): ${settled.action.kind} — ${settled.action.reason}`);
+        } else if (settled.suggestion) {
+          toast(`Elastic suggestion: ${settled.suggestion}`);
+        }
+      } catch (autErr) {
+        console.error("autonomy settle failed", autErr);
       }
     } catch (err) {
       toast(`Execution error: ${String(err)}`, "err");
@@ -2074,6 +2106,14 @@ export function TeamsPage({ onOpened }: { onOpened: () => void }) {
               <div style={{ padding: 12, borderRadius: 4, background: "var(--bg-elevated)", border: "1px solid var(--border)", marginBottom: 16, fontSize: 12, lineHeight: 1.5 }}>
                 {runnerResult.summary}
               </div>
+              {runnerAutonomy && (
+                <div className="muted" style={{ marginTop: 6 }}>
+                  Autonomy: arms [{runnerAutonomy.arms.join(", ") || "none"}] · verified{" "}
+                  {String(runnerAutonomy.verified)}{runnerAutonomy.simulated ? " (simulated — experience only)" : ""} · elastic{" "}
+                  {runnerAutonomy.action.kind}
+                  {runnerAutonomy.applied ? " (applied)" : runnerAutonomy.suggestion ? " (suggested)" : ""}
+                </div>
+              )}
 
               <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-mute)", marginBottom: 8 }}>
                 Agent Seat Records ({runnerResult.seats.length})

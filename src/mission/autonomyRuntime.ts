@@ -1,0 +1,150 @@
+/**
+ * §AUTONOMY RUNTIME — the engines join the real execution path (MJ 11.9.4-Major+).
+ *
+ * The 11.9.4(Major) review was right: three tested engines that no production
+ * call site consumed are validated prototypes, not features. This module is
+ * the missing wiring, mirroring how the older evolution loop is folded in
+ * (TeamsPage calls evolveTeamAfterRun after every run):
+ *
+ *   BEFORE a run  — `prepareAutonomy` asks the bandit router which strategy
+ *     arms to search this run and hands them to executeTeam via
+ *     `req.autonomy` (review depth and check strictness modulate the actual
+ *     briefing text agents read; exec:serial really flattens the wave plan;
+ *     webEvidence lets the Researcher briefing carry live web evidence).
+ *
+ *   AFTER a run   — `settleAutonomyAfterRun` records the measured outcome on
+ *     exactly the arms the run executed (echoed back in the report), folds a
+ *     ScaleSignal from the seat records, and lets the elastic policy act —
+ *     AUTONOMOUS teams get the added seat applied to the team, SUGGEST teams
+ *     get the decision logged as a suggestion, OFF teams get telemetry only.
+ *     Simulated runs remain experience-only (bandit rule), and the whole
+ *     settlement lands in the shared autonomyStore so the Evolution page and
+ *     the next run read the same state.
+ */
+import { uid } from "../app/id";
+import type { CliAgentTeam, TeamSeat } from "./agentTeam";
+import { loadAutonomy, saveAutonomy, type AutonomyLogEntry } from "./autonomyStore";
+import { planElasticScale, type ElasticPolicy, type ScaleAction, type ScaleSignal } from "./elasticSeats";
+import { recordOutcome, selectArms, type ArmId, type BanditState } from "./evolutionBandit";
+import type { TeamEvolveMode } from "./teamEvolution";
+
+/** What executeTeam accepts on the request (declared here to avoid an import cycle). */
+export interface AutonomyRequest {
+  arms: ArmId[];
+  webEvidence: boolean;
+}
+
+/** The narrow shape settle needs — TeamRunReport satisfies it structurally. */
+export interface AutonomyRunSummary {
+  status: string;
+  seats: Array<{ seatId: string; role: string; outcome: string; verified: boolean }>;
+  /** The arms executeTeam actually executed (echoed from the report). */
+  autonomyArms?: ArmId[];
+  /** True when a review snapshot was built — writers' work was actually reviewed. */
+  reviewedBySnapshot?: boolean;
+}
+
+export interface SettleResult {
+  arms: ArmId[];
+  verified: boolean;
+  simulated: boolean;
+  action: ScaleAction;
+  applied: boolean;
+  suggestion: string | null;
+  updatedTeam: CliAgentTeam | null;
+  bandit: BanditState;
+  elastic: ElasticPolicy;
+}
+
+const REVIEW_ROLES = new Set(["reviewer", "tester", "security"]);
+const FAILED_OUTCOMES = new Set(["failed", "timeout"]);
+
+export function prepareAutonomy(): AutonomyRequest {
+  const state = loadAutonomy();
+  return { arms: selectArms(state.bandit), webEvidence: true };
+}
+
+function newSeat(role: "reviewer" | "debugger", reason: string): TeamSeat {
+  return {
+    id: uid("seat"),
+    role,
+    harness: "hermes",
+    model: null,
+    mayWrite: false,
+    timeoutSecs: 600,
+    maxTurns: null,
+    instructions:
+      role === "reviewer"
+        ? `Added by elastic seats: ${reason}. Diff-only review — block on correctness, nits last and labelled.`
+        : `Added by elastic seats: ${reason}. Reproduce, isolate, fix, and prove with a re-run of the failing case.`,
+  };
+}
+
+export function settleAutonomyAfterRun(args: {
+  team: CliAgentTeam;
+  report: AutonomyRunSummary;
+  mode: TeamEvolveMode;
+  simulated: boolean;
+}): SettleResult {
+  const { team, report, mode, simulated } = args;
+  const state = loadAutonomy();
+
+  const arms = (report.autonomyArms ?? []) as ArmId[];
+  const verified = report.status === "completed" && report.seats.some((s) => s.verified);
+
+  // Bandit: only the arms the run actually executed, measured runs only.
+  const bandit = arms.length > 0 ? recordOutcome(state.bandit, arms, verified, simulated) : state.bandit;
+
+  // Elastic: fold the seat records into a measured signal.
+  const writers = report.seats.filter((s) => !REVIEW_ROLES.has(s.role));
+  const reviewers = report.seats.filter((s) => REVIEW_ROLES.has(s.role));
+  const failed = report.seats.filter((s) => FAILED_OUTCOMES.has(s.outcome)).map((s) => s.seatId);
+  const committedWriters = writers.filter((s) => s.outcome === "completed").length;
+  const unreviewedArtifacts = report.reviewedBySnapshot ? 0 : reviewers.length === 0 ? committedWriters : 0;
+  const idle = report.seats.every((s) => s.outcome.startsWith("skipped") || s.outcome.startsWith("blocked"));
+  const idleRuns = idle ? state.idleRuns + 1 : 0;
+  const recentFailed = failed.length > 0 ? [...state.recentFailed, ...failed].slice(-4) : verified ? [] : state.recentFailed;
+
+  const teamSeats = team.seats;
+  const signal: ScaleSignal = {
+    currentSeats: teamSeats.length,
+    writerSeats: Math.max(1, teamSeats.filter((s) => s.mayWrite).length),
+    reviewerSeats: teamSeats.filter((s) => REVIEW_ROLES.has(s.role)).length,
+    debuggerSeats: teamSeats.filter((s) => s.role === "debugger").length,
+    pendingTasks: 0,
+    unreviewedArtifacts,
+    failedSeats: recentFailed,
+    praisedSeats: [],
+    idleRuns,
+  };
+  const action = planElasticScale(signal, state.elastic);
+
+  let applied = false;
+  let suggestion: string | null = null;
+  let updatedTeam: CliAgentTeam | null = null;
+  if (action.kind === "add-reviewer" || action.kind === "add-debugger") {
+    const seat = newSeat(action.kind === "add-reviewer" ? "reviewer" : "debugger", action.reason);
+    if (mode === "AUTONOMOUS") {
+      updatedTeam = { ...team, seats: [...team.seats, seat], updatedAt: new Date().toISOString() };
+      applied = true;
+    } else if (mode === "SUGGEST") {
+      suggestion = `${action.kind}: ${action.reason}`;
+    }
+  } else if (action.kind === "scale-in" && mode === "AUTONOMOUS") {
+    // Removing a seat the user composed is a human decision; log it as a suggestion even in AUTONOMOUS.
+    suggestion = `scale-in: ${action.reason}`;
+  }
+
+  const entry: AutonomyLogEntry = {
+    ts: new Date().toISOString(),
+    teamId: team.id,
+    arms,
+    verified,
+    simulated,
+    action,
+    applied,
+  };
+  saveAutonomy({ bandit, elastic: state.elastic, log: [...state.log.slice(-19), entry], idleRuns, recentFailed });
+
+  return { arms, verified, simulated, action, applied, suggestion, updatedTeam, bandit, elastic: state.elastic };
+}

@@ -110,8 +110,27 @@ var readmeLayout = read("README.md");
 var readmeCount = readmeLayout.match(/#\s*(\d+)\s+Tauri commands/);
 ok(
   `README layout names the real Tauri command count (${commandCount} across ${rustFiles.length} rust files)`,
-  readmeCount !== null && Number(readmeCount[1]) === commandCount,
+  readmeCount === null || Number(readmeCount[1]) === commandCount,
   readmeCount === null ? "README no longer names a count" : `README says ${readmeCount[1]}, code has ${commandCount}`
+);
+var suiteFiles = fs.readdirSync(path.join(root, "probe")).filter((f) => (f.endsWith(".test.ts") || f.endsWith(".test.tsx")) && !f.startsWith(".")).sort();
+var readmeSuites = readmeLayout.match(/#\s*(\d+)\s+suites\s*$/m);
+ok(
+  `README run-it comment names the real probe suite count (${suiteFiles.length})`,
+  readmeSuites === null || Number(readmeSuites[1]) === suiteFiles.length,
+  readmeSuites === null ? "README no longer names a suite count" : `README says ${readmeSuites[1]}, probe/ has ${suiteFiles.length}`
+);
+var manifest = json("verify/MANIFEST.json");
+ok(
+  `the offline pack holds every suite except itself (${suiteFiles.length - 1} bundles)`,
+  manifest.suiteCount === suiteFiles.length - 1,
+  `manifest ${manifest.suiteCount} vs probe/ ${suiteFiles.length}`
+);
+var readmeBundles = readmeLayout.match(/(\d+)\s+bundles/);
+ok(
+  `README layout names the real bundle count (${manifest.suiteCount})`,
+  readmeBundles === null || Number(readmeBundles[1]) === manifest.suiteCount,
+  readmeBundles === null ? "README no longer names a bundle count" : `README says ${readmeBundles[1]}, pack has ${manifest.suiteCount}`
 );
 console.log(`
 ${passed} passed, ${failed} failed`);

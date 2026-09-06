@@ -40,7 +40,7 @@ Tauri v2 (Rust 1.80) + React 18 / Vite 6 / TypeScript 5.6 / Zustand on top, Pyth
 # Node 22 + Rust stable (WebKit/GTK on Linux)
 npm ci
 npm run typecheck   # tsc --noEmit
-npm test            # 40 suites
+npm test            # 42 suites
 npm run build       # vite build
 
 # dev
@@ -56,15 +56,15 @@ node verify/run.mjs
 ```
 src/         # React — pages, canvas, mission runtime, domain/harness, engines
 src-tauri/   # 94 Tauri commands, SQLite, keyring, MCP/ACP bridges, evolution-service, git
-probe/       # 40 suites (40/40)
-verify/      # offline pack — 39 bundles + runner, byte-pinned
+probe/       # 42 suites (42/42)
+verify/      # offline pack — 41 bundles + runner, byte-pinned
 vendor/      # mcp-servers-reference, mcp-github, evolution-service (hermes-agent + its self-evolution agent de-vendored in 11.9)
 docs/        # history + verification
 ```
 
 ### Tests
 
-`npm test` does 40 suites — harnesses 270 assertions (the `iff` on turn-flags for all 25), checkRunner, sandbox, theme, canvasGeometry, etc. There's a typed `MjCommands` in `src/ipc/client.ts` so a renamed Rust command is a compile error, not a runtime surprise.
+`npm test` does 42 suites — harnesses 270 assertions (the `iff` on turn-flags for all 25), checkRunner, sandbox, theme, canvasGeometry, etc. There's a typed `MjCommands` in `src/ipc/client.ts` so a renamed Rust command is a compile error, not a runtime surprise.
 
 `node verify/run.mjs` is the reviewer gate — same suites as bundles, no install.
 
@@ -72,7 +72,7 @@ More in `docs/VERIFICATION.md` and `verify/BUILD-INFO.txt`.
 
 ### History
 
-5.0 → 11.9.4 over about a year. Biggest fixes: vacuous gate (args reversed), turn-flag drift, wrapper `EACCES` mis-classified as enforced, browser `require('fs')` that broke in ESM, shipping the vendored engines, then typing the whole Rust↔TS boundary and killing every `as never` in `src/`. 11.9 then de-vendored the Hermes agent engines, shipped the minimal/unique **NTH** theme (obsidian ground, electro-violet volt, plasma pulse — no gimmicky motion), 11.9.4 re-cut it on the v3 atlas **FOUNDRY** identity (carbon ground, cream ink, brass accent — frontend-only), and fixed the four canvas integrity bugs the review found: wires now land on their port anchors via rendered bounding-box measurement, overlapping cards own their stacking contexts, ports are inset into the card edge, and agent cards are a consistent `264px`. **11.9.4(Fixed)** then reworked the feel: the five-color-minimal **wabi** palette (charcoal / washi / kiln / moss / berry) became the twelfth theme and the new default, and a transform-only motion system landed — boot splash, staggered node entrance, wire draw-in, port hover, keyed page transitions — all behind `prefers-reduced-motion`.
+5.0 → 11.9.4 over about a year. Biggest fixes: vacuous gate (args reversed), turn-flag drift, wrapper `EACCES` mis-classified as enforced, browser `require('fs')` that broke in ESM, shipping the vendored engines, then typing the whole Rust↔TS boundary and killing every `as never` in `src/`. 11.9 then de-vendored the Hermes agent engines, shipped the minimal/unique **NTH** theme (obsidian ground, electro-violet volt, plasma pulse — no gimmicky motion), 11.9.4 re-cut it on the v3 atlas **FOUNDRY** identity (carbon ground, cream ink, brass accent — frontend-only), and fixed the four canvas integrity bugs the review found: wires now land on their port anchors via rendered bounding-box measurement, overlapping cards own their stacking contexts, ports are inset into the card edge, and agent cards are a consistent `264px`. **11.9.4(Fixed)** then reworked the feel: the five-color-minimal **wabi** palette (charcoal / washi / kiln / moss / berry) became the twelfth theme and the new default, and a transform-only motion system landed — boot splash, staggered node entrance, wire draw-in, port hover, keyed page transitions — all behind `prefers-reduced-motion`. **11.9.4(Major)** added three autonomy engines (web-evidence Researcher, elastic seats, bandit-routed evolution), and **11.9.4(Major+)** wired all three into the real execution path — bandit arms modulate each run's briefings and wave plan, runs settle measured outcomes back into the shared autonomy store, elastic scaling acts mode-gated — with source-kind-honest web providers, pull-honest seeding, and BUILD-INFO provenance pinned by a gate.
 
 Short version in `CHANGELOG.md`, full notes in `docs/history/`.
 

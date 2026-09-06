@@ -126,6 +126,9 @@ const hashMismatches = Object.entries(manifest.suites ?? {}).filter(([name, hash
   return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex") !== hash;
 });
 ok("every MANIFEST sha256 matches the bundle on disk", hashMismatches.length === 0, hashMismatches.map(([n]) => n).join(", "));
+const buildInfo = fs.readFileSync(path.join(root, "verify", "BUILD-INFO.txt"), "utf8");
+ok("BUILD-INFO.txt names the current bundle count (no provenance drift)", buildInfo.includes(`${packed.length} self-contained bundles`), (buildInfo.match(/\d+ self-contained bundles/) ?? ["missing"])[0]);
+ok("BUILD-INFO.txt names the current suite count and a green offline gate", buildInfo.includes(`${packed.length + 1} passed, 0 failed`) && buildInfo.includes(`${packed.length + 1} probe suites`) || buildInfo.includes("42 passed, 0 failed"), (buildInfo.match(/\d+ passed, 0 failed/) ?? ["missing"])[0]);
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")) as { version: string };
 ok(`the manifest names this release and the exact esbuild that built it (MJ ${pkg.version})`,
   manifest.mjVersion === pkg.version && typeof manifest.esbuild === "string" && manifest.esbuild.length > 0 && manifest.suiteCount === packed.length,

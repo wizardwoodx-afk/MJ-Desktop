@@ -1740,6 +1740,180 @@ function writeContextFiles(team, opts) {
 // src/mission/teamExecutor.ts
 import * as path from "node:path";
 
+// src/mission/webSearch.ts
+var WEB_PROVIDERS = [
+  {
+    id: "wikipedia",
+    name: "Wikipedia (opensearch)",
+    kind: "secondary",
+    needsConfig: false,
+    note: "keyless, CORS-open \u2014 primary encyclopedic sources",
+    buildUrl: (q) => `https://en.wikipedia.org/w/api.php?action=opensearch&origin=*&format=json&limit=5&search=${encodeURIComponent(q)}`
+  },
+  {
+    id: "hn",
+    name: "Hacker News (Algolia)",
+    kind: "secondary",
+    needsConfig: false,
+    note: "keyless, CORS-open \u2014 recent primary discussion + links",
+    buildUrl: (q) => `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(q)}&hitsPerPage=5`
+  },
+  {
+    id: "github",
+    name: "GitHub repository search",
+    kind: "primary",
+    needsConfig: false,
+    note: "keyless unauthenticated repository search \u2014 first-party code/docs",
+    buildUrl: (q) => `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&per_page=5`
+  },
+  {
+    id: "searxng",
+    name: "SearXNG (self-hosted)",
+    kind: "meta",
+    needsConfig: true,
+    note: "user's own metasearch endpoint \u2014 keeps queries local-first",
+    buildUrl: (q, o) => o?.searxngRoot ? `${o.searxngRoot.replace(/\/$/, "")}/search?q=${encodeURIComponent(q)}&format=json` : null
+  },
+  {
+    id: "brave",
+    name: "Brave Search (BYO key)",
+    kind: "meta",
+    needsConfig: true,
+    note: "optional key in Providers \u2014 never stored by this module",
+    buildUrl: (q, o) => o?.braveKey ? `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q)}&count=5` : null
+  }
+];
+function normalizeWikipedia(json, query) {
+  if (!Array.isArray(json) || json.length < 4) return [];
+  const [, titles, snippets, urls] = json;
+  if (!Array.isArray(titles) || !Array.isArray(urls)) return [];
+  return titles.map((title, i) => ({
+    url: String(urls[i] ?? ""),
+    title: String(title),
+    snippet: String(Array.isArray(snippets) ? snippets[i] ?? "" : ""),
+    source: "wikipedia",
+    kind: "secondary",
+    ts: null,
+    score: scoreHit({ url: String(urls[i] ?? ""), title: String(title), snippet: String(Array.isArray(snippets) ? snippets[i] ?? "" : ""), source: "wikipedia", kind: "secondary", ts: null }, query)
+  })).filter((h) => h.url.length > 0);
+}
+function normalizeHn(json, query) {
+  const hits = json?.hits;
+  if (!Array.isArray(hits)) return [];
+  return hits.map((h) => {
+    const o = h;
+    const url = o.url ?? (o.objectID ? `https://news.ycombinator.com/item?id=${o.objectID}` : "");
+    return {
+      url,
+      title: String(o.title ?? ""),
+      snippet: String(o.story_text ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 220),
+      source: "hn",
+      kind: "secondary",
+      ts: o.created_at ?? null,
+      score: 0
+    };
+  }).filter((h) => h.url.length > 0).map((h) => ({ ...h, score: scoreHit(h, query) }));
+}
+function normalizeGithub(json, query) {
+  const items = json?.items;
+  if (!Array.isArray(items)) return [];
+  return items.map((it) => {
+    const o = it;
+    return {
+      url: String(o.html_url ?? ""),
+      title: String(o.full_name ?? ""),
+      snippet: String(o.description ?? "").slice(0, 220),
+      source: "github",
+      kind: "primary",
+      ts: o.pushed_at ?? null,
+      score: 0
+    };
+  }).filter((h) => h.url.length > 0).map((h) => ({ ...h, score: scoreHit(h, query) }));
+}
+var SOURCE_PRIOR = {
+  wikipedia: 0.55,
+  hn: 0.45,
+  github: 0.45,
+  searxng: 0.4,
+  brave: 0.4
+};
+function scoreHit(hit, query) {
+  const qTokens = new Set(
+    query.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 3)
+  );
+  if (qTokens.size === 0) return SOURCE_PRIOR[hit.source] * 0.8;
+  const text = `${hit.title} ${hit.snippet}`.toLowerCase();
+  let matched = 0;
+  for (const t of qTokens) if (text.includes(t)) matched += 1;
+  const overlap = matched / qTokens.size;
+  let recency = 0;
+  if (hit.ts) {
+    const ageDays = (Date.now() - Date.parse(hit.ts)) / 864e5;
+    if (Number.isFinite(ageDays)) recency = ageDays < 7 ? 0.1 : ageDays < 90 ? 0.05 : 0;
+  }
+  return Math.min(1, 0.35 * overlap + 0.55 * overlap * SOURCE_PRIOR[hit.source] + recency + 0.1 * SOURCE_PRIOR[hit.source]);
+}
+function dedupeHits(hits) {
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const h of hits) {
+    if (seen.has(h.url)) continue;
+    seen.add(h.url);
+    out.push(h);
+  }
+  return out.sort((a, b) => b.score - a.score);
+}
+function toTriples(hits) {
+  return hits.map((h) => ({
+    claim: `${h.title}${h.snippet ? ` \u2014 ${h.snippet}` : ""}`.slice(0, 280),
+    source: h.url,
+    confidence: h.score >= 0.55 ? "high" : h.score >= 0.3 ? "medium" : "low",
+    kind: h.kind
+  }));
+}
+async function searchWeb(query, opts = {}) {
+  const doFetch = opts.fetchImpl ?? (opts.useGlobalFetch === false ? void 0 : typeof fetch === "function" ? fetch : void 0);
+  const timeoutMs = opts.timeoutMs ?? 6e3;
+  const outcomes = [];
+  const hits = [];
+  if (!doFetch) {
+    return {
+      query,
+      hits: [],
+      providers: WEB_PROVIDERS.map((p) => ({ id: p.id, ok: false, hits: 0, note: "no fetch available in this host" })),
+      fetchedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+  await Promise.all(
+    WEB_PROVIDERS.map(async (p) => {
+      const url = p.buildUrl(query, opts);
+      if (url === null) {
+        outcomes.push({ id: p.id, ok: false, hits: 0, note: p.needsConfig ? "not configured" : "no url" });
+        return;
+      }
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), timeoutMs);
+      try {
+        const res = await doFetch(url, { signal: ctl.signal, headers: p.id === "github" ? { Accept: "application/vnd.github+json" } : void 0 });
+        if (!res.ok) {
+          outcomes.push({ id: p.id, ok: false, hits: 0, note: `http ${res.status}` });
+          return;
+        }
+        const json = await res.json();
+        const norm = p.id === "wikipedia" ? normalizeWikipedia(json, query) : p.id === "hn" ? normalizeHn(json, query) : p.id === "github" ? normalizeGithub(json, query) : [];
+        hits.push(...norm);
+        outcomes.push({ id: p.id, ok: true, hits: norm.length, note: "ok" });
+      } catch (e) {
+        const msg = e instanceof Error && e.name === "AbortError" ? `timeout ${timeoutMs}ms` : "network/cors";
+        outcomes.push({ id: p.id, ok: false, hits: 0, note: msg });
+      } finally {
+        clearTimeout(timer);
+      }
+    })
+  );
+  return { query, hits: dedupeHits(hits), providers: outcomes, fetchedAt: (/* @__PURE__ */ new Date()).toISOString() };
+}
+
 // src/mission/git.ts
 function parseStatusPorcelainZ(raw) {
   if (!raw) return [];
@@ -2298,7 +2472,8 @@ Spent: $${(spentUsd2 || 0).toFixed(4)}`, "orchestrator", "finding");
       merge: { candidates: [], plan: planMerge([], { baseBranch: req.baseBranch, repoRoot: req.repoRoot, testCommand: req.testCommand }) },
       startedAt,
       finishedAt: new Date(now()).toISOString(),
-      wallClockMs: now() - t0
+      wallClockMs: now() - t0,
+      autonomyArms: req.autonomy?.arms
     };
   };
   globalAgentBus.publish({
@@ -2310,9 +2485,34 @@ Spent: $${(spentUsd2 || 0).toFixed(4)}`, "orchestrator", "finding");
   });
   const worktrees = planWorktrees(req.team, { repoRoot: req.repoRoot, baseBranch: req.baseBranch, missionSlug: req.missionSlug, deferReview: true });
   const wtBySeat = new Map(worktrees.map((w) => [w.seatId, w]));
+  const autonomyLines = [];
+  const arms = req.autonomy?.arms ?? [];
+  if (arms.includes("review:deep")) autonomyLines.push("[autonomy arm review:deep] Reviewers: attack correctness first; require re-run evidence for every pass claim; style nits last and labelled.");
+  if (arms.includes("review:shallow")) autonomyLines.push("[autonomy arm review:shallow] Reviewers: blockers only this run; defer nits.");
+  if (arms.includes("check:strict")) autonomyLines.push("[autonomy arm check:strict] Testers/QA: run EVERY listed check and quote failures verbatim; a pass without output is not a pass.");
+  if (arms.includes("check:lenient")) autonomyLines.push("[autonomy arm check:lenient] Testers/QA: core acceptance checks this run; edge cases sampled.");
+  if (req.team.seats.some((st) => st.role === "planner" || st.mayWrite) && arms.length > 0) {
+    autonomyLines.push(`[autonomy router] strategy arms this run: ${arms.join(", ")} \u2014 outcomes feed the router's next decision.`);
+  }
+  if (req.autonomy?.webEvidence !== false && req.team.seats.some((st) => st.role === "planner" || st.role === "reviewer")) {
+    try {
+      const web = await searchWeb(req.objective.slice(0, 80), { timeoutMs: 4e3 });
+      const live = web.providers.filter((pr) => pr.ok);
+      if (live.length > 0) {
+        autonomyLines.push(`[web evidence] ${web.hits.length} deduplicated hit(s) from ${live.map((pr) => pr.id).join(", ")}:`);
+        for (const t of toTriples(web.hits).slice(0, 5)) {
+          autonomyLines.push(`  - (${t.confidence}, ${t.kind}) ${t.claim} \u2014 ${t.source}`);
+        }
+      } else {
+        autonomyLines.push(`[web evidence] unavailable this run (${web.providers.map((pr) => `${pr.id}: ${pr.note}`).join("; ")}) \u2014 research proceeds without it.`);
+      }
+    } catch {
+      autonomyLines.push("[web evidence] fetch failed \u2014 research proceeds without it.");
+    }
+  }
   const briefingsByHarness = writeContextFiles(req.team, {
     objective: req.objective,
-    constraints: req.constraints ?? [],
+    constraints: [...req.constraints ?? [], ...autonomyLines],
     doNotTouch: req.doNotTouch ?? [],
     testCommand: req.testCommand
   });
@@ -2386,7 +2586,7 @@ Spent: $${(spentUsd2 || 0).toFixed(4)}`, "orchestrator", "finding");
       b.detail = `Written into ${b.writtenTo.length} worktree(s), but MJ could NOT exclude ${BRIEF_DIR}/ from git. Those files will appear as untracked and WILL be picked up by a commit \u2014 treat this seat's diff as containing the briefing.`;
     }
   }
-  const waves = waveGroups(req.assignments);
+  const waves = arms.includes("exec:serial") ? req.assignments.map((a) => [a]) : waveGroups(req.assignments);
   const runnable = /* @__PURE__ */ new Map();
   const binPaths = /* @__PURE__ */ new Map();
   for (const w of waves) {
@@ -2510,7 +2710,8 @@ Spent: $${(spentUsd2 || 0).toFixed(4)}`, "orchestrator", "finding");
     merge: { candidates, plan },
     startedAt,
     finishedAt: new Date(now()).toISOString(),
-    wallClockMs: now() - t0
+    wallClockMs: now() - t0,
+    autonomyArms: req.autonomy?.arms
   };
 }
 async function buildReviewSnapshot(req, deps, worktrees, committedBranches, setupFailed) {

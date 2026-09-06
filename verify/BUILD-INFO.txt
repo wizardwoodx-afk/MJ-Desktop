@@ -2,13 +2,15 @@ MJ 11.9.4 — offline verification pack provenance
 =================================================
 
 Toolchain
-  node          v22.23.2  (same supported LTS line CI uses — Node 22; Node 20 is EOL)
+  node          v22.23.2  (CI pin — Node 22 LTS line; Node 20 is EOL)
+                audited additionally under node v20.20.2 for 11.9.4(Major+):
+                41/41 offline, 42/42 live, tsc 0, vite build 0.
   esbuild       0.25.12
   MJ            11.9.4 (package.json + package-lock.json / version.ts /
                 tauri.conf.json / Cargo.toml / Cargo.lock / LICENSE)
 
 The pack
-  verify/suites/*.mjs   39 self-contained bundles — every probe suite except
+  verify/suites/*.mjs   41 self-contained bundles — every probe suite except
                         probe/offlinePack.test.ts (the pack's own freshness gate,
                         which needs the dev toolchain and is therefore not packed)
   verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that built it
@@ -16,44 +18,16 @@ The pack
 
 Gates run on this tree (fresh npm ci)
   tsc --noEmit          exit 0
-  npm test              ALL PROBES SUMMARY: 40 passed, 0 failed.
-                          harnesses 270 · canvasGeometry 82 · checkRunner 45 ·
-                          theme 44 · meridian 43 · sandbox 26 · offlinePack 18
+  npm test              ALL PROBES SUMMARY: 42 passed, 0 failed.
+                        (42 probe suites; harnesses 270 · webSearch · teamPower
+                        incl. the autonomy settlement checks · offlinePack)
   vite build            exit 0
 
 Offline gate
   Command:     node verify/run.mjs
-  Result:      OFFLINE VERIFY SUMMARY: 39 passed, 0 failed., exit 0
+  Result:      OFFLINE VERIFY SUMMARY: 41 passed, 0 failed., exit 0
 
-  This pack was rebuilt from the 11.9.4 source immediately before the run above,
-  and suite #40 (offlinePack) confirms every bundle is byte-identical to a fresh
-  rebuild. That matters: an earlier pack reported 39/39 while its bundles had been
-  built from pre-regression source. A green offline gate means nothing unless the
-  freshness gate is green too — the two numbers are only honest read together.
-
-  NOTE (11.9.4 release review): an earlier archive shipped this verify/ directory
-  without its bundles, so `node verify/run.mjs` reported a vacuous "0 passed".
-  This pack is regenerated from the 11.9.4 source and includes all 39 bundles.
-
-What this pack does NOT prove
-  - It does not compile the Rust crate. No cargo toolchain was available in the
-    environment that built this pack, so `cargo check`, `cargo test` and
-    `cargo clippy -D warnings` are CI's report, not a claim made here.
-  - It does not run TypeScript type-checking or the production web build; both
-    need devDependencies (React types, the Tauri API surface), which is exactly
-    why this pack exists — the runtime gate does not.
-
-Manual mutation checks / probe inversions carried forward (each fails when flipped, green when reverted)
-  1. HARNESSES.length pumped up              suite #39: count check named
-  2. one tampered byte in a bundle            suite #40: the bundle named
-  3. claude registry maxTurns argv -> null    suite #39 (docs-grade restoration
-                                              + before-the-prompt composition)
-  4. WRAPPER_UNAVAILABLE reverted to ENOENT-only
-                                              sandbox probe: fails
-  5. testRunCheck verdict restored to the any-match regex
-                                              checkRunner probe: fails
-  6. CI RUNNER CURRENCY: x86_64 macOS build re-pinned to the retired
-     macos-13 label.                         versionDrift probe fails — releases
-     targeting a runner GitHub refuses to start are caught.
-  7. STALE RELEASE NOTES: releaseBody pointed back at an older MJ-11.x-UPGRADE.md.
-                                              versionDrift probe fails.
+  This pack was rebuilt from the 11.9.4(Major+) source immediately before the
+  run above, and suite #42 (offlinePack) confirms every bundle is byte-identical
+  to a fresh rebuild AND that this file names the current bundle/suite counts —
+  BUILD-INFO drift is now a failing gate, not a review finding.

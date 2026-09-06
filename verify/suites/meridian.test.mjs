@@ -10,7 +10,7 @@ var NODE_METHODS = {
     method: "PLAN (built in): break the objective into an issue tree, resolve dependencies into a dependency map, then emit a stepped plan where every step names its owner. No code until every step has an owner."
   },
   "agent.researcher": {
-    method: "RESEARCH (built in): form the query plan, gather primary sources only, and return claims as (claim, source, confidence) triples \u2014 no secondhand summaries."
+    method: "RESEARCH (built in): form the query plan, gather primary sources only \u2014 including live web evidence (Wikipedia / HN / GitHub, or the user's own SearXNG/Brave) when the host allows \u2014 and return claims as (claim, source, confidence) triples with confidence measured from source overlap, never invented \u2014 no secondhand summaries."
   },
   "agent.browser": {
     method: "BROWSE (built in): plan first, then act \u2014 one action per step, each verified against the page state before the next. Never chains unverified actions."

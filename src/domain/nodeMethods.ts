@@ -26,7 +26,7 @@ export const NODE_METHODS: Record<string, AgentMethodEntry> = {
   },
   "agent.researcher": {
     method:
-      "RESEARCH (built in): form the query plan, gather primary sources only, and return claims as (claim, source, confidence) triples — no secondhand summaries.",
+      "RESEARCH (built in): form the query plan, gather primary sources only — including live web evidence (Wikipedia / HN / GitHub, or the user's own SearXNG/Brave) when the host allows — and return claims as (claim, source, confidence) triples with confidence measured from source overlap, never invented — no secondhand summaries.",
   },
   "agent.browser": {
     method:

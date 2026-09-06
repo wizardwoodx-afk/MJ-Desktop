@@ -32,6 +32,9 @@
 import * as path from "node:path";
 
 import type { HarnessId } from "../domain/harness";
+import type { AutonomyRequest } from "./autonomyRuntime";
+import type { ArmId } from "./evolutionBandit";
+import { searchWeb, toTriples } from "./webSearch";
 import { resolveCaps } from "./agentCapabilities";
 import { composeSeatArgv, type CliAgentTeam, type TeamSeat } from "./agentTeam";
 import { gitApi, type GitRunner } from "./git";
@@ -117,6 +120,8 @@ export interface TeamRunRequest {
   ledger: CapLedger;
   /** Refuse to start at all if this many seats cannot run. Prevents a half-empty team looking like a result. */
   minimumRunnableSeats?: number;
+  /** 11.9.4(Major+): the autonomy engines' plan for this run (bandit arms + web evidence). */
+  autonomy?: AutonomyRequest;
 }
 
 /* ------------------------------------------------------------------ records */
@@ -224,6 +229,8 @@ export interface TeamRunReport {
   startedAt: string;
   finishedAt: string;
   wallClockMs: number;
+  /** 11.9.4(Major+): the strategy arms the autonomy router executed this run. */
+  autonomyArms?: ArmId[];
 }
 
 /* ------------------------------------------------------------------ execution */
@@ -295,6 +302,7 @@ export async function executeTeam(req: TeamRunRequest, deps: TeamRunnerDeps, ses
       startedAt,
       finishedAt: new Date(now()).toISOString(),
       wallClockMs: now() - t0,
+      autonomyArms: req.autonomy?.arms,
     };
   };
 
@@ -308,9 +316,38 @@ export async function executeTeam(req: TeamRunRequest, deps: TeamRunnerDeps, ses
 
   const worktrees = planWorktrees(req.team, { repoRoot: req.repoRoot, baseBranch: req.baseBranch, missionSlug: req.missionSlug, deferReview: true });
   const wtBySeat = new Map(worktrees.map((w) => [w.seatId, w]));
+
+  /* 11.9.4(Major+): the autonomy engines modulate THIS run for real.
+     Web evidence is gathered (best-effort, honestly labelled) and the chosen
+     bandit arms become briefing lines the agents actually read. */
+  const autonomyLines: string[] = [];
+  const arms = req.autonomy?.arms ?? [];
+  if (arms.includes("review:deep")) autonomyLines.push("[autonomy arm review:deep] Reviewers: attack correctness first; require re-run evidence for every pass claim; style nits last and labelled.");
+  if (arms.includes("review:shallow")) autonomyLines.push("[autonomy arm review:shallow] Reviewers: blockers only this run; defer nits.");
+  if (arms.includes("check:strict")) autonomyLines.push("[autonomy arm check:strict] Testers/QA: run EVERY listed check and quote failures verbatim; a pass without output is not a pass.");
+  if (arms.includes("check:lenient")) autonomyLines.push("[autonomy arm check:lenient] Testers/QA: core acceptance checks this run; edge cases sampled.");
+  if (req.team.seats.some((st) => st.role === "planner" || st.mayWrite) && arms.length > 0) {
+    autonomyLines.push(`[autonomy router] strategy arms this run: ${arms.join(", ")} — outcomes feed the router's next decision.`);
+  }
+  if (req.autonomy?.webEvidence !== false && req.team.seats.some((st) => st.role === "planner" || st.role === "reviewer")) {
+    try {
+      const web = await searchWeb(req.objective.slice(0, 80), { timeoutMs: 4000 });
+      const live = web.providers.filter((pr) => pr.ok);
+      if (live.length > 0) {
+        autonomyLines.push(`[web evidence] ${web.hits.length} deduplicated hit(s) from ${live.map((pr) => pr.id).join(", ")}:`);
+        for (const t of toTriples(web.hits).slice(0, 5)) {
+          autonomyLines.push(`  - (${t.confidence}, ${t.kind}) ${t.claim} — ${t.source}`);
+        }
+      } else {
+        autonomyLines.push(`[web evidence] unavailable this run (${web.providers.map((pr) => `${pr.id}: ${pr.note}`).join("; ")}) — research proceeds without it.`);
+      }
+    } catch {
+      autonomyLines.push("[web evidence] fetch failed — research proceeds without it.");
+    }
+  }
   const briefingsByHarness = writeContextFiles(req.team, {
     objective: req.objective,
-    constraints: req.constraints ?? [],
+    constraints: [...(req.constraints ?? []), ...autonomyLines],
     doNotTouch: req.doNotTouch ?? [],
     testCommand: req.testCommand,
   });
@@ -403,7 +440,9 @@ export async function executeTeam(req: TeamRunRequest, deps: TeamRunnerDeps, ses
   }
 
   // Pre-flight: find out which binaries exist BEFORE spending anything.
-  const waves = waveGroups(req.assignments);
+  const waves = arms.includes("exec:serial")
+    ? req.assignments.map((a) => [a]) // autonomy arm: force serial execution this run
+    : waveGroups(req.assignments);
   const runnable = new Map<string, boolean>();
   const binPaths = new Map<string, string>();
   for (const w of waves) {
@@ -548,6 +587,7 @@ export async function executeTeam(req: TeamRunRequest, deps: TeamRunnerDeps, ses
     startedAt,
     finishedAt: new Date(now()).toISOString(),
     wallClockMs: now() - t0,
+    autonomyArms: req.autonomy?.arms,
   };
 }
 
