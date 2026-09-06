@@ -1,5 +1,7 @@
 /**
- * §FUZZY — the palette's ranking brain (MJ 11.9.5).
+ * §FUZZY — the palette's ranking brain.
+ * Provenance: subsequence core shipped in MJ 11.9.5; the label-first composition
+ * score (paletteScore) is the 11.9.6 review fix. Both facts stay true forever.
  *
  * Researched grounding: every keyboard-first tool (Raycast, Linear, VS Code) reduces to the same
  * machine — subsequence match + bonuses for word boundaries, runs, and prefix alignment — done

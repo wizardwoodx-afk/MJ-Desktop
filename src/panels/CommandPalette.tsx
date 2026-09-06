@@ -1,5 +1,5 @@
 /**
- * §COMMAND PALETTE — the 11.9.5 Raycast-grade recut.
+ * §COMMAND PALETTE — the Raycast-grade recut (shipped 11.9.5, label-first ranking since 11.9.6).
  *
  * Researched grounding: Raycast's DESIGN.md — "keyboard-first changes the layout: compact uniform
  * rows, crisp dark surfaces, restrained radii, monospace where it belongs"; Linear/VS Code/Notion

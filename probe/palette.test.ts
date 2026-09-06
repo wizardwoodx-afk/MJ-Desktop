@@ -1,5 +1,7 @@
 /**
- * §Palette probe (MJ 11.9.5) — fuzzy ranking + honest connection refusals.
+ * §Palette probe — fuzzy ranking + honest connection refusals.
+ * Provenance: fuzzy core probed since 11.9.5; the label-first paletteScore
+ * checks are the 11.9.6 review fix; both stay pinned here.
  *
  * Two halves of the keyboard-first release:
  *   1. the palette's scorer behaves like the tools it studied (Raycast/Linear/VS Code):

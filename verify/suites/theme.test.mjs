@@ -5,7 +5,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 // src/version.ts
-var MJ_VERSION = "11.9.6";
+var MJ_VERSION = "11.9.7";
 var MJ_VERSION_SHORT = MJ_VERSION.split(".").slice(0, 2).join(".");
 var MJ_TITLE = `MJ ${MJ_VERSION_SHORT}`;
 
