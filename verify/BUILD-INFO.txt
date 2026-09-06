@@ -1,0 +1,53 @@
+MJ 11.9.9 — offline verification pack provenance
+=================================================
+
+Toolchain (certifying runtime)
+  node          v22.23.2  (Node 22 LTS "Jod" — every gate below was executed
+                           under this runtime: fresh npm ci, tsc, live suites,
+                           pack rebuild, offline gate, vite build)
+  esbuild       0.25.12
+  MJ            11.9.9 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml / Cargo.lock / LICENSE)
+
+Honest scope
+  Rust/Tauri shell compilation was NOT re-run in the certifying environment
+  (no cargo toolchain there). The typed TS↔Rust command boundary is covered
+  by the probe suites (controlPlane) and the version manifests are pinned by
+  versionDrift; the Rust sources themselves are unchanged since 11.9.4.
+
+The pack
+  verify/suites/*.mjs   51 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness gate,
+                        which needs the dev toolchain and is therefore not packed)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that built it
+  verify/run.mjs        zero-dependency runner (node: builtins only)
+
+Gates run on this tree (fresh npm ci, Node v22.23.2)
+  tsc --noEmit          exit 0
+  npm test              ALL PROBES SUMMARY: 52 passed, 0 failed.
+                        (52 probe suites; harnesses 270 · webSearch · teamPower ·
+                        receipts · licensing · preflight · checkpoints · palette · layout ·
+                        NEW 11.9.9: verifyGate · roleBoard · receiptVault · fleet
+                        incl. the label-first ranking checks · layered-layout engine · offlinePack)
+  vite build            exit 0
+
+Offline gate
+  Command:     node verify/run.mjs
+  Result:      OFFLINE VERIFY SUMMARY: 51 passed, 0 failed., exit 0 (node v22.23.2)
+
+  This pack was rebuilt from the 11.9.9 source under Node 22 immediately before
+  the run above, and suite #52 (offlinePack) confirms every bundle is
+  byte-identical to a fresh rebuild AND that this file names the current
+  bundle/suite counts — BUILD-INFO drift is now a failing gate, not a review
+  finding.
+
+11.9.9 — what the new suites pin
+  #49 verifyGate     adversarial verification: cross-vendor PASS, same-harness
+                     BLOCKED (STRICT) / FAILED (ADVISORY), cross-seat overlap,
+                     rejections, receipt requirement, report derivation, team findings
+  #50 roleBoard      your harnesses, your roles: deterministic auto-assign, owned-only
+                     application, unowned/llm-writer/self-verification findings
+  #51 receiptVault   vault issue/list/cap, self-audit naming a tampered receipt,
+                     SIEM bundle shape, one-pager claims + gate-event back-compat
+  #52 fleet          Mission Control state: lifecycle, stagnation by clock, cost-ledger
+                     honesty (tokens-only), simulated flagging, approval inbox
