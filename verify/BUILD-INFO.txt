@@ -1,0 +1,63 @@
+MJ 11.10.1 — offline verification pack provenance
+==================================================
+
+Toolchain (certifying runtime)
+  node          v22.23.2  (Node 22 LTS "Jod" — every gate below was executed
+                           under this runtime: fresh npm ci, tsc, live suites,
+                           pack rebuild, offline gate, vite build)
+  esbuild       0.25.12
+  MJ            11.10.1 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml / Cargo.lock / LICENSE)
+
+Honest scope
+  Rust/Tauri shell compilation was NOT re-run in the certifying environment
+  (no cargo toolchain there). The typed TS↔Rust command boundary is covered
+  by the probe suites (controlPlane) and the version manifests are pinned by
+  versionDrift; the Rust sources themselves are unchanged since 11.9.4.
+
+The pack
+  verify/suites/*.mjs   55 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness gate,
+                        which needs the dev toolchain and is therefore not packed)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that built it
+  verify/run.mjs        zero-dependency runner (node: builtins only)
+
+Gates run on this tree (fresh npm ci, Node v22.23.2)
+  tsc --noEmit          exit 0
+  npm test              ALL PROBES SUMMARY: 56 passed, 0 failed.
+                        (56 probe suites; harnesses 270 · webSearch · teamPower ·
+                        receipts · licensing · preflight · checkpoints · palette · layout ·
+                        verifyGate · roleBoard · receiptVault · fleet · mergeGate ·
+                        NEW 11.10.1: signing · mergeExecutor · evidencePack)
+  vite build            exit 0
+
+Offline gate
+  Command:     node verify/run.mjs
+  Result:      OFFLINE VERIFY SUMMARY: 55 passed, 0 failed., exit 0 (node v22.23.2)
+
+  This pack was rebuilt from the 11.10.1 source under Node 22 immediately before
+  the run above, and suite #56 (offlinePack) confirms every bundle is
+  byte-identical to a fresh rebuild AND that this file names the current
+  bundle/suite counts — BUILD-INFO drift is now a failing gate, not a review
+  finding.
+
+11.10.1 — what the three new suites pin (the completion release)
+  #54 signing        Ed25519 issuer identity on REAL WebCrypto: stable key id + public
+                     key, sign/verify roundtrip, forged signature AND forged public key
+                     rejected, mj-proof-receipt/2 issued + verified, seat identity
+                     digests sha256(seatId|role|harness) in-chain, v1 receipts still
+                     verify, JSONL preserves the signature, public-key doc exports.
+  #55 mergeExecutor  the merge engine on a REAL git repository: gate allowed → plan
+                     executes and the merge-commit sha is recorded and real; blocked
+                     gate → REFUSED, HEAD untouched; recorded override executes and is
+                     named; a real conflict is caught at merge-tree PRE-FLIGHT before
+                     any merge; simulated host never claims a merge; the signed merge
+                     attestation verifies and detects a swapped sha.
+  #56 evidencePack   one exportable bundle: empty-vault honesty, receipts re-verified
+                     at export (a locally tampered receipt is FLAGGED inside the pack,
+                     never hidden), attestations included, SIEM bundle + one-pager +
+                     issuer doc present, EU AI Act Art. 12 / ISO 42001 / SOC 2
+                     crosswalk names concrete artifacts (stated as convenience, not
+                     legal advice).
+  receipts probe     extended: every new receipt is v2 and either signed or honestly
+                     explains why not; stripping issuer fields verifies as v1.
