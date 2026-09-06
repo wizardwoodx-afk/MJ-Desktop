@@ -1,0 +1,86 @@
+name: CI
+
+# MJ 11.0 (W5). Every claim the docs make becomes checkable: the Rust crate is compiled on
+# three OSes with the real GTK/WebKit stack, every probe runs, the production bundle builds.
+# This workflow exists to retire the oldest line in the honesty ledger:
+#   "`cargo check` has never run on the full Tauri crate."
+#
+# MJ 11.8.5 — runner currency. A workflow that cannot allocate a runner verifies nothing, and
+# a CI badge nobody can reproduce is decoration. Runner images are retired on a published
+# schedule, so:
+#   macos-13       support ended 2025-12-04   -> was in release.yml, REMOVED
+#   macos-14       deprecated, unsupported 2026-11-02 -> moved to macos-15
+#   ubuntu-22.04   active support ends 2026-09-17      -> moved to ubuntu-24.04
+#   ubuntu-20.04   support ended 2025-04-15
+# probe/versionDrift.test.ts §5 fails the gate if any of those labels reappear, so this
+# cannot silently rot the way it did.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            name: linux
+          - os: macos-15
+            name: macos
+          - os: windows-latest
+            name: windows
+    runs-on: ${{ matrix.os }}
+    name: verify (${{ matrix.name }})
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 20 reached end-of-life 2026-04-30. CI should not certify a release on a runtime
+      # that no longer receives security fixes.
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+
+      # Only Linux needs the GTK/WebKit dev stack; macOS/Windows use the platform webviews.
+      - name: Linux system deps (Tauri)
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev bubblewrap
+
+      - name: npm ci
+        run: npm ci
+
+      - name: TypeScript — tsc --noEmit
+        run: ./node_modules/.bin/tsc --noEmit
+
+      - name: Rust — cargo check (the real crate, the real macros)
+        working-directory: src-tauri
+        run: cargo check --all-targets
+
+      - name: Rust — cargo test (parsers, control plane, sandbox shapes)
+        working-directory: src-tauri
+        run: cargo test
+
+      - name: Rust — clippy (advisory, never allowed to rot silently)
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Probes (every assertion in the tree)
+        shell: bash
+        run: npm test
+
+      - name: Production bundle
+        run: ./node_modules/.bin/vite build
