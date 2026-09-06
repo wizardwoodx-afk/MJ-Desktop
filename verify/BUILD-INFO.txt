@@ -1,0 +1,33 @@
+MJ 11.9.4 — offline verification pack provenance
+=================================================
+
+Toolchain
+  node          v22.23.2  (CI pin — Node 22 LTS line; Node 20 is EOL)
+                audited additionally under node v20.20.2 for 11.9.4(Major+):
+                41/41 offline, 42/42 live, tsc 0, vite build 0.
+  esbuild       0.25.12
+  MJ            11.9.4 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml / Cargo.lock / LICENSE)
+
+The pack
+  verify/suites/*.mjs   41 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness gate,
+                        which needs the dev toolchain and is therefore not packed)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that built it
+  verify/run.mjs        zero-dependency runner (node: builtins only)
+
+Gates run on this tree (fresh npm ci)
+  tsc --noEmit          exit 0
+  npm test              ALL PROBES SUMMARY: 42 passed, 0 failed.
+                        (42 probe suites; harnesses 270 · webSearch · teamPower
+                        incl. the autonomy settlement checks · offlinePack)
+  vite build            exit 0
+
+Offline gate
+  Command:     node verify/run.mjs
+  Result:      OFFLINE VERIFY SUMMARY: 41 passed, 0 failed., exit 0
+
+  This pack was rebuilt from the 11.9.4(Major+) source immediately before the
+  run above, and suite #42 (offlinePack) confirms every bundle is byte-identical
+  to a fresh rebuild AND that this file names the current bundle/suite counts —
+  BUILD-INFO drift is now a failing gate, not a review finding.
