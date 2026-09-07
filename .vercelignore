@@ -1,0 +1,13 @@
+# Web build needs only: package.json/lock, index.html, vite.config.ts, tsconfig.json,
+# src/, public/. Everything below is real product (offline pack, desktop shell, probes)
+# but irrelevant to the static SPA Vercel serves — excluded from CLI uploads only.
+src-tauri/
+vendor/
+verify/
+probe/
+docs/
+tools/
+scripts/
+MJ-Pitch-Deck.pptx
+11.10.1.zip
+*.zip
