@@ -1,0 +1,88 @@
+MJ 11.14.5 — offline verification pack provenance
+==================================================
+
+Release identity: MJ 11.14.5 — "the Focused Release" (problem-first:
+every shipped feature points at a named enterprise problem — verification,
+trust & privacy, feedback-driven self-improvement, adaptive capability
+adoption — mapped problem → feature → code → probe in docs/PROBLEM-FOCUS.md;
+home hero rewritten from implementation-speak to the problem; hygiene
+floor made mechanical by probe/codeHygiene.test.ts; packaged-desktop web
+evidence unblocked by the CSP provider allowlist; orphaned updater
+permission and a stale Cargo.lock version removed). Numbering note:
+11.14.4 was intentionally skipped — 11.14.5 ships directly after 11.14.3
+(the same pattern as 11.12.4 / 11.12.5).
+
+This document is regenerated FROM THIS TREE at certification time. It names no
+other source tree and no older release as the pack's origin: the bundles in
+verify/suites were built from the probe sources in this same checkout, and the
+counts below were read from this same certification run.
+
+Toolchain (certifying runtime)
+  node          v20.20.2  (every gate below executed under this runtime in the
+                           external certification sandbox: tsc, live suites,
+                           pack rebuild, offline gate, vite build)
+  esbuild       0.25.12
+  MJ            11.14.5 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml + Cargo.lock / LICENSE)
+
+Pack contents
+  verify/suites/*.mjs   69 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness
+                        gate, which runs live only)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that
+                        built it
+  verify/run.mjs        offline runner: no network, no installs, no MJ state
+
+Live certification (this tree)
+  npm test              ALL PROBES SUMMARY: 70 passed, 0 failed.
+                        (70 probe suites; includes codeHygiene 13/13 hygiene
+                        assertions, selfEvolve 52/52 causal experiment
+                        assertions, governanceAlign 31/31 envelope + principal
+                        + ledger-enforcement assertions, capabilityAlign 26/26
+                        capability-not-data + Privacy Guard + durability
+                        assertions, guardrailAlign 15/15 code-level guardrail
+                        assertions, twoNodeAlign 13/13 two-machine-proof
+                        assertions, patternAlign 9/9 pattern-provenance
+                        assertions, egressAlign 8/8 egress-authority +
+                        receipt assertions)
+
+Offline gate (this pack, this tree)
+  node verify/run.mjs   OFFLINE VERIFY SUMMARY: 69 passed, 0 failed., exit 0
+                        (node v20.20.2)
+
+vite build              clean, 0 errors.
+tsc --noEmit            0 errors.
+
+11.14.5 — what changed over 11.14.3
+-----------------------------------
+The 11.14.5 audit's verdict: the engineering claims held (zero type escapes,
+zero TODO markers, zero stray console output, zero Rust unsafe, zero npm
+vulnerabilities), so this release turns the remaining gaps into product:
+
+  1. PROBLEM-FIRST FOCUS. docs/PROBLEM-FOCUS.md is the reverse-index every
+     feature must answer to: problem → feature → code → probe, built on the
+     ipse-dixit market evidence (88% of agent pilots never reach production;
+     92% of CISOs lack agent-identity visibility; EU AI Act enforcement wave,
+     Aug 2026). The Home hero now states the problem MJ solves instead of
+     describing its internals; README and CHANGELOG carry the same framing.
+  2. PACKAGED-DESKTOP WEB EVIDENCE UNBLOCKED (bug). The production CSP's
+     connect-src allowed no https: origin, so the Researcher's documented
+     renderer-fetched providers (Wikipedia, HN Algolia, GitHub search, Brave)
+     were silently blocked in the packaged desktop build. The CSP now
+     allow-lists exactly those four hosts (plus the pre-existing local
+     services) — no blanket https:, no new exfiltration surface.
+  3. HYGIENE FLOOR MADE MECHANICAL. probe/codeHygiene.test.ts (13
+     assertions): CI now fails on any future as any / @ts-ignore /
+     @ts-nocheck, TODO/FIXME/HACK marker, stray console output, a second
+     eval surface, CSP regressions (unset, unsafe-eval/inline in
+     script-src, lost local-service or provider hosts), Rust unsafe, or an
+     orphaned permission grant.
+  4. CLEANUP. The updater:default capability was granted while the updater
+     plugin had no endpoints, public key or updater artifacts and zero
+     frontend callers — removed. src-tauri/Cargo.lock still named mj-desktop
+     11.10.5 while every other manifest said 11.14.3 — aligned to 11.14.5;
+     every manifest now agrees (versionDrift green).
+
+Counts unchanged from 11.14.3: probe suites 70 live / 69 offline bundles.
+Certified in an external sandbox under node v20.20.2 (tsc 0, 70/70 live,
+69/69 offline, vite 0); CI re-runs the gates on Node v22.23.2.

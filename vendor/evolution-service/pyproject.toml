@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mj-evolution"
+version = "0.4.0"
+description = "MJ self-evolution service — DSPy + GEPA-style reflective prompt/skill optimization (Hermes-inspired). Canonical transport is JSON-lines stdio; the FastAPI server is optional and unused by MJ."
+requires-python = ">=3.10"
+dependencies = [
+    # Pinned production optimization infrastructure (no floating versions).
+    "dspy==2.5.43",
+    "dspy-gepa==0.1.4",
+    "pydantic==2.9.2",
+    "httpx==0.27.2",
+]
+
+[project.optional-dependencies]
+server = [
+    "fastapi==0.115.5",
+    "uvicorn==0.32.1",
+]
+
+[tool.setuptools]
+packages = ["mj_evolution"]
+
+[project.scripts]
+mj-evolve = "mj_evolution.evolve:main"
+mj-evolve-server = "mj_evolution.server:main"
+mj-evolve-stdio = "mj_evolution.stdio_server:main"
