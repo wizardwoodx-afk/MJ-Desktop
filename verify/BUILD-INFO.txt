@@ -1,0 +1,70 @@
+MJ 11.13.0 — offline verification pack provenance
+==================================================
+
+Release identity: MJ 11.13.0 — "the Differentiators release"
+(budget authority: hard USD caps carried by authority envelopes and enforced
+by the executor; the proof dossier: one digest-stamped export of memory,
+beliefs, skills, the measured experiment and the ledger; proof-of-learning
+inside that dossier; Settings palette count corrected to fourteen).
+
+This document is regenerated FROM THIS TREE at certification time. It names no
+other source tree and no older release as the pack's origin: the bundles in
+verify/suites were built from the probe sources in this same checkout, and the
+counts below were read from this same certification run.
+
+Toolchain (certifying runtime)
+  node          v22.23.2  (Node 22 LTS "Jod" — every gate below executed under
+                           this runtime: npm install, tsc, live suites, pack
+                           rebuild, offline gate, vite build)
+  esbuild       0.25.12
+  MJ            11.13.0 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml / LICENSE)
+
+Pack contents
+  verify/suites/*.mjs   63 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness
+                        gate, which runs live only)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that
+                        built it
+  verify/run.mjs        offline runner: no network, no installs, no MJ state
+
+Live certification (this tree)
+  npm test              ALL PROBES SUMMARY: 64 passed, 0 failed.
+                        (64 probe suites; includes selfEvolve 52/52 causal
+                        experiment assertions, mosaicAlign 20/20 epistemic +
+                        packet assertions, varkhaAlign 17/17 governance
+                        assertions, governanceAlign 31/31 envelope + principal
+                        + ledger-enforcement assertions, differentiatorAlign
+                        16/16 budget-authority + proof-dossier assertions)
+
+Offline gate (this pack, this tree)
+  node verify/run.mjs   OFFLINE VERIFY SUMMARY: 63 passed, 0 failed., exit 0
+                        (node v22.23.2)
+
+vite build              clean, 0 errors.
+tsc --noEmit            0 errors.
+
+11.13.0 — what changed over 11.12.5
+-----------------------------------
+The Differentiators release (market research: coding agents compete on
+benchmarks and inline UX; none ship spend authority, digest-stamped proof
+export, or measured proof-of-learning):
+
+  1. Budget authority: the root envelope carries budgetUsd — signed into the
+     canonical digest, attenuated like every other power (children tighten,
+     never loosen), refused pre-flight when exhausted, and checked by the
+     executor against REAL charged spend after every wave; no further seat is
+     invoked once the cap is crossed. Runner UI exposes the cap (blank =
+     uncapped).
+  2. Proof dossier (src/mission/dossier.ts): one click on the Audit page
+     exports a digest-stamped JSON — memories, beliefs, skills, the measured
+     experiment, receipts, the live ledger — all derived at export time. Any
+     edit after export breaks the digest (verifyProofDossier).
+  3. Proof-of-learning inside the dossier: strategy versions, adopted score
+     and note, measured-run count.
+
+Plus the 9.8/10 review's nit: Settings says fourteen palettes. Numbering:
+11.12.4 was intentionally skipped (11.12.5 followed 11.12.3); this feature
+release opens 11.13.x.
+
+Counts: probe suites 63 -> 64; offline bundles 62 -> 63.
