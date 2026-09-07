@@ -1,0 +1,69 @@
+MJ 11.12.3 — offline verification pack provenance
+==================================================
+
+Release identity: MJ 11.12.3 — "governance becomes mechanical"
+(human-only root principals enforced, not documented; the ledger's write
+matrix is a gate every governed store write passes through; funding and
+product collateral removed — this tree is the build, not the pitch).
+
+This document is regenerated FROM THIS TREE at certification time. It names no
+other source tree and no older release as the pack's origin: the bundles in
+verify/suites were built from the probe sources in this same checkout, and the
+counts below were read from this same certification run.
+
+Toolchain (certifying runtime)
+  node          v22.23.2  (Node 22 LTS "Jod" — every gate below executed under
+                           this runtime: fresh npm install, tsc, live suites,
+                           pack rebuild, offline gate, vite build)
+  esbuild       0.25.12
+  MJ            11.12.3 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml / LICENSE)
+
+Pack contents
+  verify/suites/*.mjs   62 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness
+                        gate, which runs live only)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that
+                        built it
+  verify/run.mjs        offline runner: no network, no installs, no MJ state
+
+Live certification (this tree)
+  npm test              ALL PROBES SUMMARY: 63 passed, 0 failed.
+                        (63 probe suites; includes selfEvolve 52/52 causal
+                        experiment assertions, mosaicAlign 20/20 epistemic +
+                        packet assertions, varkhaAlign 17/17 governance
+                        assertions, governanceAlign 31/31 envelope + principal
+                        + ledger-enforcement assertions)
+
+Offline gate (this pack, this tree)
+  node verify/run.mjs   OFFLINE VERIFY SUMMARY: 62 passed, 0 failed., exit 0
+                        (node v22.23.2)
+
+vite build              clean, 0 errors.
+tsc --noEmit            0 errors.
+
+11.12.3 — what changed over 11.12.2
+-----------------------------------
+The 9.9/10 review named two remaining gaps; both are now mechanical:
+
+  1. Human principal ENFORCED. issueRootEnvelope refuses to sign for any
+     principal that does not match human:<id> (HUMAN_PRINCIPAL_RE).
+     attenuate refuses to delegate from a non-human root, and
+     verifyEnvelope flags hand-rolled envelopes. The claim "the root of
+     every chain is a human" is now a checkable invariant, pinned by probe.
+
+  2. Ledger matrix ENFORCED at the store boundary. enforceWrite is called by
+     saveLessons (SCAR/PRECEDENT per record), saveSkills (approved records
+     are RECOURSE), saveBeliefs (STANCE) and saveImprovement (RECOURSE)
+     BEFORE anything persists. Agents may propose freely; they mechanically
+     cannot install approved skills, adopt strategies, or write house rules.
+     "MJ knows the rule" and "every write passes the rule" are now the same
+     statement.
+
+  3. Focus. FUNDING.md, the pitch deck and the product brief are removed;
+     the investor-memo link is gone from the README. CHANGELOG now carries
+     every release from 11.11.1 to 11.12.3.
+
+No new subsystems. Counts unchanged: 63 live suites / 62 offline bundles.
+Next meaningful proof per the review: real developers, real harness teams,
+real evidence.
