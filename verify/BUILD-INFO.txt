@@ -1,0 +1,71 @@
+MJ 11.12.1 — offline verification pack provenance
+==================================================
+
+Release identity: MJ 11.12.1 — "MOSAIC alignment + Varkha extracts"
+(belief store, proof-carrying actions verified at the boundary, causal memory,
+framework-as-experiment-arm, SCAR-first retrieval, write asymmetry,
+attenuated seat envelopes, repetition escalation signals).
+
+This document is regenerated FROM THIS TREE at certification time. It names no
+other source tree and no older release as the pack's origin: the bundles in
+verify/suites were built from the probe sources in this same checkout, and the
+counts below were read from this same certification run.
+
+Toolchain (certifying runtime)
+  node          v22.23.2  (Node 22 LTS "Jod" — every gate below executed under
+                           this runtime: fresh npm ci, tsc, live suites, pack
+                           rebuild, offline gate, vite build)
+  esbuild       0.25.12
+  MJ            11.12.1 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml / LICENSE)
+
+Pack contents
+  verify/suites/*.mjs   61 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness
+                        gate, which runs live only)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that
+                        built it
+  verify/run.mjs        offline runner: no network, no installs, no MJ state
+
+Live certification (this tree)
+  npm test              ALL PROBES SUMMARY: 62 passed, 0 failed.
+                        (62 probe suites; includes selfEvolve 52/52 causal
+                        experiment assertions, mosaicAlign 20/20 epistemic +
+                        packet assertions, varkhaAlign 17/17 governance
+                        assertions)
+
+Offline gate (this pack, this tree)
+  node verify/run.mjs   OFFLINE VERIFY SUMMARY: 61 passed, 0 failed., exit 0
+                        (node v22.23.2)
+
+vite build              clean, 0 errors.
+tsc --noEmit            0 errors.
+
+11.12.1 — what changed over 11.12.0
+-----------------------------------
+Review fix 1 (9.75/10 review): the execution boundary is now fully
+cryptographic. TeamExecutor calls verifyActionPacket (digest + Ed25519)
+FIRST, aborts on any mismatch, and only then applies packetAllowsExecution.
+The runtime now proves "this exact signed packet says this action is
+allowed". Pinned by varkhaAlign §5 (source-order + tamper behaviour).
+
+Review fix 2: this file. BUILD-INFO is regenerated from the certifying tree
+and contains no stale provenance; historical notes live in docs/history/.
+
+Varkha extracts (docs/VARKHA-COMPAT.md), all small and probe-pinned:
+  - SCAR before PRECEDENT: lessonsForBriefing retrieves matching failure
+    lessons first, then the rest (optimism-bias correction).
+  - Write asymmetry: agent-inferred beliefs ABOUT THE USER start pending and
+    brief only after human approval; user-stated preferences are immediate.
+  - Attenuation: the report carries per-seat envelopes (role scope,
+    write:worktree / read:review-snapshot, spend:capped-by-ledger) derived
+    from the packet that permitted the run.
+  - Step-repetition signal: identical consecutive turn signatures per seat
+    (MAST's step repetition) surface as a SUGGEST-level Chamber signal, never
+    auto-acted, never fed to the strategy experiment.
+  - Ablation clarity: diffDims pins that every candidate — mosaic included —
+    differs from its parent by exactly one dimension: each experiment is a
+    paired toggle against the same parent configuration.
+
+No new subsystems were added, per the review's advice; the next meaningful
+proof is whether real developers get measurable value from 11.12.x.
