@@ -1,0 +1,77 @@
+MJ 11.14.3 — offline verification pack provenance
+==================================================
+
+Release identity: MJ 11.14.3 — "the Two-Machine Proof + durable privacy
+budget" (A owns the data, B requests a capability, the relay coordinates,
+A computes locally, only the bounded result crosses, the receipt proves
+what crossed — run as a probe-pinned protocol simulation; the privacy
+budget made durable, per-requester, and tamper-evident; the minimum-cohort
+guard applied to filtered subsets).
+
+This document is regenerated FROM THIS TREE at certification time. It names no
+other source tree and no older release as the pack's origin: the bundles in
+verify/suites were built from the probe sources in this same checkout, and the
+counts below were read from this same certification run.
+
+Toolchain (certifying runtime)
+  node          v22.23.2  (Node 22 LTS "Jod" — every gate below executed under
+                           this runtime: npm install, tsc, live suites, pack
+                           rebuild, offline gate, vite build)
+  esbuild       0.25.12
+  MJ            11.14.3 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml / LICENSE)
+
+Pack contents
+  verify/suites/*.mjs   68 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness
+                        gate, which runs live only)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that
+                        built it
+  verify/run.mjs        offline runner: no network, no installs, no MJ state
+
+Live certification (this tree)
+  npm test              ALL PROBES SUMMARY: 69 passed, 0 failed.
+                        (69 probe suites; includes selfEvolve 52/52 causal
+                        experiment assertions, mosaicAlign 20/20 epistemic +
+                        packet assertions, varkhaAlign 17/17 governance
+                        assertions, governanceAlign 31/31 envelope + principal
+                        + ledger-enforcement assertions, differentiatorAlign
+                        22/22 budget-authority + atomic-reservation + dossier
+                        assertions, guardrailAlign 15/15 code-level guardrail
+                        assertions, patternAlign 9/9 pattern-provenance
+                        assertions, egressAlign 8/8 egress-authority +
+                        receipt assertions, capabilityAlign 26/26
+                        capability-not-data + Privacy Guard + durability
+                        assertions, twoNodeAlign 13/13 two-machine-proof
+                        assertions)
+
+Offline gate (this pack, this tree)
+  node verify/run.mjs   OFFLINE VERIFY SUMMARY: 68 passed, 0 failed., exit 0
+                        (node v22.23.2)
+
+vite build              clean, 0 errors.
+tsc --noEmit            0 errors.
+
+11.14.3 — what changed over 11.14.2
+-----------------------------------
+The 11.14.2 review's final judgment, executed:
+
+  1. THE TWO-MACHINE PROOF (src/mission/twoNode.ts): A owns the data, B
+     requests a capability, the relay — a dumb pipe that logs everything it
+     sees — coordinates, A computes locally under the full Privacy Guard,
+     only the bounded result crosses through the Egress Gate with a
+     receipt. probe/twoNodeAlign.test.ts inspects the relay's own log and
+     proves it contains identity, request, authorization evidence and the
+     receipt — and ZERO raw record values. A doctored answer is caught at
+     B by digest mismatch. Honest scope: a protocol simulation, not real
+     transport — the protocol proven before the infrastructure exists.
+  2. DURABLE PRIVACY BUDGET: the in-memory budget (the review's biggest
+     named weakness — restart resets it) is now an append-only,
+     digest-chained, anchor-sealed ledger scoped to dataset + requester +
+     window, re-read on every request. Restart resets nothing; doctoring
+     or truncating the ledger refuses all computation, in words.
+  3. FILTERED COHORTS: capability requests take equality filters
+     (where: { region: "APAC" }); the minimum-cohort guard applies to the
+     FILTERED subset — where reconstruction attacks actually live.
+
+Counts: probe suites 68 -> 69; offline bundles 67 -> 68.
