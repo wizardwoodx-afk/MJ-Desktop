@@ -1,0 +1,144 @@
+MJ 11.12.0 — offline verification pack provenance
+==================================================
+
+Release identity: MJ 11.12.0 — "MOSAIC alignment" (belief, proof-carrying actions, causal memory, framework-as-experiment-arm).
+
+Toolchain (certifying runtime)
+  node          v22.23.2  (Node 22 LTS "Jod" — every gate below was executed
+                           under this runtime: fresh npm ci, tsc, live suites,
+                           pack rebuild, offline gate, vite build)
+  esbuild       0.25.12
+  MJ            11.12.0 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml / Cargo.lock / LICENSE)
+
+Honest scope
+  Rust/Tauri shell compilation was NOT re-run in the certifying environment
+  (no cargo toolchain there). The typed TS↔Rust command boundary is covered
+  by the probe suites (controlPlane) and the version manifests are pinned by
+  versionDrift; the Rust sources themselves are unchanged since 11.9.4.
+
+The pack
+  verify/suites/*.mjs   60 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness gate,
+                        which needs the dev toolchain and is therefore not packed)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that built it
+  verify/run.mjs        zero-dependency runner (node: builtins only)
+
+Gates run on this tree (fresh npm ci, Node v22.23.2)
+  tsc --noEmit          exit 0
+  npm test              ALL PROBES SUMMARY: 61 passed, 0 failed.
+                        (61 probe suites; harnesses 270 · webSearch · teamPower ·
+                        receipts · licensing · preflight · checkpoints · palette · layout ·
+                        verifyGate · roleBoard · receiptVault · fleet · mergeGate ·
+                        signing · mergeExecutor · evidencePack ·
+                        provenance · aibom · retention ·
+                        NEW 11.11: selfEvolve)
+  vite build            exit 0
+
+Offline gate
+  Command:     node verify/run.mjs
+  Result:      OFFLINE VERIFY SUMMARY: 60 passed, 0 failed., exit 0 (node v22.23.2)
+
+  This pack was rebuilt from the 11.11.0 source under Node 22 immediately before
+  the run above, and the offlinePack suite confirms every bundle is
+  byte-identical to a fresh rebuild AND that this file names the current
+  bundle/suite counts — BUILD-INFO drift is now a failing gate, not a review
+  finding.
+
+11.10.5 — what the three new suites pin (Verified AI Delivery V1)
+  #57 provenance     commit-bound AI-authorship statements on a REAL git merge: the
+                     statement's subject digest IS the real merge-commit sha; materials
+                     carry the writer harness + the deterministic identity digest
+                     sha256(seatId|role|harness); the Ed25519 signature verifies and a
+                     laundered subject is rejected; a simulated/refused merge yields NO
+                     statement (provenance exists only for what happened).
+  #58 aibom          the AI Bill of Materials is measurement, not self-report: entries
+                     from receipts with roles/missions/seat identities; approval status
+                     is the user's OWN Role Board declaration (owned → approved, else
+                     not-declared); model versions honestly "not measured"; empty vault
+                     → empty inventory; Markdown renders a paste-ready audit table.
+  #59 retention      the deployer retention floor (Art. 26(6)-shaped): defaults to 6
+                     months, only declared options accepted, satisfied-only-when-elapsed
+                     semantics; the evidence pack names the floor and carries the AIBOM +
+                     provenance statements + the new SOX 404 / NIST 800-218A mappings.
+  evidencePack probe extended: pack assembly now passes the Role Board ownership list.
+
+11.10.5(r1) — same version, re-cut after independent review (no feature changes)
+  Two enforcement-quality fixes from the 9.9/10 review:
+  1. probe/reviewVisibility.test.ts is now HERMETIC: the base branch is read from the
+     repo instead of hardcoded "master" (git init's default differs across reviewer
+     environments — the exact fragility that made this path time out twice in
+     independent runs), and every git call sets GIT_TERMINAL_PROMPT=0 + empty
+     GIT_TEMPLATE_DIR so nothing can prompt or inject hooks. Verified 36/36 under BOTH
+     init.defaultBranch=master and init.defaultBranch=main.
+  2. The evidence-pack disclaimer now states the review's caveats verbatim: MJ is not
+     "EU AI Act compliant" and is not a compliance product (it SUPPORTS compliance
+     work; applicability depends on system and use case), and the provenance statements
+     are MJ-specific provenance shaped on in-toto conventions — NOT SLSA certification.
+  Gates re-run for the re-cut under Node v22.23.2: tsc 0, 59/59 live, 58/58 offline,
+  vite build 0, archive re-verified from the extracted zip.
+
+== 11.10.6 (2026-09-06) — Proof-of-Work Asset Release ==
+- media/ asset pack (real 2x screenshots + index); brief PDF and demo ship separately.
+- Gates under Node v22.23.2: tsc 0; 59/59 live; 58/58 offline; vite clean.
+
+== 11.10.7 (2026-09-06) — CLARITY redesign ==
+- UI/UX: labelled grouped sidebar replaces the icon rail; library drawer close-bug fixed;
+  base type 14px; daylight palette; color-scheme now theme-aware.
+- Manifests in lockstep at 11.10.7; theme probe 13->14 deliberately.
+- Gates under Node v22.23.2: tsc 0; 59/59 live; 58/58 offline; vite clean.
+
+== 11.11.0 (2026-09-06) — SELF-EVOLVING ==
+- Lessons memory, strategy self-improvement loop, skill evolution, learning receipts;
+  settlement wired into the Teams runner; Evolve page card; library learned-skills.
+- probe/selfEvolve.test.ts pins the spine (suite #60).
+- Gates under Node v22.23.2: tsc 0; 60/60 live; 59/59 offline; vite clean.
+
+11.11.1 — the strategy loop becomes a genuine online experiment
+---------------------------------------------------------------
+The 11.11.0 review (9.7/10) caught that candidates were scored on runs executed
+under the parent's parameters and that an unmeasured baseline lost to any real
+candidate score. 11.11.1 rebuilds the loop as a causal chain:
+
+  - nextRunStrategy() assigns which strategy version the next run executes BEFORE
+    it starts (balanced alternation; ties to the candidate).
+  - teamExecutor executes that version's parameters for real (serialExec flattens
+    waves, reviewDepth adds a second review pass instruction, checkBias sets the
+    web-evidence slice, lessonBudget caps ORG_LESSONS) and the report records the
+    governing strategy id.
+  - settlement appends each run under that id; each arm is scored ONLY on its own
+    attributed runs (armScores); the baseline is continuously measured, never null.
+  - MIN_TRIALS = 3 measured runs per arm before any verdict; adoption needs a
+    strict margin > 0.05; TRIAL_CAP = 8 retires inconclusive; unattributed
+    (pre-11.11.1) runs score for no arm; simulated runs still teach nothing.
+  - skill evolution described accurately: procedural knowledge (node defs +
+    briefing lines), human-approved, not new executable tools.
+  - "AGI-grade autonomy" label retired until justified; the claim is the narrower,
+    stronger one: remembers, experiments, keeps only measured improvement.
+
+probe/selfEvolve.test.ts grew 34 -> 51 assertions incl. the causal chain:
+candidate selected -> actually executed -> own results recorded -> evaluated on
+those results -> adopted/retired with the numbers.
+
+Gates re-run for 11.11.1 under Node v22.23.2: tsc 0, 60/60 live, 59/59 offline,
+vite clean.
+
+11.12.0 — MOSAIC-Ω alignment extract, shipped as a measured experiment arm
+--------------------------------------------------------------------------
+- belief.ts: world-belief store (known/probably/uncertain/contradicted/unknown);
+  external claims cap at "probably"; contradictions surfaced; predictions
+  labelled NOT evidence; beliefs never enter lessons/scores/receipt facts.
+- actionPacket.ts: signed pre-action packets (intent, belief digest, plan step,
+  prediction, risk, permission, rollback, verification); executor aborts on
+  refused or irreversible-without-allowed BEFORE anything runs or spends.
+- lessons.ts: causal edges (decision/action/observation/outcome) +
+  retrieveCausal "what happened when we tried X" with zero similarity bleed.
+- selfImprove.ts: fifth strategy dimension `mosaic` — the extract rides only on
+  runs whose governing strategy has it on, so the 11.11.1 online experiment
+  measures the framework on attributed runs and adopts/retires it with numbers.
+- probe/mosaicAlign.test.ts: 20 assertions pinning R1 (predictions are not
+  evidence) and R2 (proof-carrying actions) plus causal retrieval and the
+  mosaic rotation.
+
+Gates re-run for 11.12.0 under Node v22.23.2: tsc 0, 61/61 live, 60/60 offline,
+vite clean.
