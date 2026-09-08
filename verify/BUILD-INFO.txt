@@ -1,0 +1,83 @@
+MJ 11.14.7 — offline verification pack provenance
+==================================================
+
+Release identity: MJ 11.14.7 — "the Arena Gate" (a hostile battery gates
+real runs: runGovernanceArena attacks MJ's own custody / capability /
+egress / verifyGate / ledger modules with 11 adversarial scenarios —
+self-grading, agent root, scope growth, expiry, revocation, budget caps
+and races, egress outside scope, post-signing tamper, agent DOCTRINE
+writes, off-policy datasets — and REFUSES the mission in words if any
+boundary falls; guardrails-as-code become guardrails-as-executable-battery;
+the report's canonical sha256 digest is attachable to receipts). Numbering
+note: 11.14.6 was intentionally skipped — 11.14.7 ships directly after
+11.14.5 (the established skip pattern).
+
+This document is regenerated FROM THIS TREE at certification time. It names no
+other source tree and no older release as the pack's origin: the bundles in
+verify/suites were built from the probe sources in this same checkout, and the
+counts below were read from this same certification run.
+
+Toolchain (certifying runtime)
+  node          v22.23.2  (Node 22 LTS "Jod" — the same runtime CI certifies
+                           on; every gate below executed under this runtime:
+                           npm ci, tsc, live suites, pack rebuild, offline
+                           gate, vite build)
+  esbuild       0.25.12
+  MJ            11.14.7 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml + Cargo.lock / LICENSE)
+
+Pack contents
+  verify/suites/*.mjs   70 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness
+                        gate, which runs live only)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that
+                        built it
+  verify/run.mjs        offline runner: no network, no installs, no MJ state
+
+Live certification (this tree)
+  npm test              ALL PROBES SUMMARY: 71 passed, 0 failed.
+                        (71 probe suites; includes arenaGate 22/22
+                        hostile-scenario assertions, codeHygiene 13/13
+                        hygiene assertions, selfEvolve 52/52 causal
+                        experiment assertions, governanceAlign 31/31
+                        envelope + principal + ledger-enforcement
+                        assertions, capabilityAlign 26/26
+                        capability-not-data + Privacy Guard + durability
+                        assertions, guardrailAlign 15/15 code-level
+                        guardrail assertions, twoNodeAlign 13/13
+                        two-machine-proof assertions, patternAlign 9/9
+                        pattern-provenance assertions, egressAlign 8/8
+                        egress-authority + receipt assertions)
+
+Offline gate (this pack, this tree)
+  node verify/run.mjs   OFFLINE VERIFY SUMMARY: 70 passed, 0 failed., exit 0
+                        (node v22.23.2)
+
+vite build              clean, 0 errors.
+tsc --noEmit            0 errors.
+
+11.14.7 — what changed over 11.14.5
+-----------------------------------
+  1. THE GOVERNANCE ARENA GATE (src/mission/arenaGate.ts). 2026 enterprise
+     practice made adversarial batteries a deployment gate; MJ applies the
+     same discipline to its OWN governance machine. Eleven deterministic,
+     offline scenarios execute the real modules with hostile intent and
+     require every refusal IN WORDS: self-grading by the writer
+     (evaluateVerifyGate, STRICT), an agent obtaining a root envelope
+     (issueRootEnvelope), delegated scope widening (attenuate), lapsed and
+     revoked envelopes (checkEnvelope), hard USD caps and atomic concurrent
+     reservations (budgetCheck, BudgetGate), egress outside the envelope's
+     scope (requestEgress), post-signing tamper (verifyEnvelope), an agent
+     writing DOCTRINE (enforceWrite), and aggregates over datasets the
+     machine does not expose (executeCapability). Any breach -> gate
+     REFUSED, naming the scenario; a canonical sha256 digest rides the
+     report for receipt attachment. probe/arenaGate.test.ts (22) pins every
+     scenario defended, refusals named, and digest stability.
+  2. HONEST SCOPE. The battery attacks MJ's mechanical policy boundaries —
+     the surfaces where MJ promises hard guarantees. Fuzzing prompts through
+     live LLM harnesses and UI surfacing of the gate are the documented next
+     layer (docs/DIFFERENTIATOR-ROADMAP.md), not part of this release.
+
+Counts: probe suites 70 -> 71; offline bundles 69 -> 70.
+Re-certified under node v22.23.2 (tsc 0, 71/71 live incl. offlinePack
+freshness, 70/70 offline, vite 0).
