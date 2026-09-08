@@ -1,0 +1,89 @@
+MJ 11.14.8 — offline verification pack provenance
+==================================================
+
+Release identity: MJ 11.14.8 — "the Arena Gate WIRED" (the 11.14.7 review's
+one gap closed: runGovernanceArena now runs INSIDE executeTeam BEFORE any
+seat is invoked — a REFUSED gate aborts the mission in words, nothing
+executed, nothing spent; the PASS/REFUSED stamp + canonical sha256 digest
+ride TeamRunReport.arena AND the sealed mission proof receipt as an
+`arena.gate` chain event; the arena's exception classifier now accepts only
+MJ's typed module-prefixed refusals; the canonical digest covers
+id+title+outcome, with refusal notes kept as human-readable evidence —
+raw notes embed a process-global sequence counter and would break receipt
+reproducibility, stated in code).
+
+This document is regenerated FROM THIS TREE at certification time. It names no
+other source tree and no older release as the pack's origin: the bundles in
+verify/suites were built from the probe sources in this same checkout, and the
+counts below were read from this same certification run.
+
+Toolchain (certifying runtime)
+  node          v22.23.2  (Node 22 LTS "Jod" — the same runtime CI certifies
+                           on; every gate below executed under this runtime:
+                           npm ci, tsc, live suites, pack rebuild, offline
+                           gate, vite build)
+  esbuild       0.25.12
+  MJ            11.14.8 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml + Cargo.lock / LICENSE)
+
+Pack contents
+  verify/suites/*.mjs   71 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness
+                        gate, which runs live only)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that
+                        built it
+  verify/run.mjs        offline runner: no network, no installs, no MJ state
+
+Live certification (this tree)
+  npm test              ALL PROBES SUMMARY: 72 passed, 0 failed.
+                        (72 probe suites; includes arenaWired 15/15 mission-
+                        path wiring assertions, arenaGate 22/22 hostile-
+                        scenario assertions, codeHygiene 13/13 hygiene
+                        assertions, selfEvolve 52/52 causal experiment
+                        assertions, governanceAlign 31/31 envelope +
+                        principal + ledger-enforcement assertions,
+                        capabilityAlign 26/26 capability-not-data +
+                        Privacy Guard + durability assertions,
+                        guardrailAlign 15/15 code-level guardrail assertions,
+                        twoNodeAlign 13/13 two-machine-proof assertions,
+                        patternAlign 9/9 pattern-provenance assertions,
+                        egressAlign 8/8 egress-authority + receipt
+                        assertions)
+
+Offline gate (this pack, this tree)
+  node verify/run.mjs   OFFLINE VERIFY SUMMARY: 71 passed, 0 failed., exit 0
+                        (node v22.23.2)
+
+vite build              clean, 0 errors.
+tsc --noEmit            0 errors.
+
+11.14.8 — what changed over 11.14.7
+-----------------------------------
+  1. THE ARENA GATE IS WIRED INTO MISSION ADMISSION (src/mission/
+     teamExecutor.ts). executeTeam now invokes the governance arena after
+     the custody / budget / action-packet admissions and before any seat:
+     gate REFUSED -> mission aborted in words, nothing executed, nothing
+     spent. TeamRunReport.arena stamps gate + canonical digest + summary +
+     total/defended/breached on every return path; TeamRunnerDeps.arenaRunner
+     is the deterministic injection seam.
+  2. THE DIGEST RIDES THE REAL RECEIPT (src/mission/receipts.ts +
+     autonomyRuntime.ts + TeamsPage). AutonomyRunSummary.arenaGate ->
+     buildProofReceipt emits an arena.gate event (gate, digest, defended,
+     total, summary) into the sealed SHA-256 chain. Summaries without the
+     stamp keep the pre-11.14.8 event shape exactly.
+  3. REVIEW NITS CLOSED (src/mission/arenaGate.ts). The exception
+     classifier accepts only typed module-prefixed refusals
+     (custody:/ledger:/capability:/egress: + refusal language). Canonical
+     digest = sha256 over [id, title, outcome]; refusal notes stay in the
+     report/event as human evidence (raw notes embed a process-global
+     sequence counter and would break digest reproducibility — stated in
+     code).
+  4. NEW PROBE arenaWired (15 assertions): mission path carries the PASS
+     stamp with the same digest as the standalone battery at one fixed
+     clock; a REFUSED battery aborts before dispatch (seats 0, spent 0);
+     the sealed receipt chain carries arena.gate with the mission digest;
+     legacy summaries keep their old receipt shape.
+
+Counts: probe suites 71 -> 72; offline bundles 70 -> 71.
+Re-certified under node v22.23.2 (tsc 0, 72/72 live incl. offlinePack
+freshness, 71/71 offline, vite 0).

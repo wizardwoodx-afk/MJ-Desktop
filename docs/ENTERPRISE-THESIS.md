@@ -1,0 +1,224 @@
+# Enterprise Thesis — The Cloud Coordinates. The Data Stays Home.
+
+*MJ platform direction, 2026. This document is the validation artifact: what we
+believe, why now, what we have already proven, and what must be validated
+before heavy infrastructure is built.*
+
+---
+
+## One line
+
+**A cloud control plane for companies whose data lives across thousands of
+employee devices — employees collaborate and run approved operations across
+one another's data without centralizing anything into the cloud.**
+
+Shorter: **the cloud coordinates the company; the data stays with the people
+who own it.**
+
+## The problem, as companies feel it today
+
+Corporate data no longer lives in one warehouse. It lives on laptops —
+distributed employees, different locations, different networks — and every
+current collaboration model forces a bad trade:
+
+- **Upload everything** (cloud warehouse / SaaS storage): centralized breach
+  surface, sovereignty and residency violations, and a direct collision with
+  GDPR Article 25 *data minimization* — you copied data you never needed to.
+- **Don't collaborate**: employees email attachments, use personal tools,
+  and the shadow-data problem grows.
+- **Clean rooms** (AWS/Snowflake/Databricks/InfoSum/Decentriq): real and
+  funded, but shaped for *org-to-org analytics over warehouses* — not for
+  Employee 1 needing one file from Employee 2's laptop.
+
+The mental model everyone already understands — tightened: this is not
+"WhatsApp for enterprise files." It is **WhatsApp's selective-sharing model
+applied to enterprise computation**: you don't expose the whole gallery just
+to send one photo, and a colleague doesn't get the whole dataset just to
+receive one approved answer from it.
+
+## The idea
+
+**Control plane / data plane separation** — the pattern Tailscale proved at
+network level and NIST Zero Trust prescribes for access — applied to
+corporate collaboration over endpoint-resident data:
+
+```text
+                    CLOUD CONTROL PLANE
+        Identity | Policy | Discovery | Routing
+        Sessions | Permissions | Audit receipts
+                         |
+          -------------------------------------
+          |                                   |
+     Employee 1                          Employee 2
+      laptop                                laptop
+   Company data                          Company data
+   Local compute                         Local compute
+          \                                   /
+           \________ encrypted channel ______/
+```
+
+The cloud knows **who, which device, which resource, what operation, whether
+it was allowed, when, and what evidence was produced.** It never becomes the
+warehouse.
+
+### The upgrade that makes it a company: capability, not data
+
+The stronger form is not "share a file." It is:
+
+> **Expose a capability without exposing the underlying data.**
+
+Employee 2 does not ask for `revenue.xlsx`. Employee 2 asks:
+*"run the approved 'revenue by region' calculation on your data."* The
+computation happens **where the data lives**; only the permitted result
+crosses the boundary — with a receipt.
+
+## What is NOT novel — and what is ours
+
+Honesty first: "data stays on the device while the cloud coordinates" is an
+established pattern, and adjacent products exist:
+
+- **Tailscale** — cloud control plane, endpoint data plane (network level).
+- **Aranya** — decentralized zero-trust access with endpoint-resident policy.
+- **Volt4** — peer-to-peer fabric for files, structured data, analytics and
+  commands with policy-controlled access.
+- **Duality / InfoSum / Aggregion** — compute over data without moving raw
+  rows (org-to-org, warehouse-shaped).
+- **Olympus** — AI against data where it already lives.
+
+So "data stays at endpoints" cannot be the moat, and this thesis does not
+claim it is. The claim is the COMBINATION nobody ships together:
+
+> **capability-over-data requests + endpoint policy enforcement +
+> cryptographic receipts for every crossing + an agent runtime that can
+> perform the approved operation under budget authority.**
+
+Each piece exists somewhere; the enforced, audited, agent-executed
+*combination* on employee endpoints is the bet.
+
+## The hardest problem, faced honestly: aggregates can leak
+
+Aggregate-only is necessary, not sufficient: narrow or repeated aggregate
+queries can reconstruct rows ("average salary of the 3 people in legal").
+The production system must eventually carry: dataset- and field-level
+policy, minimum cohort sizes, query rate limits, result bounding, privacy
+budgets, and differential-privacy-grade protection for sensitive classes.
+
+The seed enforces the first five mechanically, today:
+
+- **MJ 11.14.2 — the Privacy Guard:** field policy, minimum cohort, hard
+  per-window query budget, bounded precision — each refusal in words, each
+  pinned by probe.
+- **MJ 11.14.3 — the two weaknesses the review named, closed:**
+  (1) the query budget is now DURABLE — an append-only, digest-chained,
+  anchor-sealed ledger scoped to dataset + requester + window, re-read on
+  every request. Restarting the endpoint resets nothing; doctoring the
+  ledger refuses everything. (2) capability requests now take filters, and
+  the minimum-cohort guard applies to the FILTERED subset — "average salary
+  for APAC" is refused at cohort 2 even though the whole dataset passes.
+
+Still honest about what remains: production needs write-locking and real
+tenant partitioning around that ledger, and differential-privacy-grade
+protection for sensitive classes. DP is the enterprise tier, not the MVP.
+
+## Honest engineering choice: three models
+
+1. **Data transfer** — laptop → cloud processes it. The cloud sees the data.
+   *(the model we reject)*
+2. **Endpoint processing** — the laptop computes; only the result travels.
+   The cloud never sees underlying data. *(our model, now)*
+3. **Privacy-preserving remote computation** — confidential computing / MPC /
+   homomorphic encryption. *(a later enterprise tier, not the MVP)*
+
+Model 2 is the defensible start: it requires no new physics, works with any
+data shape, and its claims are auditable with ordinary tooling.
+
+## The moat candidate: zero trust you can *audit*, not just enforce
+
+Meshes connect devices. Zero-trust systems make policy decisions. Almost
+nobody produces **signed, verifiable evidence of every operation that crossed
+a boundary** — who asked, what was permitted, what exactly left, attested
+cryptographically, recomputable by an auditor who does not trust us.
+
+That evidence layer is the differentiator, and it is the part we have already
+built and probe-pinned inside MJ:
+
+| Platform requirement | Already proven in MJ |
+|---|---|
+| Human authority for any departure | Authority Envelope: human-only principals, scope, expiry, revocation (custody, 31 probe assertions) |
+| Spend/egress limits that hold under concurrency | BudgetGate atomic reservations; Egress Gate + digest-chained receipt ledger (66 live suites) |
+| "Rules enforced in code, not prompts" | Guardrail Manifest — twelve pinned code checks |
+| Proof-of-work export | Proof Dossier: digest-stamped evidence file |
+| Agents can propose, only humans install | Ledger write-permission matrix |
+
+MJ is the **flagship endpoint workload** of this platform: the runtime that
+demonstrates the platform's guarantees on a single machine, before any cloud
+exists.
+
+## The two-machine proof — run (MJ 11.14.3)
+
+The 11.14.2 review said the next real step was not another feature but this
+experiment: A owns the data, B requests a capability, the relay coordinates,
+A computes locally, only the permitted result crosses, policy and budget
+apply, the receipt proves what crossed. It ran — as an honest in-repo
+protocol simulation (`src/mission/twoNode.ts`, probe-pinned 13/13), with the
+relay as a dumb pipe that logs everything it sees. What the probe proved:
+
+1. B's answer is computed at A and crosses bounded (545.3 over 5 records),
+   digest-verified at B, receipt chained in A's egress ledger.
+2. The relay's own log contains identities, the request, authorization
+   evidence and the receipt — and ZERO raw record values.
+3. Refusals cross too, in words: off-whitelist op, off-policy field,
+   narrow filtered cohort.
+4. The privacy budget holds across the wire, survives A's restart, and
+   resets honestly when the window passes.
+5. A relay that doctors the answer is caught at B by digest mismatch.
+
+What this is NOT: real transport, real machines, real encryption, real
+multi-tenancy. It is the protocol proven before the infrastructure exists —
+exactly the order this thesis argues for.
+
+## Roadmap (deliberately staged)
+
+- **Phase 0 — now (desktop seed):** the Egress Gate and capability requests on
+  one machine. Every departure needs authority + receipt. *Shipped: MJ 11.14.*
+- **Phase 1 — two-node proof:** protocol proven in-repo (MJ 11.14.3);
+  next: the same messages over an encrypted laptop↔laptop channel, where
+  the relay sees coordination and receipts, never payloads.
+- **Phase 2 — control plane:** identity, enrollment, policy, discovery,
+  session routing, audit rollup.
+- **Phase 3 — org console + compliance exports:** the CISO view; GDPR
+  minimization evidence as a product surface.
+
+## What must be validated before cloud infrastructure is built
+
+1. **Three design-partner conversations** with platform/CISO buyers: does
+   "capability, not data" match a budgeted pain?
+2. **Which operations** do real teams actually request across machines?
+   (the whitelist is the product)
+3. **Identity substrate decision:** roll our own enrollment vs ride an
+   existing IdP (SSO/SAML/OIDC) — enterprises will demand the latter.
+4. **Willingness to run an agent runtime (MJ) as the endpoint workload** vs
+   plain file/operation sharing only.
+
+## What we are NOT claiming
+
+- The control-plane/data-plane pattern is not novel; Tailscale and zero-trust
+  architectures established it. Our bet is the *combination*: endpoint-resident
+  corporate data + capability sharing + cryptographic receipts + an agent
+  runtime that proves what it did.
+- Model 2 does not give formal cryptographic privacy guarantees (that is
+  model 3's job). It gives *data minimization by architecture*, which is what
+  the regulation and the CISO actually ask for first.
+- An egress gate alone is not a company. The gate is the seed; the thesis is
+  the company. Validation decides which one we are building.
+
+---
+
+*Provenance note: market statements above cite 2026 research — clean-room
+platforms (AWS/Snowflake/Salesforce/InfoSum/Decentriq), Tailscale
+control/data plane docs, NIST SP 800-207 zero trust, GDPR Art. 25 data
+minimization guidance, and the adjacent products named in "What is NOT
+novel" (tailscale.com/docs/concepts/control-data-planes,
+aranya-project.github.io, volt4.ai, dualitytech.com, olympus.io). Figures
+quoted elsewhere (clean-room costs, vendor claims) are vendor-reported and
+unaudited.*
