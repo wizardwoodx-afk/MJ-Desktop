@@ -1,0 +1,86 @@
+MJ 13.0.1 — offline verification pack provenance
+===================================================
+
+Release identity: MJ 13.0.1 — "the INK retune: unknown minerals on black"
+(the owner-review pass on 13.0.0; engine logic untouched). The owner
+judged the 13.0.0 palette "common" (warm-black + gold reads as the default
+premium template) and the surface still instrument-cramped. 13.0.1:
+
+1. PALETTE ON TRUE BLACK. OBSIDIAN six -> INK six: ink (black #000000 +
+   smoked apricot #C98A62, default), pitch (OLED black + dusty rose),
+   slag (graphite + whetstone steel), fern (black-green + seedpod olive),
+   ivory (paper + copper), travertine (stone + bronze-olive). No gold, no
+   brass, no violet, no cyan, no neon. Every secondary token derived from
+   five base hues with color-mix; old prefs (incl. all OBSIDIAN-era names)
+   migrate deliberately via THEME_ALIASES.
+2. PREMIUM FRAME (research-driven: whitespace + type hierarchy are the
+   largest premium signals, not paint). Muted copy reads in Inter 12.5
+   instead of 9-11px mono; cards 22x24 padding at 14px radius; page
+   gutters 34x38; buttons/inputs 8px radius, accent focus rings, quiet
+   press state; nav rail reads Inter 12.5 with active accent tick; the
+   Settings Appearance card is a real picker - each theme option is a row
+   with a live two-tone ground+signal swatch, name and descriptor.
+3. ICONS - the clean cut. FOUNDRY facet chips removed; all 43 glyphs are a
+   uniform 1.6-weight stroke, round caps and joins, no fills.
+4. NODE ANATOMY V2. Cards carry live state on the frame: running/error/done
+   tint the border and icon tile (running agent spine pulses, killed by
+   prefers-reduced-motion); ports straddle the card edge so wires visibly
+   land on their anchors; connected ports fill with the signal + soft ring;
+   valid targets pulse; purpose clamps to two lines; meta footer is one
+   quiet dot-separated line.
+
+Toolchain (this pack)
+  node          22.23.2 (the certifying standalone, /tmp/node-v22.23.2)
+  npm test      75 probe suites
+  build         vite production build (the web bundle gate)
+  esbuild       0.25.12
+  MJ            13.0.1 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml + Cargo.lock / LICENSE)
+
+Pack contents
+  verify/suites/*.mjs   74 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness
+                        gate, which runs live only)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that
+                        built it
+  verify/run.mjs        offline runner: no network, no installs, no MJ state
+
+Live certification (this tree)
+  npm test              ALL PROBES SUMMARY: 75 passed, 0 failed.
+                        (75 probe suites; includes versionDrift 40/40,
+                        navAlign 42/42 (five doors; page imports exactly
+                        ONE mission module), knowledgeSkills 56/56, theme
+                        64/64 (INK contract: THEME_IDS read from store.ts,
+                        ink-set hue pins, true-black proof, no-gold ban,
+                        alias migration incl. OBSIDIAN-era names, swatch
+                        pins), meridian 42/42 (clean-cut icon grammar,
+                        node anatomy v2 pins), missionLoop 80/80,
+                        teamEvolution 48/48, arenaWired 15/15, arenaGate
+                        22/22, codeHygiene 13/13, selfEvolve 52/52,
+                        governanceAlign 31/31, capabilityAlign 26/26,
+                        guardrailAlign 15/15, twoNodeAlign 13/13,
+                        patternAlign 9/9, egressAlign 8/8, harnesses
+                        270/270)
+
+Offline gate (this pack, this tree)
+  node verify/run.mjs   OFFLINE VERIFY SUMMARY: 74 passed, 0 failed., exit 0
+                        (node v22.23.2)
+
+vite build              clean, 0 errors.
+tsc --noEmit            0 errors.
+
+13.0.1 — what changed over 13.0.0
+---------------------------------
+  1. INK PALETTE: true-black grounds + rare mineral signals (smoked
+     apricot / dusty rose / whetstone / seedpod olive / copper /
+     bronze-olive); gold family removed.
+  2. PREMIUM FRAME: Inter body copy, airy cards/gutters, refined controls,
+     Inter rail with active tick, Settings theme picker with live
+     two-tone previews.
+  3. ICONS: uniform 1.6 clean cut, no facet chips, no fills.
+  4. NODES v2: state on the frame (border + tile + spine pulse),
+     edge-straddling ports, filled rings when connected.
+
+Counts: 75 live / 74 offline (unchanged); theme 64/64, meridian 42/42.
+Certified under node v22.23.2 (tsc 0, 75/75 live incl. offlinePack
+freshness, 74/74 offline, vite 0).
