@@ -1,0 +1,92 @@
+MJ 11.14.11 — offline verification pack provenance
+===================================================
+
+Release identity: MJ 11.14.11 — "the Provenance Cleanup + true race test"
+(the 11.14.8 review's two open nits, closed. (1) Release hygiene: the
+metadata said 11.14.8 while BUILD-NATIVE.md shipped MJ_8.0.0 installer
+filenames and DESKTOP-NATIVE.md / INSTALL-ON-LAPTOP.md opened at "MJ
+11.14.1" with MJ_11.0.0 installers — invisible because versionDrift only
+compared the MJ X.Y short form on title lines and never scanned bodies.
+All operational docs (BUILD-NATIVE, DESKTOP-NATIVE, INSTALL-ON-LAPTOP,
+DEPLOY-VERCEL, README, PLATFORM-LIMITS) now name exactly the current
+release, and probe/versionDrift.test.ts is extended (26 -> 40 assertions):
+title checks are PATCH-aware (MJ X.Y.Z must equal the exact release) and
+every operational doc's BODY is scanned for any MJ X.Y.Z / MJ_X.Y.Z token
+naming a different release — history-file pointers masked, everything else
+must be current. (2) The arena's budget-race scenario is now genuinely
+concurrent: 50 rounds of two async callers via Promise.all, each reaching
+reserve() after a real event-loop yield; exactly one admission per round,
+the cap never crossed.)
+
+This document is regenerated FROM THIS TREE at certification time. It names no
+other source tree and no older release as the pack's origin: the bundles in
+verify/suites were built from the probe sources in this same checkout, and the
+counts below were read from this same certification run.
+
+Toolchain (certifying runtime)
+  node          v22.23.2  (Node 22 LTS "Jod" — the same runtime CI certifies
+                           on; every gate below executed under this runtime:
+                           npm ci, tsc, live suites, pack rebuild, offline
+                           gate, vite build)
+  esbuild       0.25.12
+  MJ            11.14.11 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml + Cargo.lock / LICENSE)
+
+Pack contents
+  verify/suites/*.mjs   72 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness
+                        gate, which runs live only)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that
+                        built it
+  verify/run.mjs        offline runner: no network, no installs, no MJ state
+
+Live certification (this tree)
+  npm test              ALL PROBES SUMMARY: 73 passed, 0 failed.
+                        (73 probe suites; includes versionDrift 40/40
+                        manifest + document-drift assertions (patch-aware
+                        titles, body scans), navAlign 30/30 consolidation
+                        assertions, arenaWired 15/15 mission-path wiring
+                        assertions, arenaGate 22/22 hostile-scenario
+                        assertions incl. the concurrent budget race,
+                        codeHygiene 13/13 hygiene assertions, selfEvolve
+                        52/52 causal experiment assertions, governanceAlign
+                        31/31 envelope + principal + ledger-enforcement
+                        assertions, capabilityAlign 26/26 capability-not-
+                        data + Privacy Guard + durability assertions,
+                        guardrailAlign 15/15 code-level guardrail
+                        assertions, twoNodeAlign 13/13 two-machine-proof
+                        assertions, patternAlign 9/9 pattern-provenance
+                        assertions, egressAlign 8/8 egress-authority +
+                        receipt assertions)
+
+Offline gate (this pack, this tree)
+  node verify/run.mjs   OFFLINE VERIFY SUMMARY: 72 passed, 0 failed., exit 0
+                        (node v22.23.2)
+
+vite build              clean, 0 errors.
+tsc --noEmit            0 errors.
+
+11.14.11 — what changed over 11.14.10
+-------------------------------------
+  1. RELEASE HYGIENE, FIXED AND MADE MECHANICAL. BUILD-NATIVE.md named
+     MJ_8.0.0 installer artifacts; DESKTOP-NATIVE.md and INSTALL-ON-
+     LAPTOP.md opened at "MJ 11.14.1" and named MJ_11.0.0 installers;
+     docs/PLATFORM-LIMITS.md carried a stale title — all invisible to the
+     old versionDrift, which compared only the MJ X.Y short form on title
+     lines. All operational docs now name exactly the current release.
+     probe/versionDrift.test.ts grew 26 -> 40 assertions: patch-aware
+     titles (MJ X.Y.Z must equal the exact release) and a BODY scan of
+     every operational doc for any MJ X.Y.Z / MJ_X.Y.Z token naming a
+     different release; pointers to docs/history files are masked (their
+     filenames legitimately carry old versions), everything else must be
+     current.
+  2. THE BUDGET-RACE SCENARIO IS NOW GENUINELY CONCURRENT. It was two
+     sequential reserve() calls — atomicity proven, but nothing raced.
+     Now 50 rounds of two async callers via Promise.all, each reaching
+     reserve() after a real event-loop yield: exactly one admission per
+     round and the cap is never crossed, under genuinely interleaved
+     execution.
+
+Counts unchanged: probe suites 73 live / 72 offline bundles.
+Re-certified under node v22.23.2 (tsc 0, 73/73 live incl. offlinePack
+freshness, 72/72 offline, vite 0).
