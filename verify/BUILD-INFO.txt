@@ -1,0 +1,99 @@
+MJ 12.0.1 — offline verification pack provenance
+===================================================
+
+Release identity: MJ 12.0.1 — "The Human-Feedback-in-the-Loop patch" (the
+12.0.0 review's open items, closed). The review confirmed the ONE-ENGINE
+fusion — missionLoop.ts orchestrates teams, self-evolution, feedback,
+adaptive learning and communication as phases of one runtime — and flagged
+three gaps, all closed in 12.0.1: (1) the explicit human feedback
+interaction (1-5 rating + comment) is back INSIDE the Loop: engine API
+submitHumanFeedback() queues the rating on every seat that ran the cycle
+through the same applyTeamFeedback pipeline the pre-12.0 Teams page used,
+and the next ADAPT fold turns it into real evidence (1-2 = weight-2
+"Human: <comment>" evidence, 4-5 = praise suppression, 3 neutral); the Loop
+page renders the rating panel on every ledger cycle. (2) The Loop page now
+imports the engine module ONLY — crew persistence (loadCrews/persistCrew),
+the host-deps adapter (loopHostDeps) and the bus projection (loopBusFeed)
+moved behind missionLoop's API; navAlign's forbidden list includes
+agentTeam/hostDeps/interAgentChannel. (3) The claims now state the precise
+architecture: ONE canonical orchestrator over the engines of record (team
+evolution, autonomy/bandit, lessons, receipts, bus, crew persistence) with
+one cycle ledger (mj.missionLoop.v1) — NOT one physical store; the module
+header, IA doc, changelog and README say exactly that, and navAlign pins
+the wording.
+
+Toolchain (this pack)
+  node          22.23.2 (the certifying standalone, /tmp/node-v22.23.2)
+  npm test      74 probe suites
+  build         vite production build (the web bundle gate)
+  esbuild       0.25.12
+  MJ            12.0.1 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml + Cargo.lock / LICENSE)
+
+Pack contents
+  verify/suites/*.mjs   73 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness
+                        gate, which runs live only)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that
+                        built it
+  verify/run.mjs        offline runner: no network, no installs, no MJ state
+
+Live certification (this tree)
+  npm test              ALL PROBES SUMMARY: 74 passed, 0 failed.
+                        (74 probe suites; includes versionDrift 40/40
+                        manifest + document-drift assertions (patch-aware
+                        titles, body scans), navAlign 39/39 consolidation
+                        assertions (five doors, Engine/Verify/System, no
+                        orphan routes, page-imports-engine rule incl. the
+                        12.0.1 internals agentTeam/hostDeps/interAgentChannel,
+                        phase rail == engine arc, engine header wording, the
+                        explicit 1-5 rating surface), missionLoop 67/67
+                        ONE-ENGINE assertions (gated team missions on real
+                        git worktrees: healing arc, human REJECT recorded
+                        with zero effect, ACCEPT applies superset instruction
+                        edit, receipts per cycle, OFF mode telemetry-only,
+                        the 12.0.1 human-rating arc: praise -> suppression,
+                        criticism -> weight-2 Human evidence, queues consumed
+                        once, one current rating per cycle), arenaWired 15/15
+                        mission-path wiring assertions, arenaGate 22/22
+                        hostile-scenario assertions incl. the concurrent
+                        budget race, codeHygiene 13/13 hygiene assertions,
+                        selfEvolve 52/52 causal experiment assertions,
+                        governanceAlign 31/31 envelope + principal + ledger-
+                        enforcement assertions, capabilityAlign 26/26
+                        capability-not-data + Privacy Guard + durability
+                        assertions, guardrailAlign 15/15 code-level guardrail
+                        assertions, twoNodeAlign 13/13 two-machine-proof
+                        assertions, patternAlign 9/9 pattern-provenance
+                        assertions, egressAlign 8/8 egress-authority +
+                        receipt assertions)
+
+Offline gate (this pack, this tree)
+  node verify/run.mjs   OFFLINE VERIFY SUMMARY: 73 passed, 0 failed., exit 0
+                        (node v22.23.2)
+
+vite build              clean, 0 errors.
+tsc --noEmit            0 errors.
+
+12.0.1 — what changed over 12.0.0
+---------------------------------
+  1. THE EXPLICIT HUMAN FEEDBACK SURFACE IS BACK, INSIDE THE LOOP.
+     submitHumanFeedback() is engine API; the Loop page renders a 1-5 +
+     comment panel on every ledger cycle. Ratings queue on every seat that
+     ran and fold into real evidence at the next ADAPT (1-2 criticism =
+     weight-2 "Human: ..." evidence with the comment preserved; 4-5 =
+     praise suppression, never invented criticism; 3 = neutral). Invalid
+     ratings and unknown cycles are refused without touching any store.
+     probe/missionLoop.test.ts grew 56 -> 67 assertions.
+  2. THE PAGE TALKS TO THE ENGINE ONLY. Crew persistence, host deps and the
+     bus projection moved behind missionLoop's API (loadCrews/persistCrew,
+     loopHostDeps, loopBusFeed). navAlign grew 32 -> 39 assertions incl. the
+     new forbidden modules (agentTeam, hostDeps, interAgentChannel).
+  3. PRECISE CLAIMS. The module header and every product doc now say what the
+     architecture is: one canonical orchestrator over the engines of record
+     with one cycle ledger — not one physical store. navAlign pins the
+     wording; the honest model cannot drift back into an overclaim.
+
+Counts: probe suites 74 live / 73 offline bundles (unchanged).
+Certified under node v22.23.2 (tsc 0, 74/74 live incl. offlinePack
+freshness, 73/73 offline, vite 0).
