@@ -1,0 +1,96 @@
+MJ 12.0.0 — offline verification pack provenance
+===================================================
+
+Release identity: MJ 12.0.0 — "ONE ENGINE — the Mission Loop" (the real
+consolidation: 11.14.10 organized the shelves, 12.0 fuses the machinery).
+Reviews of the 11.14 line were right twice: the app's features were still
+separate productions inside one app — TEAMS, team self-evolution, the
+feedback loop, adaptive learning and agent communication, each with its own
+store, page and vocabulary. 12.0 merges them into ONE runtime:
+src/mission/missionLoop.ts owns the whole cycle — COMPOSE -> DISPATCH ->
+COMMUNICATE -> EXECUTE -> GATE -> ADAPT — and folds every measured outcome
+through the SAME engines (seat signals -> human-gated team-evolution
+candidates, bandit + elastic settlement, lesson reflection, one signed
+proof receipt per cycle) into ONE loop ledger (mj.missionLoop.v1). The
+product surface collapses to one engine screen + five doors: Mission Loop /
+Workflows / Proof / Audit / System (PageKind trimmed to the five; legacy
+feature pages stay in the tree only where probes exercise them, no longer
+navigable). The lifecycle MJ narrated since 11.14.10 runs INSIDE the engine
+as its real phase rail; the Loop page imports the engine only, never the
+fragment stores (navAlign pins that).
+
+Toolchain (this pack)
+  node          22.23.2 (the certifying standalone, /tmp/node-v22.23.2)
+  npm test      74 probe suites
+  build         vite production build (the web bundle gate)
+  esbuild       0.25.12
+  MJ            12.0.0 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml + Cargo.lock / LICENSE)
+
+Pack contents
+  verify/suites/*.mjs   73 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness
+                        gate, which runs live only)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that
+                        built it
+  verify/run.mjs        offline runner: no network, no installs, no MJ state
+
+Live certification (this tree)
+  npm test              ALL PROBES SUMMARY: 74 passed, 0 failed.
+                        (74 probe suites; includes versionDrift 40/40
+                        manifest + document-drift assertions (patch-aware
+                        titles, body scans), navAlign 32/32 consolidation
+                        assertions (five doors, Engine/Verify/System,
+                        no orphan routes, page-imports-engine rule, phase
+                        rail == engine arc), missionLoop 56/56 ONE-ENGINE
+                        assertions (gated team missions on real git
+                        worktrees: healing arc, human REJECT recorded with
+                        zero effect, ACCEPT applies superset instruction
+                        edit, receipts per cycle, OFF mode proposes
+                        nothing), arenaWired 15/15 mission-path wiring
+                        assertions, arenaGate 22/22 hostile-scenario
+                        assertions incl. the concurrent budget race,
+                        codeHygiene 13/13 hygiene assertions, selfEvolve
+                        52/52 causal experiment assertions, governanceAlign
+                        31/31 envelope + principal + ledger-enforcement
+                        assertions, capabilityAlign 26/26 capability-not-
+                        data + Privacy Guard + durability assertions,
+                        guardrailAlign 15/15 code-level guardrail
+                        assertions, twoNodeAlign 13/13 two-machine-proof
+                        assertions, patternAlign 9/9 pattern-provenance
+                        assertions, egressAlign 8/8 egress-authority +
+                        receipt assertions)
+
+Offline gate (this pack, this tree)
+  node verify/run.mjs   OFFLINE VERIFY SUMMARY: 73 passed, 0 failed., exit 0
+                        (node v22.23.2)
+
+vite build              clean, 0 errors.
+tsc --noEmit            0 errors.
+
+12.0.0 — what changed over 11.14.11
+-----------------------------------
+  1. ONE RUNTIME. missionLoop.ts owns the whole cycle: COMPOSE (crew from
+     the bandit-shaped seat plan) -> DISPATCH (seats + briefs) ->
+     COMMUNICATE (every dispatch/event published on role channels) ->
+     EXECUTE (real gated team missions on real git worktrees) -> GATE
+     (arena + budget + verify verdicts ARE the feedback) -> ADAPT (seat
+     signals fold through team evolution and bandit settlement; lessons
+     reflect; one signed proof receipt per cycle). One loop ledger key:
+     mj.missionLoop.v1.
+  2. ONE SURFACE. PageKind trimmed to five doors (Mission Loop / Workflows /
+     Proof / Audit / System); the Loop page composes the crew, runs cycles,
+     shows the live bus, holds the human gate on adaptation proposals and
+     lists the cycle ledger with receipts — and imports the engine module
+     only. navAlign re-pinned 30 -> 32 (no orphan routes, engine-import
+     rule, phase rail == engine arc).
+  3. THE HEALING ARC IS PROBED. probe/missionLoop.test.ts (56/56): three
+     measured failing cycles produce a seat candidate from evidence; a
+     human REJECT is recorded and changes nothing (no pretend learning);
+     a human ACCEPT applies a superset instruction edit; the next cycles
+     complete verified; receipts verify end to end; OFF mode records
+     telemetry but proposes nothing.
+
+Counts: probe suites 74 live / 73 offline bundles.
+Certified under node v22.23.2 (tsc 0, 74/74 live incl. offlinePack
+freshness, 73/73 offline, vite 0).
