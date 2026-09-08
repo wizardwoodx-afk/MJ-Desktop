@@ -1,0 +1,79 @@
+MJ 12.2.0 — offline verification pack provenance
+===================================================
+
+Release identity: MJ 12.2.0 — "provider precision on the Knowledge Forge"
+(the 12.1.1 review's one remaining item, closed). The 9.85/10 review
+confirmed every 12.1.1 fix and froze the release with one open item:
+dataHandling: "provider" said content went to the harness's configured
+provider but not WHICH provider — Anthropic, OpenAI, a local model, or an
+enterprise proxy. 12.2.0 records providerInfo on every provider-bound
+proposal: vendor (the harness's default when unconfigured, labeled as such
+— claude->Anthropic, codex->OpenAI, gemini->Google, grok->xAI, qwen->Alibaba
+Qwen, opencode->configurable), endpointClass cloud-default /
+local-configured / unknown, and endpointBasis detected / user-declared /
+not-visible, with the written reason on every record. Honest by
+construction: MJ reports only what it can see — a host-supplied readEnv
+probe (no override visible = cloud-default; loopback = local-configured;
+any other override or invalid URL = unknown with its reason; a throwing
+probe = not-visible), else the user's own declaration (user-declared),
+else the truthful default unknown + not-visible with the reason written
+(the Tauri renderer sees only PATH/searched/bins — MJ cannot read the
+harness's endpoint override settings; it never pretends otherwise).
+Mechanical paths keep providerInfo: null. The forge card gains an ENDPOINT
+(you declaration) select and provider chips (vendor . class; unknown is
+visually distinct and explains itself on hover).
+
+Toolchain (this pack)
+  node          22.23.2 (the certifying standalone, /tmp/node-v22.23.2)
+  npm test      75 probe suites
+  build         vite production build (the web bundle gate)
+  esbuild       0.25.12
+  MJ            12.2.0 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml + Cargo.lock / LICENSE)
+
+Pack contents
+  verify/suites/*.mjs   74 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness
+                        gate, which runs live only)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that
+                        built it
+  verify/run.mjs        offline runner: no network, no installs, no MJ state
+
+Live certification (this tree)
+  npm test              ALL PROBES SUMMARY: 75 passed, 0 failed.
+                        (75 probe suites; includes versionDrift 40/40,
+                        navAlign 42/42 (five doors; page imports exactly
+                        ONE mission module; forge is engine API),
+                        knowledgeSkills 56/56 (six guardlines + 12.1.1
+                        renderer-safety scan, dataHandling truth table +
+                        12.2.0 provider precision: vendor defaults, loopback
+                        classification, detected/user-declared/not-visible
+                        truth table, mechanical-null pin), missionLoop
+                        80/80, teamEvolution 48/48, arenaWired 15/15,
+                        arenaGate 22/22, codeHygiene 13/13, selfEvolve
+                        52/52, governanceAlign 31/31, capabilityAlign 26/26,
+                        guardrailAlign 15/15, twoNodeAlign 13/13,
+                        patternAlign 9/9, egressAlign 8/8, harnesses
+                        270/270)
+
+Offline gate (this pack, this tree)
+  node verify/run.mjs   OFFLINE VERIFY SUMMARY: 74 passed, 0 failed., exit 0
+                        (node v22.23.2)
+
+vite build              clean, 0 errors.
+tsc --noEmit            0 errors.
+
+12.2.0 — what changed over 12.1.1
+---------------------------------
+  1. PROVIDER PRECISION: provider-bound proposals record vendor (labeled
+     default) + endpoint class + basis + written reason; the reviewer's one
+     open item on 12.1.1 is closed without pretending to know details the
+     harness doesn't expose.
+  2. HONEST ORDERING: detected (readEnv probe) -> user-declared -> the
+     truthful unknown/not-visible default; every unknown explains itself.
+  3. UI: ENDPOINT (your declaration) select on the forge card; provider
+     chips with hover reasons; mechanical proposals show no chip.
+
+Counts: 75 live / 74 offline (unchanged); knowledgeSkills 44 -> 56/56.
+Certified under node v22.23.2 (tsc 0, 75/75 live incl. offlinePack
+freshness, 74/74 offline, vite 0).
