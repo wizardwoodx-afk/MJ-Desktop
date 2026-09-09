@@ -1,0 +1,15 @@
+* text=auto eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.mjs text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.md text eol=lf
+*.rs text eol=lf
+*.toml text eol=lf
+# Binary assets
+*.png binary
+*.mp4 binary
+*.pdf binary
+*.pptx binary

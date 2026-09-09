@@ -1,0 +1,1554 @@
+/* =============================================================================
+   MJ 13.0.1 — the INK theme system (unknown minerals on black)
+   -----------------------------------------------------------------------------
+   The 13.0 palette (obsidian: warm jet + brass) read as every other
+   "premium template" — gold on black. 13.0.1 retires it for a set built on
+   the owner's direction: TRUE BLACK ground with rare, unsaturated mineral
+   signals. No gold, no brass, no violet, no cyan, no neon — each palette
+   carries one muted pigment that reads quiet at rest and precise when used:
+
+     ink        — black #000000, warm parchment ink, SMOKED APRICOT signal.
+                  The flagship (default).
+     pitch      — OLED black, warm white ink, DUSTY ROSE signal.
+     slag       — graphite black, steel-grey ink, WHETSTONE signal (cool).
+     fern       — black-green, parchment ink, SEEDPOD-olive signal.
+     ivory      — the paper light: warm white, ink, COPPER signal.
+     travertine — the stone light: warm stone, ink, BRONZE-OLIVE signal.
+
+   The contract is unchanged and probe-pinned:
+
+     1. BLACK IS THE CANVAS. Hierarchy is carried by neutral ink weight and
+        spacing; one signal colour per theme means "look here now". No
+        gradients in chrome, ever.
+     2. TYPE DOES THE HEAVY LIFTING. Inter for content, Space Mono for data
+        and numbers, Doto for the single hero moment.
+     3. REFINED SURFACES. Soft technical radii, hairline borders, flat
+        fills, ink-mix elevation — nothing glossy, nothing glowing.
+     4. MOTION WITH A JOB. 140-280ms, transform/opacity only; every
+        animation honours prefers-reduced-motion.
+
+   All component rules below are shared through :is(), so a palette is ONLY a
+   token block — every secondary token is derived from the five base hues with
+   color-mix, so a palette cannot rot out of sync with the system.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   SHARED DESIGN TOKENS — fonts, type scale, spacing, motion, shape.
+   --------------------------------------------------------------------------- */
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) {
+  --font-ui: "Inter", "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "Space Mono", "JetBrains Mono", ui-monospace, monospace;
+  --font-doto: "Doto", "Space Mono", ui-monospace, monospace;
+  --font-serif: "Georgia", "Iowan Old Style", "Palatino", ui-serif, "Times New Roman", serif;
+
+  /* Shape: refined technical — 4/7/10px, never pill. */
+  --r-sm: 4px;
+  --r-md: 7px;
+  --r-lg: 10px;
+
+  /* Motion: purposeful ease-out. */
+  --t-fast: 140ms cubic-bezier(0.2, 0, 0, 1);
+  --t-med: 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------------------------------------------------------------------------
+   PALETTES — every token a component in this file or in mj.css reads.
+   --------------------------------------------------------------------------- */
+
+[data-theme="ink"] {
+  /* ink — ground #000000 · ink #EAE4D8 · signal #C98A62 · alive #8FA284 · alert #B75346 */
+  --bg: #000000;
+  --bg-elevated: color-mix(in oklab, #EAE4D8 6%, #000000);
+  --bg-panel: color-mix(in oklab, #EAE4D8 4%, #000000);
+  --bg-input: color-mix(in oklab, #EAE4D8 2%, #000000);
+  --border: color-mix(in oklab, #EAE4D8 13%, #000000);
+  --border-strong: color-mix(in oklab, #EAE4D8 24%, #000000);
+  --text: #EAE4D8;
+  --text-dim: color-mix(in oklab, #EAE4D8 78%, #000000);
+  --text-mute: color-mix(in oklab, #EAE4D8 58%, #000000);
+  --text-4: color-mix(in oklab, #EAE4D8 30%, #000000);
+  --amber: #C98A62;
+  --amber-dim: color-mix(in oklab, #C98A62 12%, transparent);
+  --amber-hot: color-mix(in oklab, #C98A62 62%, #EAE4D8);
+  --danger: #B75346;
+  --danger-dim: color-mix(in oklab, #B75346 18%, transparent);
+  --ok: #8FA284;
+  --nk-black: #000000;
+  --nk-surface: color-mix(in oklab, #EAE4D8 6%, #000000);
+  --nk-surface-2: color-mix(in oklab, #EAE4D8 13%, #000000);
+  --nk-surface-3: color-mix(in oklab, #EAE4D8 24%, #000000);
+  --nk-input: color-mix(in oklab, #EAE4D8 2%, #000000);
+  --nk-border: color-mix(in oklab, #EAE4D8 13%, #000000);
+  --nk-border-strong: color-mix(in oklab, #EAE4D8 24%, #000000);
+  --nk-hairline: color-mix(in oklab, #EAE4D8 13%, #000000);
+  --white: #EAE4D8;
+  --text-1: #EAE4D8;
+  --text-2: color-mix(in oklab, #EAE4D8 78%, #000000);
+  --text-3: color-mix(in oklab, #EAE4D8 58%, #000000);
+  --red: #B75346;
+  --red-dim: color-mix(in oklab, #B75346 13%, transparent);
+  --silver: color-mix(in oklab, #EAE4D8 55%, #000000);
+  --silver-dim: color-mix(in oklab, #EAE4D8 15%, transparent);
+  --success: #8FA284;
+  --error: #B75346;
+  --row-hover: color-mix(in oklab, #EAE4D8 5%, #000000);
+  --accent: #C98A62;
+  --accent-hot: color-mix(in oklab, #C98A62 62%, #EAE4D8);
+  --accent-contrast: color-mix(in oklab, #EAE4D8 7%, #000000);
+  --accent-dim: color-mix(in oklab, #C98A62 12%, transparent);
+  --dot-1: color-mix(in oklab, #EAE4D8 5%, transparent);
+  --dot-2: color-mix(in oklab, #C98A62 9%, transparent);
+  --wire: color-mix(in oklab, #EAE4D8 28%, transparent);
+  --wire-active: #C98A62;
+  --wire-hot: color-mix(in oklab, #C98A62 62%, #EAE4D8);
+  --wire-done: color-mix(in oklab, #EAE4D8 48%, transparent);
+  --glyph-off: color-mix(in oklab, #EAE4D8 9%, #000000);
+  --glyph-on: #C98A62;
+  --menu-hover: color-mix(in oklab, #EAE4D8 7%, #000000);
+  --seg-off: color-mix(in oklab, #EAE4D8 11%, #000000);
+  --overlay: rgba(0, 0, 0, 0.78);
+  --sel-bg: #C98A62;
+  --sel-fg: #000000;
+  --scroll-thumb: color-mix(in oklab, #EAE4D8 16%, #000000);
+  --scroll-thumb-hover: color-mix(in oklab, #EAE4D8 28%, #000000);
+  --port-edge: color-mix(in oklab, #EAE4D8 52%, #000000);
+  --inset: color-mix(in oklab, #EAE4D8 6%, #000000);
+}
+
+[data-theme="pitch"] {
+  /* pitch — ground #000000 · ink #F0EBE1 · signal #BD8577 · alive #7DA088 · alert #BE5A4B */
+  --bg: #000000;
+  --bg-elevated: color-mix(in oklab, #F0EBE1 6%, #000000);
+  --bg-panel: color-mix(in oklab, #F0EBE1 4%, #000000);
+  --bg-input: color-mix(in oklab, #F0EBE1 2%, #000000);
+  --border: color-mix(in oklab, #F0EBE1 13%, #000000);
+  --border-strong: color-mix(in oklab, #F0EBE1 24%, #000000);
+  --text: #F0EBE1;
+  --text-dim: color-mix(in oklab, #F0EBE1 78%, #000000);
+  --text-mute: color-mix(in oklab, #F0EBE1 58%, #000000);
+  --text-4: color-mix(in oklab, #F0EBE1 30%, #000000);
+  --amber: #BD8577;
+  --amber-dim: color-mix(in oklab, #BD8577 12%, transparent);
+  --amber-hot: color-mix(in oklab, #BD8577 62%, #F0EBE1);
+  --danger: #BE5A4B;
+  --danger-dim: color-mix(in oklab, #BE5A4B 18%, transparent);
+  --ok: #7DA088;
+  --nk-black: #000000;
+  --nk-surface: color-mix(in oklab, #F0EBE1 6%, #000000);
+  --nk-surface-2: color-mix(in oklab, #F0EBE1 13%, #000000);
+  --nk-surface-3: color-mix(in oklab, #F0EBE1 24%, #000000);
+  --nk-input: color-mix(in oklab, #F0EBE1 2%, #000000);
+  --nk-border: color-mix(in oklab, #F0EBE1 13%, #000000);
+  --nk-border-strong: color-mix(in oklab, #F0EBE1 24%, #000000);
+  --nk-hairline: color-mix(in oklab, #F0EBE1 13%, #000000);
+  --white: #F0EBE1;
+  --text-1: #F0EBE1;
+  --text-2: color-mix(in oklab, #F0EBE1 78%, #000000);
+  --text-3: color-mix(in oklab, #F0EBE1 58%, #000000);
+  --red: #BE5A4B;
+  --red-dim: color-mix(in oklab, #BE5A4B 13%, transparent);
+  --silver: color-mix(in oklab, #F0EBE1 55%, #000000);
+  --silver-dim: color-mix(in oklab, #F0EBE1 15%, transparent);
+  --success: #7DA088;
+  --error: #BE5A4B;
+  --row-hover: color-mix(in oklab, #F0EBE1 5%, #000000);
+  --accent: #BD8577;
+  --accent-hot: color-mix(in oklab, #BD8577 62%, #F0EBE1);
+  --accent-contrast: color-mix(in oklab, #F0EBE1 7%, #000000);
+  --accent-dim: color-mix(in oklab, #BD8577 12%, transparent);
+  --dot-1: color-mix(in oklab, #F0EBE1 5%, transparent);
+  --dot-2: color-mix(in oklab, #BD8577 9%, transparent);
+  --wire: color-mix(in oklab, #F0EBE1 28%, transparent);
+  --wire-active: #BD8577;
+  --wire-hot: color-mix(in oklab, #BD8577 62%, #F0EBE1);
+  --wire-done: color-mix(in oklab, #F0EBE1 48%, transparent);
+  --glyph-off: color-mix(in oklab, #F0EBE1 9%, #000000);
+  --glyph-on: #BD8577;
+  --menu-hover: color-mix(in oklab, #F0EBE1 7%, #000000);
+  --seg-off: color-mix(in oklab, #F0EBE1 11%, #000000);
+  --overlay: rgba(0, 0, 0, 0.78);
+  --sel-bg: #BD8577;
+  --sel-fg: #000000;
+  --scroll-thumb: color-mix(in oklab, #F0EBE1 16%, #000000);
+  --scroll-thumb-hover: color-mix(in oklab, #F0EBE1 28%, #000000);
+  --port-edge: color-mix(in oklab, #F0EBE1 52%, #000000);
+  --inset: color-mix(in oklab, #F0EBE1 6%, #000000);
+}
+
+[data-theme="slag"] {
+  /* slag — ground #0B0C0E · ink #E4E6E4 · signal #9AA6AE · alive #7E9C88 · alert #B65746 */
+  --bg: #0B0C0E;
+  --bg-elevated: color-mix(in oklab, #E4E6E4 6%, #0B0C0E);
+  --bg-panel: color-mix(in oklab, #E4E6E4 4%, #0B0C0E);
+  --bg-input: color-mix(in oklab, #E4E6E4 2%, #0B0C0E);
+  --border: color-mix(in oklab, #E4E6E4 13%, #0B0C0E);
+  --border-strong: color-mix(in oklab, #E4E6E4 24%, #0B0C0E);
+  --text: #E4E6E4;
+  --text-dim: color-mix(in oklab, #E4E6E4 78%, #0B0C0E);
+  --text-mute: color-mix(in oklab, #E4E6E4 58%, #0B0C0E);
+  --text-4: color-mix(in oklab, #E4E6E4 30%, #0B0C0E);
+  --amber: #9AA6AE;
+  --amber-dim: color-mix(in oklab, #9AA6AE 12%, transparent);
+  --amber-hot: color-mix(in oklab, #9AA6AE 62%, #E4E6E4);
+  --danger: #B65746;
+  --danger-dim: color-mix(in oklab, #B65746 18%, transparent);
+  --ok: #7E9C88;
+  --nk-black: #0B0C0E;
+  --nk-surface: color-mix(in oklab, #E4E6E4 6%, #0B0C0E);
+  --nk-surface-2: color-mix(in oklab, #E4E6E4 13%, #0B0C0E);
+  --nk-surface-3: color-mix(in oklab, #E4E6E4 24%, #0B0C0E);
+  --nk-input: color-mix(in oklab, #E4E6E4 2%, #0B0C0E);
+  --nk-border: color-mix(in oklab, #E4E6E4 13%, #0B0C0E);
+  --nk-border-strong: color-mix(in oklab, #E4E6E4 24%, #0B0C0E);
+  --nk-hairline: color-mix(in oklab, #E4E6E4 13%, #0B0C0E);
+  --white: #E4E6E4;
+  --text-1: #E4E6E4;
+  --text-2: color-mix(in oklab, #E4E6E4 78%, #0B0C0E);
+  --text-3: color-mix(in oklab, #E4E6E4 58%, #0B0C0E);
+  --red: #B65746;
+  --red-dim: color-mix(in oklab, #B65746 13%, transparent);
+  --silver: color-mix(in oklab, #E4E6E4 55%, #0B0C0E);
+  --silver-dim: color-mix(in oklab, #E4E6E4 15%, transparent);
+  --success: #7E9C88;
+  --error: #B65746;
+  --row-hover: color-mix(in oklab, #E4E6E4 5%, #0B0C0E);
+  --accent: #9AA6AE;
+  --accent-hot: color-mix(in oklab, #9AA6AE 62%, #E4E6E4);
+  --accent-contrast: color-mix(in oklab, #E4E6E4 7%, #0B0C0E);
+  --accent-dim: color-mix(in oklab, #9AA6AE 12%, transparent);
+  --dot-1: color-mix(in oklab, #E4E6E4 5%, transparent);
+  --dot-2: color-mix(in oklab, #9AA6AE 9%, transparent);
+  --wire: color-mix(in oklab, #E4E6E4 28%, transparent);
+  --wire-active: #9AA6AE;
+  --wire-hot: color-mix(in oklab, #9AA6AE 62%, #E4E6E4);
+  --wire-done: color-mix(in oklab, #E4E6E4 48%, transparent);
+  --glyph-off: color-mix(in oklab, #E4E6E4 9%, #0B0C0E);
+  --glyph-on: #9AA6AE;
+  --menu-hover: color-mix(in oklab, #E4E6E4 7%, #0B0C0E);
+  --seg-off: color-mix(in oklab, #E4E6E4 11%, #0B0C0E);
+  --overlay: rgba(0, 0, 0, 0.78);
+  --sel-bg: #9AA6AE;
+  --sel-fg: #0B0C0E;
+  --scroll-thumb: color-mix(in oklab, #E4E6E4 16%, #0B0C0E);
+  --scroll-thumb-hover: color-mix(in oklab, #E4E6E4 28%, #0B0C0E);
+  --port-edge: color-mix(in oklab, #E4E6E4 52%, #0B0C0E);
+  --inset: color-mix(in oklab, #E4E6E4 6%, #0B0C0E);
+}
+
+[data-theme="fern"] {
+  /* fern — ground #070A08 · ink #E6E4D6 · signal #A79A63 · alive #7E9A72 · alert #B2503F */
+  --bg: #070A08;
+  --bg-elevated: color-mix(in oklab, #E6E4D6 6%, #070A08);
+  --bg-panel: color-mix(in oklab, #E6E4D6 4%, #070A08);
+  --bg-input: color-mix(in oklab, #E6E4D6 2%, #070A08);
+  --border: color-mix(in oklab, #E6E4D6 13%, #070A08);
+  --border-strong: color-mix(in oklab, #E6E4D6 24%, #070A08);
+  --text: #E6E4D6;
+  --text-dim: color-mix(in oklab, #E6E4D6 78%, #070A08);
+  --text-mute: color-mix(in oklab, #E6E4D6 58%, #070A08);
+  --text-4: color-mix(in oklab, #E6E4D6 30%, #070A08);
+  --amber: #A79A63;
+  --amber-dim: color-mix(in oklab, #A79A63 12%, transparent);
+  --amber-hot: color-mix(in oklab, #A79A63 62%, #E6E4D6);
+  --danger: #B2503F;
+  --danger-dim: color-mix(in oklab, #B2503F 18%, transparent);
+  --ok: #7E9A72;
+  --nk-black: #070A08;
+  --nk-surface: color-mix(in oklab, #E6E4D6 6%, #070A08);
+  --nk-surface-2: color-mix(in oklab, #E6E4D6 13%, #070A08);
+  --nk-surface-3: color-mix(in oklab, #E6E4D6 24%, #070A08);
+  --nk-input: color-mix(in oklab, #E6E4D6 2%, #070A08);
+  --nk-border: color-mix(in oklab, #E6E4D6 13%, #070A08);
+  --nk-border-strong: color-mix(in oklab, #E6E4D6 24%, #070A08);
+  --nk-hairline: color-mix(in oklab, #E6E4D6 13%, #070A08);
+  --white: #E6E4D6;
+  --text-1: #E6E4D6;
+  --text-2: color-mix(in oklab, #E6E4D6 78%, #070A08);
+  --text-3: color-mix(in oklab, #E6E4D6 58%, #070A08);
+  --red: #B2503F;
+  --red-dim: color-mix(in oklab, #B2503F 13%, transparent);
+  --silver: color-mix(in oklab, #E6E4D6 55%, #070A08);
+  --silver-dim: color-mix(in oklab, #E6E4D6 15%, transparent);
+  --success: #7E9A72;
+  --error: #B2503F;
+  --row-hover: color-mix(in oklab, #E6E4D6 5%, #070A08);
+  --accent: #A79A63;
+  --accent-hot: color-mix(in oklab, #A79A63 62%, #E6E4D6);
+  --accent-contrast: color-mix(in oklab, #E6E4D6 7%, #070A08);
+  --accent-dim: color-mix(in oklab, #A79A63 12%, transparent);
+  --dot-1: color-mix(in oklab, #E6E4D6 5%, transparent);
+  --dot-2: color-mix(in oklab, #A79A63 9%, transparent);
+  --wire: color-mix(in oklab, #E6E4D6 28%, transparent);
+  --wire-active: #A79A63;
+  --wire-hot: color-mix(in oklab, #A79A63 62%, #E6E4D6);
+  --wire-done: color-mix(in oklab, #E6E4D6 48%, transparent);
+  --glyph-off: color-mix(in oklab, #E6E4D6 9%, #070A08);
+  --glyph-on: #A79A63;
+  --menu-hover: color-mix(in oklab, #E6E4D6 7%, #070A08);
+  --seg-off: color-mix(in oklab, #E6E4D6 11%, #070A08);
+  --overlay: rgba(0, 0, 0, 0.78);
+  --sel-bg: #A79A63;
+  --sel-fg: #070A08;
+  --scroll-thumb: color-mix(in oklab, #E6E4D6 16%, #070A08);
+  --scroll-thumb-hover: color-mix(in oklab, #E6E4D6 28%, #070A08);
+  --port-edge: color-mix(in oklab, #E6E4D6 52%, #070A08);
+  --inset: color-mix(in oklab, #E6E4D6 6%, #070A08);
+}
+
+[data-theme="ivory"] {
+  /* ivory — ground #F5F1E9 · ink #1E1A13 · signal #A4502C · alive #4E6E54 · alert #A63A2E */
+  --bg: #F5F1E9;
+  --bg-elevated: color-mix(in oklab, #1E1A13 4%, #F5F1E9);
+  --bg-panel: color-mix(in oklab, #1E1A13 3%, #F5F1E9);
+  --bg-input: color-mix(in oklab, #1E1A13 7%, #F5F1E9);
+  --border: color-mix(in oklab, #1E1A13 15%, #F5F1E9);
+  --border-strong: color-mix(in oklab, #1E1A13 24%, #F5F1E9);
+  --text: #1E1A13;
+  --text-dim: color-mix(in oklab, #1E1A13 66%, #F5F1E9);
+  --text-mute: color-mix(in oklab, #1E1A13 48%, #F5F1E9);
+  --text-4: color-mix(in oklab, #1E1A13 30%, #F5F1E9);
+  --amber: #A4502C;
+  --amber-dim: color-mix(in oklab, #A4502C 12%, transparent);
+  --amber-hot: color-mix(in oklab, #A4502C 62%, #1E1A13);
+  --danger: #A63A2E;
+  --danger-dim: color-mix(in oklab, #A63A2E 18%, transparent);
+  --ok: #4E6E54;
+  --nk-black: #F5F1E9;
+  --nk-surface: color-mix(in oklab, #1E1A13 4%, #F5F1E9);
+  --nk-surface-2: color-mix(in oklab, #1E1A13 15%, #F5F1E9);
+  --nk-surface-3: color-mix(in oklab, #1E1A13 24%, #F5F1E9);
+  --nk-input: color-mix(in oklab, #1E1A13 7%, #F5F1E9);
+  --nk-border: color-mix(in oklab, #1E1A13 15%, #F5F1E9);
+  --nk-border-strong: color-mix(in oklab, #1E1A13 24%, #F5F1E9);
+  --nk-hairline: color-mix(in oklab, #1E1A13 15%, #F5F1E9);
+  --white: #1E1A13;
+  --text-1: #1E1A13;
+  --text-2: color-mix(in oklab, #1E1A13 66%, #F5F1E9);
+  --text-3: color-mix(in oklab, #1E1A13 48%, #F5F1E9);
+  --red: #A63A2E;
+  --red-dim: color-mix(in oklab, #A63A2E 13%, transparent);
+  --silver: color-mix(in oklab, #1E1A13 55%, #F5F1E9);
+  --silver-dim: color-mix(in oklab, #1E1A13 15%, transparent);
+  --success: #4E6E54;
+  --error: #A63A2E;
+  --row-hover: color-mix(in oklab, #1E1A13 5%, #F5F1E9);
+  --accent: #A4502C;
+  --accent-hot: color-mix(in oklab, #A4502C 62%, #1E1A13);
+  --accent-contrast: #F5F1E9;
+  --accent-dim: color-mix(in oklab, #A4502C 12%, transparent);
+  --dot-1: color-mix(in oklab, #1E1A13 7%, transparent);
+  --dot-2: color-mix(in oklab, #A4502C 9%, transparent);
+  --wire: color-mix(in oklab, #1E1A13 34%, transparent);
+  --wire-active: #A4502C;
+  --wire-hot: color-mix(in oklab, #A4502C 62%, #1E1A13);
+  --wire-done: color-mix(in oklab, #1E1A13 48%, transparent);
+  --glyph-off: color-mix(in oklab, #1E1A13 9%, #F5F1E9);
+  --glyph-on: #A4502C;
+  --menu-hover: color-mix(in oklab, #1E1A13 7%, #F5F1E9);
+  --seg-off: color-mix(in oklab, #1E1A13 11%, #F5F1E9);
+  --overlay: rgba(30, 26, 19, 0.45);
+  --sel-bg: #A4502C;
+  --sel-fg: #F5F1E9;
+  --scroll-thumb: color-mix(in oklab, #1E1A13 16%, #F5F1E9);
+  --scroll-thumb-hover: color-mix(in oklab, #1E1A13 28%, #F5F1E9);
+  --port-edge: color-mix(in oklab, #1E1A13 52%, #F5F1E9);
+  --inset: color-mix(in oklab, #1E1A13 10%, #F5F1E9);
+}
+
+[data-theme="travertine"] {
+  /* travertine — ground #EFE9DC · ink #252017 · signal #7A6B3A · alive #52684E · alert #9E3E2E */
+  --bg: #EFE9DC;
+  --bg-elevated: color-mix(in oklab, #252017 4%, #EFE9DC);
+  --bg-panel: color-mix(in oklab, #252017 3%, #EFE9DC);
+  --bg-input: color-mix(in oklab, #252017 7%, #EFE9DC);
+  --border: color-mix(in oklab, #252017 15%, #EFE9DC);
+  --border-strong: color-mix(in oklab, #252017 24%, #EFE9DC);
+  --text: #252017;
+  --text-dim: color-mix(in oklab, #252017 66%, #EFE9DC);
+  --text-mute: color-mix(in oklab, #252017 48%, #EFE9DC);
+  --text-4: color-mix(in oklab, #252017 30%, #EFE9DC);
+  --amber: #7A6B3A;
+  --amber-dim: color-mix(in oklab, #7A6B3A 12%, transparent);
+  --amber-hot: color-mix(in oklab, #7A6B3A 62%, #252017);
+  --danger: #9E3E2E;
+  --danger-dim: color-mix(in oklab, #9E3E2E 18%, transparent);
+  --ok: #52684E;
+  --nk-black: #EFE9DC;
+  --nk-surface: color-mix(in oklab, #252017 4%, #EFE9DC);
+  --nk-surface-2: color-mix(in oklab, #252017 15%, #EFE9DC);
+  --nk-surface-3: color-mix(in oklab, #252017 24%, #EFE9DC);
+  --nk-input: color-mix(in oklab, #252017 7%, #EFE9DC);
+  --nk-border: color-mix(in oklab, #252017 15%, #EFE9DC);
+  --nk-border-strong: color-mix(in oklab, #252017 24%, #EFE9DC);
+  --nk-hairline: color-mix(in oklab, #252017 15%, #EFE9DC);
+  --white: #252017;
+  --text-1: #252017;
+  --text-2: color-mix(in oklab, #252017 66%, #EFE9DC);
+  --text-3: color-mix(in oklab, #252017 48%, #EFE9DC);
+  --red: #9E3E2E;
+  --red-dim: color-mix(in oklab, #9E3E2E 13%, transparent);
+  --silver: color-mix(in oklab, #252017 55%, #EFE9DC);
+  --silver-dim: color-mix(in oklab, #252017 15%, transparent);
+  --success: #52684E;
+  --error: #9E3E2E;
+  --row-hover: color-mix(in oklab, #252017 5%, #EFE9DC);
+  --accent: #7A6B3A;
+  --accent-hot: color-mix(in oklab, #7A6B3A 62%, #252017);
+  --accent-contrast: #EFE9DC;
+  --accent-dim: color-mix(in oklab, #7A6B3A 12%, transparent);
+  --dot-1: color-mix(in oklab, #252017 7%, transparent);
+  --dot-2: color-mix(in oklab, #7A6B3A 9%, transparent);
+  --wire: color-mix(in oklab, #252017 34%, transparent);
+  --wire-active: #7A6B3A;
+  --wire-hot: color-mix(in oklab, #7A6B3A 62%, #252017);
+  --wire-done: color-mix(in oklab, #252017 48%, transparent);
+  --glyph-off: color-mix(in oklab, #252017 9%, #EFE9DC);
+  --glyph-on: #7A6B3A;
+  --menu-hover: color-mix(in oklab, #252017 7%, #EFE9DC);
+  --seg-off: color-mix(in oklab, #252017 11%, #EFE9DC);
+  --overlay: rgba(30, 26, 19, 0.45);
+  --sel-bg: #7A6B3A;
+  --sel-fg: #EFE9DC;
+  --scroll-thumb: color-mix(in oklab, #252017 16%, #EFE9DC);
+  --scroll-thumb-hover: color-mix(in oklab, #252017 28%, #EFE9DC);
+  --port-edge: color-mix(in oklab, #252017 52%, #EFE9DC);
+  --inset: color-mix(in oklab, #252017 10%, #EFE9DC);
+}
+
+
+
+
+
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   NTH — MJ's flagship palette, re-cut in the FOUNDRY identity (v3 color atlas).
+   Five cold-but-warm rare tones, zero neon: carbon (#0e0f0e) · slate (#161814)
+   · paper (#f3eee3) · brass (#b8a17b) · verdigris (#5f8a74).
+   A charcoal-green "foundry" ground, warm cream paper ink, and a single brass
+   accent that reads like an engraved instrument plate. Verdigris is the "alive"
+   pulse for anything running; a functional oxide is reserved for errors only.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* chalk — the same system in light: a printed technical manual. */
+
+/* carbon — industrial cool-grey dark, phosphor-green instrument light. */
+
+/* bone — warm parchment light, sepia ink, terracotta accent. */
+
+/* indigo — deep slate-indigo dark, ice-blue accent. */
+
+/* sage — soft botanical light, forest-green accent. */
+
+/* aurora — V11.5: deep blue-teal night, one ice signal. The palette of the 3 a.m. operator
+   who still wants to read every label. Twelve hues, no gradients, no glow abuse. */
+
+/* ---------------------------------------------------------------------------
+   SHARED COMPONENT RULES — one system, six palettes.
+   --------------------------------------------------------------------------- */
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) ::selection { background: var(--sel-bg); color: var(--sel-fg); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) ::-webkit-scrollbar-thumb { background: var(--scroll-thumb); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) ::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
+
+/* ── chrome ─────────────────────────────────────────────────────────────── */
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) button {
+  border-radius: var(--r-md);
+  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+}
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) button:hover { border-style: dashed; background: transparent; transform: none; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) button.primary:hover { background: var(--accent-hot); border-style: solid; border-color: var(--accent-hot); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) button.danger { color: var(--red); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) button:focus-visible { outline: 1px dashed var(--accent); outline-offset: 2px; }
+
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .titlebar .logo i { color: var(--accent); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .titlebar .host-pill,
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .statusbar,
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .tabstrip .tab {
+  font-family: var(--font-doto);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+}
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .tabstrip .tab.active { font-weight: 700; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .kbd { font-family: var(--font-doto); letter-spacing: 0.1em; border-radius: var(--r-md); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .titlebar .win-btns button:hover { background: var(--inset); border-style: solid; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .titlebar .win-btns .close:hover { background: var(--red); color: var(--sel-fg); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .traffic span { border-radius: var(--r-md); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .traffic .m { background: var(--accent); }
+
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .menubar .menu-item:hover,
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .menubar .menu-item.open { background: var(--menu-hover); box-shadow: inset 0 -2px 0 var(--accent); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .menu-fly button:hover { background: var(--menu-hover); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .menu-fly { border-radius: 0; }
+
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .tabstrip .tab.active { box-shadow: inset 0 2px 0 var(--accent); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .tabstrip .tab .x:hover { color: var(--accent-hot); }
+
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .rail button.active { background: var(--menu-hover); box-shadow: inset 2px 0 0 var(--accent); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .rail button:hover { background: var(--row-hover); }
+
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .statusbar .live { color: var(--accent); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .statusbar .live::before { background: var(--accent); border-radius: var(--r-md); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .statusbar .err { color: var(--red); }
+
+/* ── glyph interface: segmented ETA module reads like instrument LED strips ─ */
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .eta-seg { background: var(--seg-off); border-radius: 0; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .eta-seg.on { background: var(--accent); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .eta-seg.hot { background: var(--red); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .eta-readout { color: var(--text); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* ── canvas ─────────────────────────────────────────────────────────────── */
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .canvas-grid {
+  background-image:
+    radial-gradient(circle, var(--dot-1) 1px, transparent 1px),
+    radial-gradient(circle, var(--dot-2) 1px, transparent 1.5px);
+  background-size: 20px 20px, 100px 100px;
+}
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .wire { stroke: var(--wire); stroke-dasharray: 2 4; filter: none; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .wire.active { stroke: var(--wire-active) !important; stroke-dasharray: 9 8; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .wire.streaming { stroke: var(--wire-hot); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .wire.completed { stroke: var(--wire-done); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .wire.error { stroke: var(--red); }
+
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .node-card { border-radius: var(--r-lg); box-shadow: none !important; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .node-card:hover { border-color: var(--border-strong); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .node-card.selected { border-color: var(--accent); outline: 1px dashed var(--accent); outline-offset: 2px; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .node-card.agent .head .icon { color: var(--text); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .node-card .head { border-bottom: 1px solid var(--border); padding-bottom: 7px; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .node-card .title { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* The glyph light: a dot that turns accent when the node is alive. */
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .glyph-light { border-radius: var(--r-md); background: var(--glyph-off); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .glyph-light.on { background: var(--glyph-on); box-shadow: 0 0 6px var(--accent-dim); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .glyph-light.err { background: var(--red); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .glyph-light.done { background: var(--text); }
+
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .port-anchor { border-radius: 50%; border-color: var(--port-edge); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .port-anchor:hover,
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .port-anchor.valid-target { border-color: var(--accent-hot); background: var(--accent); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .port-anchor.filled { background: var(--accent); border-color: var(--accent); }
+
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .sticky-note { border-left: 3px dotted var(--accent); background: var(--accent-dim); border-radius: 0; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .marquee-rect { border: 1px dashed var(--accent); background: var(--accent-dim); border-radius: 0; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .canvas-toolbar { border-radius: 0; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .minimap { border-radius: 0; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .canvas-empty { background-image: radial-gradient(circle, var(--dot-1) 1px, transparent 1px); background-size: 16px 16px; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .canvas-empty .ce-mark { color: var(--inset); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .canvas-empty .ce-title { font-family: var(--font-doto); letter-spacing: 0.1em; }
+
+/* ── panels & pages ─────────────────────────────────────────────────────── */
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .card,
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .modal .card { border-radius: 0; box-shadow: none !important; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .modal { border-radius: 0; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .modal-overlay,
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .palette-overlay { background: var(--overlay); backdrop-filter: none; -webkit-backdrop-filter: none; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .library-drawer { border-radius: 0; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .lib-item:hover { background: var(--row-hover); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .inspector-head { background: var(--bg-panel); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .palette { border-radius: 0; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .palette input { font-family: var(--font-doto); letter-spacing: 0.04em; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .palette .result { border-radius: 0; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .palette .result:hover,
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .palette .result.hot { background: var(--menu-hover); box-shadow: inset 2px 0 0 var(--accent); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .toast { border-radius: 0; border-left: 3px solid var(--accent); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .toast.err { border-left-color: var(--red); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .assistant-panel { border-radius: 0; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .ctx-menu { border-radius: 0; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .stat { border-radius: 0; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .stat .n { color: var(--text); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .home-hero h1 span { color: var(--accent); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .pill { border-radius: var(--r-md); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .pill.ok { color: var(--text); border-color: var(--border-strong); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .pill.err { color: var(--red); border-color: var(--red-dim); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .gantt-bar { border-radius: 0; background: var(--accent); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .diff-add { color: var(--text); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .diff-del { color: var(--red); }
+
+/* ── typography: labels are instrument markings, not sentences ───────────── */
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .card-title,
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .ev-kind,
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .lib-cat,
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .eta-readout {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .stat,
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .canvas-empty .ce-mark {
+  font-family: var(--font-doto);
+  font-size: 40px;
+  letter-spacing: -0.02em;
+  font-variation-settings: "ROND" 0, "WONK" 1;
+}
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) h1,
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) h2 {
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+/* hazard — V11.4 — industrial dark: soot canvas, safety-yellow signal.
+   The workshop palette: Teenage Engineering knobs on a Nothing chassis. */
+
+/* orchid — V11.4 — noir magenta: near-black plum, orchid signal.
+   The evening palette: OLED noir with an orchid lamp. */
+
+/* porcelain — V11.4 — cool light: porcelain white, ultraviolet signal.
+   The gallery palette: white cube, one violet work of light. */
+
+/* =============================================================================
+   V11.4 — THE SIGNAL DIET (the red-retreat pass)
+   -----------------------------------------------------------------------------
+   Nothing OS keeps red for interrupts; the V11.2 inscribed painted too much of
+   the screen with it. V11.4 retreats the signal to interrupt-only duty:
+   primary buttons go monochrome (white fill / black ink), big numbers go white,
+   tinted washes halve, and the scrollbar stops shouting. Red remains where it
+   MEANS something: the live lamp, the brand dot, the active wire, the focus
+   ring, selection, danger. If nothing is urgent, nothing is red.
+   ========================================================================== */
+
+/* primary controls: ink on the canvas, not a red flood — inscribed only,
+   the other palettes keep their own quieter signals */
+[data-theme="pitch"] button.primary {
+  color: var(--bg);
+  background: var(--text);
+  border-color: var(--text);
+}
+[data-theme="pitch"] button.primary:hover {
+  background: #ffffff;
+  border-color: #ffffff;
+}
+
+/* big numbers are data, not alarms */
+[data-theme="pitch"] .stat .n,
+[data-theme="ink"] .stat .n,
+[data-theme="pitch"] .stat .n,
+[data-theme="ivory"] .stat .n { color: var(--text); }
+
+/* =============================================================================
+   V11.3 — THE DOT SYSTEM (the Nothing OS inscription pass)
+   -----------------------------------------------------------------------------
+   One accent of colour per screen. The grey scale is the hierarchy. The dot is
+   the atom: status pills lead with a 4px dot, toggles are mechanical switches,
+   sliders end in a dot, theme chips carry their own pigment dot, and focus is
+   a hairline ring — never a glow. Every rule here is shared through :is(),
+   exactly like the rest of the file: a palette is still only tokens.
+   ========================================================================== */
+
+/* status pills lead with a dot that inherits the pill's state colour */
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .pill::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+/* mechanical toggle — a switch, not a checkbox. square track, square thumb,
+   percussive travel, hairline borders only. */
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 28px;
+  height: 14px;
+  margin: 0;
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  position: relative;
+  cursor: pointer;
+  transition: border-color var(--t-fast), background var(--t-fast);
+  flex: none;
+}
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 10px;
+  height: 10px;
+  background: var(--text-mute);
+  transition: transform var(--t-fast), background var(--t-fast);
+}
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) input[type="checkbox"]:hover { border-color: var(--accent); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) input[type="checkbox"]:checked { border-color: var(--accent); }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) input[type="checkbox"]:checked::before {
+  transform: translateX(14px);
+  background: var(--accent);
+}
+
+/* sliders — a hairline rail with a dot thumb */
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 2px;
+  background: var(--border-strong);
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  cursor: pointer;
+}
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+}
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) input[type="range"]::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+}
+
+/* theme chips — each palette carries its own pigment dot so the settings row
+   reads like a paint card. The hex lives here in the CSS (the token home),
+   never in TypeScript. */
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .theme-chip { text-transform: lowercase; letter-spacing: 0.04em; }
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .theme-chip .tdot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--seg-off);
+  flex: none;
+}
+
+/* cyanotype — 11.9.5: the exposure-cyan dot */
+:is([data-theme="ink"]) .theme-chip[data-t="ink"] .tdot { background: #C98A62; border-color: #C98A62; }
+:is([data-theme="pitch"]) .theme-chip[data-t="pitch"] .tdot { background: #BD8577; border-color: #BD8577; }
+:is([data-theme="slag"]) .theme-chip[data-t="slag"] .tdot { background: #9AA6AE; border-color: #9AA6AE; }
+:is([data-theme="fern"]) .theme-chip[data-t="fern"] .tdot { background: #A79A63; border-color: #A79A63; }
+:is([data-theme="ivory"]) .theme-chip[data-t="ivory"] .tdot { background: #A4502C; border-color: #A4502C; }
+:is([data-theme="travertine"]) .theme-chip[data-t="travertine"] .tdot { background: #7A6B3A; border-color: #7A6B3A; }
+) .theme-chip.on { border-color: var(--accent); color: var(--text); }
+
+/* focus is a hairline ring, never a glow */
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) :focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* dotted rule — the dot-matrix hairline divider */
+:is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) .dot-rule {
+  border: none;
+  border-top: 1px dotted var(--border-strong);
+  margin: 14px 0;
+}
+
+/* reduced motion, honoured ────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  :is(
+  [data-theme="ink"],
+  [data-theme="pitch"],
+  [data-theme="slag"],
+  [data-theme="fern"],
+  [data-theme="ivory"],
+  [data-theme="travertine"]
+) * {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+}
+
+/* ── wabi — the twelfth palette: five-color minimal (MJ 11.9.4-Fixed) ──────
+ * Charcoal ground, washi ink, one kiln-terracotta signal, moss alive,
+ * berry error. Exactly five hues: every secondary tone is derived from
+ * them with color-mix, so the palette stays literally five colors by
+ * construction. Flat instrument panel — no gradients, no glow.
+ */
+
+/* cyanotype — 11.9.5, the thirteenth palette: FIVE colors, one rare hue family.
+   Prussian ground #0b1524 · paper ink #e9eef7 · exposure signal #8fc6ff ·
+   madder error #d4687c · viridian alive #5fb8a0. Everything else is color-mix.
+   The story is the process: ferrous salts, sunlight, and the blueprint's blue. */
+
+/* daylight — 11.10.7 CLARITY, the fourteenth palette: warm paper ground, ink text,
+   kiln-copper signal at light-mode contrast, moss alive, madder error. */
+
+
+/* --- 13.0.1 theme option previews (per-theme ground + signal swatches) ------- */
+[data-t="ink"] .sw-ground { background: #000000; }        [data-t="ink"] .sw-signal { background: #C98A62; }
+[data-t="pitch"] .sw-ground { background: #000000; }      [data-t="pitch"] .sw-signal { background: #BD8577; }
+[data-t="slag"] .sw-ground { background: #0B0C0E; }       [data-t="slag"] .sw-signal { background: #9AA6AE; }
+[data-t="fern"] .sw-ground { background: #070A08; }       [data-t="fern"] .sw-signal { background: #A79A63; }
+[data-t="ivory"] .sw-ground { background: #F5F1E9; }      [data-t="ivory"] .sw-signal { background: #A4502C; }
+[data-t="travertine"] .sw-ground { background: #EFE9DC; } [data-t="travertine"] .sw-signal { background: #7A6B3A; }

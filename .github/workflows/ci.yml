@@ -1,0 +1,59 @@
+name: CI
+
+# CI compiles the real Tauri crate on Windows (cargo check/test/clippy),
+# runs the full probe suite and builds the production bundle on every push
+# and PR. Windows-only: MJ is built, installed and demoed on Windows 11 for
+# pre-seed; no maintainer validates the other platforms, so CI does not run
+# them. probe/versionDrift.test.ts §5 still fails the gate if a retired
+# runner label or an EOL Node major reappears here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    name: verify (windows)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+
+      - name: npm ci
+        run: npm ci
+
+      - name: TypeScript — tsc --noEmit
+        run: ./node_modules/.bin/tsc --noEmit
+
+      - name: Rust — cargo check
+        working-directory: src-tauri
+        run: cargo check --all-targets
+
+      - name: Rust — cargo test
+        working-directory: src-tauri
+        run: cargo test
+
+      - name: Rust — clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Probes
+        shell: bash
+        run: npm test
+
+      - name: Production bundle
+        run: ./node_modules/.bin/vite build
