@@ -61,13 +61,13 @@ var NODE_METHODS = {
     method: "SHAPE (built in): parse, then apply the shape \u2014 the output is the input made conformant, or a precise error."
   },
   "cap.webhook": {
-    method: "DELIVER (built in): sign the payload (HMAC-SHA256), deliver with 3 retries and exponential backoff, and record the final status."
+    method: "DELIVER (declared, not built): the node stores a URL, but this release ships no webhook sender \u2014 running it refuses and says so, rather than reporting a delivery that never happened."
   },
   "cap.cron": {
-    method: "SCHEDULE (built in): fire on the cron schedule; skip if the previous run is still busy \u2014 no overlapping runs, no queue buildup."
+    method: "SCHEDULE (declared, not built): the node stores a cron expression, but this release ships no scheduler \u2014 running it refuses and says so, rather than emitting a tick nothing produced."
   },
   "cap.vector": {
-    method: "RECALL (built in): embed once, cache by content hash, and return the k nearest neighbours with their scores."
+    method: "RECALL (built in): substring-match the node's memory store and return up to k entries, best-importance first \u2014 keyword recall, not embeddings or nearest-neighbour search."
   }
 };
 var CATEGORY_METHODS = {
@@ -1088,7 +1088,7 @@ var NODE_DEFINITIONS = [
     category: "capability",
     group: "v3",
     icon: "zap",
-    description: "Emits or receives a signed webhook event.",
+    description: "Holds a webhook URL for a future sender. Not built in this release \u2014 running it refuses rather than faking a delivery.",
     inputs: [inP(p("payload", "Payload", "JSON"))],
     outputs: [outP(p("event", "Event", "Event"))],
     permissions: { networkAccess: true },
@@ -1100,7 +1100,7 @@ var NODE_DEFINITIONS = [
     category: "capability",
     group: "v3",
     icon: "clock",
-    description: "Triggers the workflow on a cron expression (desktop scheduler).",
+    description: "Holds a cron expression for a future scheduler. Not built in this release \u2014 running it refuses rather than emitting a tick nothing produced.",
     inputs: [],
     outputs: [outP(p("tick", "Tick", "Event"))],
     configSchema: [{ key: "cron", label: "Cron", type: "text", default: "0 9 * * 1-5" }]
@@ -1250,10 +1250,34 @@ ok(
   "missing cap method"
 );
 ok(
-  "methods speak in verbs (built-in marker)",
-  Object.values(NODE_METHODS).every((m) => /\(built in\)/i.test(m.method)),
-  "a method lost its built-in marker"
+  "every method declares its implementation status (built in | declared, not built)",
+  Object.values(NODE_METHODS).every((m) => /\(built in\)/i.test(m.method) || /\(declared, not built\)/i.test(m.method)),
+  Object.entries(NODE_METHODS).filter(([, m]) => !/\(built in\)/i.test(m.method) && !/\(declared, not built\)/i.test(m.method)).map(([id]) => id).join(", ")
 );
+{
+  const schedulerSrc = read(path.join("src", "engine", "scheduler.ts"));
+  const refused = [...schedulerSrc.matchAll(/if \(id === "(cap\.[a-z]+)"\) \{\s*\n\s*throw new Error\("([^"]*declared but not built[^"]*)"/g)].map((m) => ({ id: m[1], why: m[2] }));
+  ok(
+    "the scheduler refuses the unbuilt capabilities instead of passing them through",
+    refused.length >= 2 && refused.every((r) => r.why.length > 0),
+    `refused: ${refused.map((r) => r.id).join(", ") || "none"}`
+  );
+  ok(
+    "no refused capability still claims to be built in",
+    refused.every((r) => !/\(built in\)/i.test(NODE_METHODS[r.id]?.method ?? "")),
+    refused.filter((r) => /\(built in\)/i.test(NODE_METHODS[r.id]?.method ?? "")).map((r) => r.id).join(", ")
+  );
+  ok(
+    "every refused capability is labelled (declared, not built) in its method",
+    refused.every((r) => /\(declared, not built\)/i.test(NODE_METHODS[r.id]?.method ?? "")),
+    refused.filter((r) => !/\(declared, not built\)/i.test(NODE_METHODS[r.id]?.method ?? "")).map((r) => r.id).join(", ")
+  );
+  ok(
+    "cap.vector is genuinely built, so it keeps the built-in marker",
+    /\(built in\)/i.test(NODE_METHODS["cap.vector"]?.method ?? "") && /ipc\.memorySearch/.test(schedulerSrc),
+    "cap.vector lost its implementation or its marker"
+  );
+}
 ok(
   "methodFor falls back to the category, never to silence",
   methodFor({ id: "agent.unknown", category: "agent" }).length > 0,

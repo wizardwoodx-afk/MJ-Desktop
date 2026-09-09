@@ -1,4 +1,4 @@
-# MJ 14.1.2 — Desktop native install
+# MJ 14.1.3 — Desktop native install
 
 MJ is a Tauri v2 desktop app. The web preview you see in a browser is the same React app with no
 native shell — it cannot spawn coding agents, touch the keyring, or write SQLite. Everything below

@@ -108,7 +108,7 @@ var MJ_VERSION, MJ_VERSION_SHORT, MJ_TITLE;
 var init_version = __esm({
   "src/version.ts"() {
     "use strict";
-    MJ_VERSION = "14.1.2";
+    MJ_VERSION = "14.1.3";
     MJ_VERSION_SHORT = MJ_VERSION.split(".").slice(0, 2).join(".");
     MJ_TITLE = `MJ ${MJ_VERSION_SHORT}`;
   }
@@ -4587,7 +4587,7 @@ var NODE_DEFINITIONS = [
     category: "capability",
     group: "v3",
     icon: "zap",
-    description: "Emits or receives a signed webhook event.",
+    description: "Holds a webhook URL for a future sender. Not built in this release \u2014 running it refuses rather than faking a delivery.",
     inputs: [inP(p("payload", "Payload", "JSON"))],
     outputs: [outP(p("event", "Event", "Event"))],
     permissions: { networkAccess: true },
@@ -4599,7 +4599,7 @@ var NODE_DEFINITIONS = [
     category: "capability",
     group: "v3",
     icon: "clock",
-    description: "Triggers the workflow on a cron expression (desktop scheduler).",
+    description: "Holds a cron expression for a future scheduler. Not built in this release \u2014 running it refuses rather than emitting a tick nothing produced.",
     inputs: [],
     outputs: [outP(p("tick", "Tick", "Event"))],
     configSchema: [{ key: "cron", label: "Cron", type: "text", default: "0 9 * * 1-5" }]

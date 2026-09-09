@@ -1,6 +1,6 @@
 [package]
 name = "mj-desktop"
-version = "14.1.2"
+version = "14.1.3"
 description = "MJ - native visual AI agent orchestration workstation"
 authors = ["MJ"]
 edition = "2021"

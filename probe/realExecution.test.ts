@@ -6,8 +6,9 @@
  * actual MissionRuntime. If MJ claims a mission is verified, this is the test that decides whether
  * that claim means anything.
  *
- * Skips cleanly (rather than passing vacuously) when python3/pytest or cargo is unavailable, and
- * says so.
+ * Skips cleanly (rather than passing vacuously) when python3, the pytest module or cargo is
+ * unavailable, and says which one. "pytest is available" is asked the same way checkRunner
+ * asks it — `python3 -m pytest` — because that is the command it will actually run.
  */
 
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
@@ -44,8 +45,41 @@ function have(cmd: string): boolean {
   }
 }
 
-const HAS_PYTEST = have("python3");
+/**
+ * Probe an interpreter module rather than a binary on PATH.
+ *
+ * `checkRunner` discovers Python suites from pyproject.toml and runs them as
+ * `python3 -m pytest -q` (src/mission/checkRunner.ts:106) — it never invokes the `pytest`
+ * console script. So "is pytest available" must ask the same question the runner will:
+ * a machine where `pytest` is not on PATH but `python3 -m pytest` works CAN run these
+ * checks, and a machine with python3 but no pytest module CANNOT.
+ */
+function haveModule(cmd: string, args: string[]): boolean {
+  try {
+    execSync([cmd, ...args].join(" "), { stdio: "ignore", env: { ...process.env, PATH: envPath } });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 14.1.3 — this used to read `have("python3")` while being named HAS_PYTEST.
+ *
+ * The consequence was exact and reproducible: on any machine with python3 but no pytest,
+ * the suite entered the branch its own header promises to skip, ran the real checks, and
+ * FAILED three assertions (`a passing suite must exit 0, got 1`, `the failure output must be
+ * captured verbatim`, `the measured check must pass`) — reporting MJ as broken when the
+ * host was simply missing a test runner. Because this suite ships inside the offline pack,
+ * the same missing binary took `node verify/run.mjs` from 80/0 to 79/1 with exit 1 on a
+ * machine the docs described as needing nothing but Node.
+ */
+const HAS_PYTHON = have("python3");
+const HAS_PYTEST = HAS_PYTHON && haveModule("python3", ["-m", "pytest", "--version"]);
 const HAS_CARGO = have("cargo");
+
+/** Which half of the Python toolchain is absent, so the skip says something true. */
+const PYTHON_MISSING: string | null = !HAS_PYTHON ? "python3" : !HAS_PYTEST ? "the pytest module (python3 -m pytest)" : null;
 
 function mkrepo(name: string, files: Record<string, string>): string {
   const dir = join(tmpdir(), `mj7-${name}-${Date.now()}`);
@@ -64,7 +98,7 @@ console.log("\n== real commands, real exit codes ==\n");
 
 if (!HAS_PYTEST) {
   skipped += 1;
-  console.log("  SKIP python3 unavailable — real verification not exercisable here");
+  console.log(`  SKIP ${PYTHON_MISSING} unavailable — real verification not exercisable here`);
 } else {
   const green = mkrepo("green", {
     "pyproject.toml": PYPROJECT,

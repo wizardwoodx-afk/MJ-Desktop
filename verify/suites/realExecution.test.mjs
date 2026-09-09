@@ -39,7 +39,7 @@ var MJ_VERSION, MJ_VERSION_SHORT, MJ_TITLE;
 var init_version = __esm({
   "src/version.ts"() {
     "use strict";
-    MJ_VERSION = "14.1.2";
+    MJ_VERSION = "14.1.3";
     MJ_VERSION_SHORT = MJ_VERSION.split(".").slice(0, 2).join(".");
     MJ_TITLE = `MJ ${MJ_VERSION_SHORT}`;
   }
@@ -4524,7 +4524,7 @@ var NODE_DEFINITIONS = [
     category: "capability",
     group: "v3",
     icon: "zap",
-    description: "Emits or receives a signed webhook event.",
+    description: "Holds a webhook URL for a future sender. Not built in this release \u2014 running it refuses rather than faking a delivery.",
     inputs: [inP(p("payload", "Payload", "JSON"))],
     outputs: [outP(p("event", "Event", "Event"))],
     permissions: { networkAccess: true },
@@ -4536,7 +4536,7 @@ var NODE_DEFINITIONS = [
     category: "capability",
     group: "v3",
     icon: "clock",
-    description: "Triggers the workflow on a cron expression (desktop scheduler).",
+    description: "Holds a cron expression for a future scheduler. Not built in this release \u2014 running it refuses rather than emitting a tick nothing produced.",
     inputs: [],
     outputs: [outP(p("tick", "Tick", "Event"))],
     configSchema: [{ key: "cron", label: "Cron", type: "text", default: "0 9 * * 1-5" }]
@@ -12180,8 +12180,18 @@ function have(cmd) {
     return false;
   }
 }
-var HAS_PYTEST = have("python3");
+function haveModule(cmd, args) {
+  try {
+    execSync([cmd, ...args].join(" "), { stdio: "ignore", env: { ...process.env, PATH: envPath } });
+    return true;
+  } catch {
+    return false;
+  }
+}
+var HAS_PYTHON = have("python3");
+var HAS_PYTEST = HAS_PYTHON && haveModule("python3", ["-m", "pytest", "--version"]);
 var HAS_CARGO = have("cargo");
+var PYTHON_MISSING = !HAS_PYTHON ? "python3" : !HAS_PYTEST ? "the pytest module (python3 -m pytest)" : null;
 function mkrepo(name, files) {
   const dir = join4(tmpdir2(), `mj7-${name}-${Date.now()}`);
   mkdirSync2(dir, { recursive: true });
@@ -12196,7 +12206,7 @@ var PYPROJECT = "[project]\nname = 'target'\nversion = '0.1.0'\n";
 console.log("\n== real commands, real exit codes ==\n");
 if (!HAS_PYTEST) {
   skipped += 1;
-  console.log("  SKIP python3 unavailable \u2014 real verification not exercisable here");
+  console.log(`  SKIP ${PYTHON_MISSING} unavailable \u2014 real verification not exercisable here`);
 } else {
   const green = mkrepo("green", {
     "pyproject.toml": PYPROJECT,

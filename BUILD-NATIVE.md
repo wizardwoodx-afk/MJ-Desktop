@@ -8,9 +8,9 @@ only way anyone can show you the UI from inside a sandbox. The artifact you ship
 
 | Platform | Output |
 |---|---|
-| Windows | `src-tauri/target/release/bundle/nsis/MJ_14.1.2_x64-setup.exe` |
+| Windows | `src-tauri/target/release/bundle/nsis/MJ_14.1.3_x64-setup.exe` |
 | macOS | `src-tauri/target/release/bundle/macos/MJ.app` + `.dmg` |
-| Linux | `src-tauri/target/release/bundle/appimage/MJ_14.1.2_amd64.AppImage` + `.deb` |
+| Linux | `src-tauri/target/release/bundle/appimage/MJ_14.1.3_amd64.AppImage` + `.deb` |
 
 Double-click the installer. There is no port, no `npm run dev`, no browser.
 

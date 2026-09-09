@@ -1,4 +1,4 @@
-# Install MJ 14.1.2 on your laptop (Windows 11) — the only supported install
+# Install MJ 14.1.3 on your laptop (Windows 11) — the only supported install
 
 This zip is **native desktop source**, not a website. MJ is a **Tauri v2** app: the UI is React,
 the engine is Rust, and everything real (SQLite, the keyring, agent processes, sandboxes) happens
@@ -64,8 +64,8 @@ When it finishes, the signed-pending installer is at:
 
 ```
 src-tauri\target\release\bundle\
-  ├─ msi\MJ_14.1.2_x64_en-US.msi
-  └─ nsis\MJ_14.1.2_x64-setup.exe
+  ├─ msi\MJ_14.1.3_x64_en-US.msi
+  └─ nsis\MJ_14.1.3_x64-setup.exe
 ```
 
 Run either one — MJ installs to Programs, gets a Start-menu entry, and launches as a desktop

@@ -3,7 +3,7 @@
 MJ ships its verification with it. There are two tiers — use the deepest one
 your environment allows.
 
-## Tier 1 — offline, zero install (any machine with Node.js)
+## Tier 1 — offline, no npm install (Node.js + git)
 
 From the extracted release tree:
 
@@ -22,6 +22,24 @@ OFFLINE VERIFY SUMMARY: 80 passed, 0 failed.
 per bundle, and in a dev environment the `offlinePack` suite fails the gate if a
 fresh rebuild is not byte-identical to the shipped pack.
 
+### Host tools, stated plainly (14.1.3)
+
+"Zero install" was over-promised. The bundles need no npm packages, but the suites
+inside them drive real programs:
+
+| Tool | Required? | What happens without it |
+|---|---|---|
+| Node.js | **required** | nothing runs |
+| `git` | **required** | `gitTs` / `mergeExecutor` drive real git child processes and fail |
+| `python3 -m pytest` | optional | `realExecution` **skips** and names the missing module |
+| `cargo` | optional | `realExecution` **skips** the Rust checks |
+
+Before 14.1.3 a machine with `python3` but no pytest did not skip — `realExecution`
+probed for the wrong binary, entered the branch, and **failed 3 assertions**, taking
+this tier to `79 passed, 1 failed` with exit 1 and reporting MJ as broken when only
+the host was short a test runner. That is fixed, and the skip now says which half of
+the toolchain is absent.
+
 ## Tier 2 — full toolchain (where `npm ci` works)
 
 ```
@@ -32,7 +50,9 @@ npm run build         # vite production build, exit 0
 ```
 
 `tsc --noEmit` and `vite build` need the dev dependencies (React types, the Tauri
-API surface) — that is exactly why Tier 1 exists: the runtime gate does not.
+API surface) — that is exactly why Tier 1 exists: the runtime gate does not. The
+same host-tool table applies: without `python3 -m pytest`, `npm test` reports
+`81 passed` with `realExecution` skipping rather than failing.
 
 ## What each tier proves
 

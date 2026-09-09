@@ -1,36 +1,49 @@
-MJ 14.1.2 — offline verification pack provenance
+MJ 14.1.3 — offline verification pack provenance
 ===================================================
 
-Release identity: MJ 14.1.2 — "the external-review hardening."
-Two findings from the independent 14.1.1 review (9.2/10, "strongest MJ version
-so far"), both fixed and probe-pinned:
+Release identity: MJ 14.1.3 — "the honesty patch."
+Four defects where the tree claimed more than the build did, each fixed and
+pinned by a probe:
 
-  1. VERSION INTEGRITY: missionRecord.ts had a stale hardcoded "14.1.0" in the
-     record's mjVersion field while the drift gate never scanned the file
-     (40/40 green despite it). The record now imports MJ_VERSION;
-     probe/missionRecord asserts the seal carries the live release; and
-     probe/versionDrift gained two checks scanning the crown artifact
-     (imports MJ_VERSION; no hardcoded release literals) so this rot class
-     can never silently return.
-  2. HOSTILE-INPUT ROBUSTNESS: garbage issuer keys produced raw OpenSSL stack
-     traces in the standalone verifiers. Both now answer cleanly —
-     "INVALID: malformed issuer public key (expected 64 hex chars)" (exit 1)
-     via a shape check plus guarded key parsing; pinned by hostile-input
-     cases in missionRecord and verifierTool.
-  3. README layout's stale bundle count corrected (73 -> 80).
+  1. FALSE FAILURE FROM A WRONG CAPABILITY PROBE: probe/realExecution.test.ts
+     read `have("python3")` into a constant named HAS_PYTEST. On any host with
+     python3 but no pytest the suite entered the branch its own header promises
+     to skip, ran the real checks, and failed 3 assertions ("a passing suite
+     must exit 0, got 1"). Because the suite ships inside this pack, that one
+     missing binary took `node verify/run.mjs` to 79 passed / 1 failed with
+     exit 1 on a machine the docs described as needing nothing but Node. The
+     probe now asks the question checkRunner actually asks — `python3 -m
+     pytest` (src/mission/checkRunner.ts:106), never the `pytest` console
+     script — and the skip names the missing half of the toolchain.
+  2. CAPABILITIES THAT REPORTED SUCCESS WITHOUT RUNNING: cap.cron and
+     cap.webhook fell through runCapability's pass-through return and emitted
+     NODE_SUCCEEDED having scheduled nothing and delivered nothing — the same
+     silent fake cap.http already refused. Both now refuse in that voice,
+     NODE_METHODS gains a second honest marker "(declared, not built)", and
+     probe/meridian fails the build if any capability the runner refuses still
+     claims "(built in)". cap.vector keeps its built-in marker; its method
+     text now matches what memory_search really does (substring recall ordered
+     by importance — not embeddings, not k-nearest-neighbours).
+  3. DOC OVER-PROMISE: docs/VERIFICATION.md called Tier 1 "zero install (any
+     machine with Node.js)". Node.js and git are required; python3 -m pytest
+     and cargo are optional and now skip cleanly.
+  4. A DEPENDENCY THAT IMPLIED A CAPABILITY: playwright and puppeteer-core had
+     zero call sites in this tree and are removed from package.json. The
+     external mj-browser service the Browser screen forwards to is documented
+     in docs/PLATFORM-LIMITS.md instead.
 
-Trust model carried from 14.1.1 (unchanged): --issuer-key pins the trusted
-Ed25519 key out-of-band; no pin -> issuer UNVERIFIED (exit 3); mismatch ->
-INVALID (exit 1); match -> issuer AUTHENTICATED (exit 0). Mission economics
-spans every cycle (perCycle + totals). Claim language: zero MJ state
+Trust model carried from 14.1.1/14.1.2 (unchanged): --issuer-key pins the
+trusted Ed25519 key out-of-band; no pin -> issuer UNVERIFIED (exit 3);
+mismatch -> INVALID (exit 1); match -> issuer AUTHENTICATED (exit 0). Mission
+economics spans every cycle (perCycle + totals). Claim language: zero MJ state
 required, issuer key pinned out-of-band — never "zero trust".
 
 Toolchain (this tree's certification)
-  node          v22.23.2 (linux x64) — ALL FOUR GATES BELOW RAN UNDER IT
+  node          v22.22.3 (linux x64) — ALL FOUR GATES BELOW RAN UNDER IT
   npm test      81 probe suites
   build         vite production build (the web bundle gate)
   esbuild       0.25.12
-  MJ            14.1.2 (package.json + package-lock.json / version.ts /
+  MJ            14.1.3 (package.json + package-lock.json / version.ts /
                 tauri.conf.json / Cargo.toml + Cargo.lock / LICENSE)
 
 Pack contents
@@ -41,21 +54,29 @@ Pack contents
                         built it
   verify/run.mjs        offline runner: no network, no installs, no MJ state
 
-Live certification (this tree, node v22.23.2)
+Live certification (this tree, node v22.22.3)
   tsc --noEmit          0 errors.
   npm test              ALL PROBES SUMMARY: 81 passed, 0 failed.
-                        (includes versionDrift 42/42 — now scanning the
-                        crown artifact — and the new hostile-input pins)
+                        (81 probe suites, incl. offlinePack freshness,
+                        versionDrift 42/42 and the extended meridian gates)
   node verify/run.mjs   OFFLINE VERIFY SUMMARY: 80 passed, 0 failed., exit 0
   vite build            clean, 0 errors.
 
-14.1.2 — upgrade notes
+  realExecution was certified on BOTH paths, not only the skip: with
+  python3 -m pytest absent it reports 3 skips and exits 0; with pytest 9.1.1
+  present it runs for real — green repo exit=0, red repo failure text captured,
+  mission verification 3/3 measured — 14 passed, 0 failed, 1 skipped (cargo).
+
+14.1.3 — upgrade notes
 ----------------------
-  1. No state migration; records sealed by 14.1.0/14.1.1 remain verifiable
+  1. No state migration; records sealed by earlier releases remain verifiable
      (their recorded mjVersion is historical fact, like any receipt).
-  2. Both verifiers stay dependency-free (probes pin their import lists).
-  3. Release ritual unchanged: tag v14.1.2; release.yml re-runs the gates.
+  2. A workflow containing a Schedule or Webhook node now FAILS that node with
+     a stated reason instead of silently succeeding. That is the intended
+     behaviour change: nothing was ever scheduled or delivered before either.
+  3. Both verifiers stay dependency-free (probes pin their import lists).
+  4. Release ritual unchanged: tag v14.1.3; release.yml re-runs the gates.
 
 Counts: 81 live / 80 offline.
-Certified under node v22.23.2 (tsc 0, 81/81 live incl. offlinePack freshness,
+Certified under node v22.22.3 (tsc 0, 81/81 live incl. offlinePack freshness,
 80/80 offline, vite clean).

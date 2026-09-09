@@ -77,8 +77,35 @@ ok(`no agent def is left without an honest method (${agentDefs.length} defs, rol
   agentDefs.filter((d) => methodFor(d) === "Method not yet specified").map((d) => d.id).slice(0, 5).join(", "));
 ok("capability nodes carry methods too (webhook/cron/vector)",
   ["cap.webhook", "cap.cron", "cap.vector"].every((id) => NODE_METHODS[id]?.method), "missing cap method");
-ok("methods speak in verbs (built-in marker)",
-  Object.values(NODE_METHODS).every((m) => /\(built in\)/i.test(m.method)), "a method lost its built-in marker");
+ok("every method declares its implementation status (built in | declared, not built)",
+  Object.values(NODE_METHODS).every((m) => /\(built in\)/i.test(m.method) || /\(declared, not built\)/i.test(m.method)),
+  Object.entries(NODE_METHODS).filter(([, m]) => !/\(built in\)/i.test(m.method) && !/\(declared, not built\)/i.test(m.method)).map(([id]) => id).join(", "));
+
+/* ── 14.1.3: a capability must not claim "(built in)" for something the runtime refuses ──
+ *
+ * cap.cron and cap.webhook shipped method text promising a scheduler and a signed, retried
+ * delivery. Neither exists: both fell through runCapability's pass-through return and reported
+ * NODE_SUCCEEDED having done nothing — the same silent fake cap.http explicitly refuses. The
+ * runtime now refuses them too, and this gate keeps the two files from drifting apart again:
+ * any capability the scheduler rejects as "declared but not built" must say so in its method.
+ */
+{
+  const schedulerSrc = read(path.join("src", "engine", "scheduler.ts"));
+  const refused = [...schedulerSrc.matchAll(/if \(id === "(cap\.[a-z]+)"\) \{\s*\n\s*throw new Error\("([^"]*declared but not built[^"]*)"/g)]
+    .map((m) => ({ id: m[1], why: m[2] }));
+  ok("the scheduler refuses the unbuilt capabilities instead of passing them through",
+    refused.length >= 2 && refused.every((r) => r.why.length > 0),
+    `refused: ${refused.map((r) => r.id).join(", ") || "none"}`);
+  ok("no refused capability still claims to be built in",
+    refused.every((r) => !/\(built in\)/i.test(NODE_METHODS[r.id]?.method ?? "")),
+    refused.filter((r) => /\(built in\)/i.test(NODE_METHODS[r.id]?.method ?? "")).map((r) => r.id).join(", "));
+  ok("every refused capability is labelled (declared, not built) in its method",
+    refused.every((r) => /\(declared, not built\)/i.test(NODE_METHODS[r.id]?.method ?? "")),
+    refused.filter((r) => !/\(declared, not built\)/i.test(NODE_METHODS[r.id]?.method ?? "")).map((r) => r.id).join(", "));
+  ok("cap.vector is genuinely built, so it keeps the built-in marker",
+    /\(built in\)/i.test(NODE_METHODS["cap.vector"]?.method ?? "") && /ipc\.memorySearch/.test(schedulerSrc),
+    "cap.vector lost its implementation or its marker");
+}
 ok("methodFor falls back to the category, never to silence",
   methodFor({ id: "agent.unknown", category: "agent" } as never).length > 0, "empty fallback");
 ok("methodFor's last resort admits ignorance",

@@ -1,4 +1,4 @@
-# MJ 14.1.2 — the assurance runtime for agent work
+# MJ 14.1.3 — the assurance runtime for agent work
 
 > **The proof layer for agent work.** MJ runs fleets of AI coding agents on your own machine and turns every mission into signed, independently verifiable evidence — the assurance runtime for the age of agent audits.
 

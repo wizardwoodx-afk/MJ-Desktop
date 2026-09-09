@@ -94,15 +94,15 @@ export const NODE_METHODS: Record<string, AgentMethodEntry> = {
   },
   "cap.webhook": {
     method:
-      "DELIVER (built in): sign the payload (HMAC-SHA256), deliver with 3 retries and exponential backoff, and record the final status.",
+      "DELIVER (declared, not built): the node stores a URL, but this release ships no webhook sender — running it refuses and says so, rather than reporting a delivery that never happened.",
   },
   "cap.cron": {
     method:
-      "SCHEDULE (built in): fire on the cron schedule; skip if the previous run is still busy — no overlapping runs, no queue buildup.",
+      "SCHEDULE (declared, not built): the node stores a cron expression, but this release ships no scheduler — running it refuses and says so, rather than emitting a tick nothing produced.",
   },
   "cap.vector": {
     method:
-      "RECALL (built in): embed once, cache by content hash, and return the k nearest neighbours with their scores.",
+      "RECALL (built in): substring-match the node's memory store and return up to k entries, best-importance first — keyword recall, not embeddings or nearest-neighbour search.",
   },
 };
 

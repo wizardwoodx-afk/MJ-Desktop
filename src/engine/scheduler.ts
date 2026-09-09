@@ -382,7 +382,7 @@ export async function runWorkflow(graph: WorkflowGraph): Promise<string> {
   return execId;
 }
 
-async function runCapability(node: NodeInstance, collected: Record<string, unknown>): Promise<Record<string, unknown>> {
+export async function runCapability(node: NodeInstance, collected: Record<string, unknown>): Promise<Record<string, unknown>> {
   const first = Object.values(collected)[0];
   const id = node.definitionId;
   if (id === "cap.filesystem") {
@@ -442,6 +442,17 @@ async function runCapability(node: NodeInstance, collected: Record<string, unkno
   }
   if (id === "cap.http") {
     throw new Error("HTTP capability is host-bound. Use an agent with networkAccess or an MCP server. MJ will not silently fake a 200.");
+  }
+  // 14.1.3 — cap.cron and cap.webhook used to fall through to the pass-through return at the end
+  // of this function and report NODE_SUCCEEDED while doing nothing at all: a "scheduled" tick no
+  // scheduler ever produced, a "signed and retried" delivery that was never sent. That is the same
+  // silent-fake failure cap.http refuses two branches above, so both now refuse in the same voice.
+  // The nodes stay on the canvas as declarations; they simply stop pretending to have run.
+  if (id === "cap.cron") {
+    throw new Error("Schedule capability is declared but not built in this release: MJ ships no cron scheduler, so there is no tick to emit. Nothing was scheduled.");
+  }
+  if (id === "cap.webhook") {
+    throw new Error("Webhook capability is declared but not built in this release: no payload was signed and nothing was delivered.");
   }
   if (id === "cap.vector") {
     const hits = await ipc.memorySearch(String(node.id), String(collected.query ?? ""), Number(node.config.k ?? 5));
