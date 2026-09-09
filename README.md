@@ -2,6 +2,12 @@
 
 > **The proof layer for agent work.** MJ runs fleets of AI coding agents on your own machine and turns every mission into signed, independently verifiable evidence — the assurance runtime for the age of agent audits.
 
+> **Looking for the Vouch Harbor app?** It lives in [`vouch-harbor/`](vouch-harbor/README.md) —
+> MJ's proof core rebundled under a single conversation surface. Unzip or clone, open
+> `vouch-harbor/index.html`, no build step. Two signed sample receipts and the public issuer
+> key ship in `vouch-harbor/samples/`; verify them yourself with
+> `node tools/verify-receipt.mjs vouch-harbor/samples/receipt-real-act.jsonl --issuer-key $(cat vouch-harbor/samples/issuer-pubkey.txt)`.
+
 MJ is ONE engine: you compose a crew, give it an outcome, and the Mission Loop
 runs the whole agent-work cycle — dispatch, inter-agent communication, gated
 execution, measured feedback, and human-approved adaptation — leaving one

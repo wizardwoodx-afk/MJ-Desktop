@@ -1,0 +1,79 @@
+/* FLAMO — motion. Professional, not decorative.
+ *
+ * Rules this file obeys:
+ *   1. Motion explains a state change. Nothing animates to be noticed.
+ *   2. 120-260ms. Anything longer reads as slow; anything shorter reads as broken.
+ *   3. transform and opacity only — never layout properties, never box-shadow blur.
+ *   4. Every animation is disabled under prefers-reduced-motion, without exception.
+ *   5. Entrance motion is 4-6px of travel. Large slides read as a marketing site.
+ */
+
+/* ---------- entrance: thread messages and stage cards ---------- */
+@keyframes flamo-rise { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+.msg, .card, .gate {
+  animation: flamo-rise 220ms cubic-bezier(.22, 1, .36, 1) both;
+}
+/* A run produces many cards; staggering them keeps the sequence legible. */
+.card:nth-of-type(2) { animation-delay: 30ms; }
+.card:nth-of-type(3) { animation-delay: 60ms; }
+
+/* ---------- the cycle rail: state, not decoration ---------- */
+.stage i { transition: background var(--fast), box-shadow var(--fast), transform var(--fast); }
+.stage b { transition: color var(--fast); }
+
+@keyframes flamo-pulse {
+  0%   { box-shadow: 0 0 0 0   var(--soft); }
+  70%  { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0   transparent; }
+}
+.stage.active i { animation: flamo-pulse 1400ms cubic-bezier(.22, 1, .36, 1) infinite; }
+
+/* A stage that just completed gives one confirmation, then settles. */
+@keyframes flamo-settle { 0% { transform: scale(1); } 40% { transform: scale(1.5); } 100% { transform: scale(1); } }
+.stage.done i { animation: flamo-settle 260ms cubic-bezier(.22, 1, .36, 1) 1; }
+
+/* ---------- the human gate: one attention pulse, never a loop ----------
+ * A looping pulse is an alarm; a single one is a request. */
+@keyframes flamo-attention {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--signal) 32%, transparent); }
+  100% { box-shadow: 0 0 0 10px transparent; }
+}
+.gate { animation: flamo-rise 220ms cubic-bezier(.22,1,.36,1) both,
+                  flamo-attention 700ms cubic-bezier(.22, 1, .36, 1) 220ms 2; }
+
+/* ---------- vouch: the receipt arrives with weight ---------- */
+@keyframes flamo-stamp { 0% { opacity: 0; transform: scale(.985); } 100% { opacity: 1; transform: none; } }
+@keyframes flamo-rule  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.card.vouched { animation: flamo-stamp 260ms cubic-bezier(.22, 1, .36, 1) both; }
+.card.vouched > .h { position: relative; }
+.card.vouched > .h::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: var(--signal); transform-origin: left center;
+  animation: flamo-rule 420ms cubic-bezier(.22, 1, .36, 1) 120ms both;
+}
+
+/* ---------- working indicator: three dots, low amplitude ---------- */
+@keyframes flamo-dot { 0%, 60%, 100% { opacity: .28; transform: none; } 30% { opacity: 1; transform: translateY(-2px); } }
+.working { display: inline-flex; gap: 3px; align-items: center; }
+.working i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; display: block;
+             animation: flamo-dot 1100ms cubic-bezier(.4, 0, .2, 1) infinite; }
+.working i:nth-child(2) { animation-delay: 140ms; }
+.working i:nth-child(3) { animation-delay: 280ms; }
+
+/* ---------- view switching ---------- */
+@keyframes flamo-view { from { opacity: 0; } to { opacity: 1; } }
+.view, #view-thread { animation: flamo-view 160ms ease both; }
+
+/* ---------- press feedback: physical, brief ---------- */
+.btn, .send, .nav { transition: background var(--fast), color var(--fast), transform 90ms ease; }
+.btn:active, .send:active { transform: scale(.975); }
+
+/* ---------- the one rule that overrides everything above ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

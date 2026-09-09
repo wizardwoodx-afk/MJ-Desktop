@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vouch Harbor</title>
+<link rel="stylesheet" href="flamo.css" />
+<link rel="stylesheet" href="motion.css" />
+</head>
+<body>
+<div class="app">
+
+  <!-- ── sidebar ─────────────────────────────────────────────── -->
+  <aside class="side col">
+    <div class="brand"><i></i> Vouch Harbor <small>v0.1</small></div>
+
+    <div class="lbl">Workspace</div>
+    <div class="nav on" data-view="thread"><s></s><span>Thread</span></div>
+    <div class="nav" data-view="routines"><s></s><span>Routines</span><em id="navRoutines">3</em></div>
+    <div class="nav" data-view="tools"><s></s><span>Tools</span><em id="navTools">5</em></div>
+    <div class="nav" data-view="ledger"><s></s><span>Ledger</span><em id="navLedger">0</em></div>
+
+    <div class="lbl">Agents</div>
+    <div class="nav" data-view="thread"><s></s><span>Research</span></div>
+    <div class="nav" data-view="thread"><s></s><span>Inbox</span></div>
+    <div class="nav" data-view="thread"><s></s><span>Money</span></div>
+
+    <div class="sidefoot">
+      <span class="mono">demo build</span>
+      <span class="mono" style="margin-left:auto">no real actions</span>
+    </div>
+  </aside>
+
+  <!-- ── views ───────────────────────────────────────────────── -->
+  <main class="col" id="view-thread">
+    <div class="head">
+      <h1>Thread</h1>
+      <span class="tag" id="cycleTag">idle</span>
+      <div class="sp" id="mode">
+        <button data-m="light" aria-pressed="true">Light</button>
+        <button data-m="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+
+    <div class="thread" id="thread">
+      <div class="msg">
+        <div class="who">Flamo</div>
+        <div class="bub">Give me an outcome, not a list of steps. I'll route it, recall what's
+          relevant, plan it, argue with myself about it from three points of view, dry-run it,
+          and stop at the gate before anything irreversible happens. Everything I do lands in
+          the ledger on the right.</div>
+      </div>
+    </div>
+
+    <div class="composer">
+      <div class="cbox">
+        <input id="input" placeholder="Renew the domain before Friday and move the invoice…" autocomplete="off" />
+        <button class="send" id="send" aria-label="Send">↑</button>
+      </div>
+      <div class="hint">Real MJ proof core loaded — receipts are hash-chained and Ed25519-signed.
+        Runs the full cycle: AUTHORITY → ROUTE → RECALL → PLAN → DELIBERATE → SIMULATE → GATE → ACT → OBSERVE → VOUCH → LEARN</div>
+    </div>
+  </main>
+
+  <main class="col view" id="view-routines" hidden>
+    <div class="head"><h1>Routines</h1><span class="tag">scheduled work</span></div>
+    <div class="thread" id="routineList"></div>
+  </main>
+
+  <main class="col view" id="view-tools" hidden>
+    <div class="head"><h1>Tools</h1><span class="tag">what FLAMO may touch</span></div>
+    <div class="thread" id="toolList"></div>
+  </main>
+
+  <main class="col view" id="view-ledger" hidden>
+    <div class="head"><h1>Ledger</h1><span class="tag">vouched cycles</span></div>
+    <div class="thread" id="ledgerList">
+      <p class="empty">Nothing vouched yet. Run a cycle in Thread — a receipt lands here only after an action was observed.</p>
+    </div>
+  </main>
+
+  <!-- ── cycle inspector ─────────────────────────────────────── -->
+  <aside class="rail col">
+    <div class="lbl">Cycle</div>
+    <div class="railscroll">
+      <div id="stages"></div>
+      <div class="lbl" style="padding-left:16px">Vouched</div>
+      <div id="ledger"><p class="empty">Nothing vouched yet. A receipt appears only after an action was observed — never before.</p></div>
+    </div>
+  </aside>
+
+</div>
+<script src="mj-core.js"></script>
+<script src="flamo-ipc.js"></script>
+<script type="module">
+  import * as cron from "./cron.js";
+  window.VH_CRON = cron;
+  window.dispatchEvent(new Event("vh:cron-ready"));
+</script>
+<script src="screens.js"></script>
+<script src="cycle.js"></script>
+</body>
+</html>

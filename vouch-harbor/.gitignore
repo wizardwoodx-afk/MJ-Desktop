@@ -1,0 +1,6 @@
+# runtime state — never commit (anchored to the app root so samples/ stays tracked)
+/.issuer-store.json
+/issuer-key.txt
+/receipt.jsonl
+/receipt-real-act.jsonl
+node_modules/

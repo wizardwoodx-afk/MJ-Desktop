@@ -1,0 +1,126 @@
+/* FLAMO — Verdigris. One system, four tokens per mode, everything else derived.
+   Discipline: hairlines not shadows, one signal under 5% of the surface,
+   6px radii, flat fills, motion only where it explains a state change. */
+
+[data-mode="light"]{
+  --ground:#F0F0EC; --surface:#F8F8F5; --ink:#1B1E1C; --line:#D9DAD4; --signal:#3F7A6A;
+}
+[data-mode="dark"]{
+  --ground:#131614; --surface:#1A1E1B; --ink:#E4E7E2; --line:#282D28; --signal:#6FB79F;
+}
+:root{
+  --muted:color-mix(in srgb, var(--ink) 55%, transparent);
+  --faint:color-mix(in srgb, var(--ink) 34%, transparent);
+  --soft:color-mix(in srgb, var(--signal) 12%, transparent);
+  --r:6px;
+  --fast:140ms cubic-bezier(.2,0,0,1);
+  --med:240ms cubic-bezier(.22,1,.36,1);
+  --ui:ui-sans-serif,-apple-system,"Segoe UI",Inter,system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,"Cascadia Mono",monospace;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--ground);color:var(--ink);font:14px/1.55 var(--ui);
+  -webkit-font-smoothing:antialiased;
+  transition:background var(--med),color var(--med);
+}
+button{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-size:12px}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:216px minmax(0,1fr) 292px;height:100vh}
+.col{display:flex;flex-direction:column;min-height:0}
+.side{border-right:1px solid var(--line)}
+.rail{border-left:1px solid var(--line)}
+
+/* ---------- sidebar ---------- */
+.brand{display:flex;align-items:center;gap:9px;padding:15px 16px 13px;font-weight:600;letter-spacing:-.01em}
+.brand i{width:9px;height:9px;border-radius:2px;background:var(--signal);display:block;flex:none}
+.brand small{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--faint);font-weight:400}
+.lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:14px 16px 6px}
+.nav{display:flex;align-items:center;gap:9px;margin:0 8px;padding:7px 9px;border-radius:var(--r);
+     cursor:pointer;color:var(--muted);transition:background var(--fast),color var(--fast)}
+.nav:hover{background:var(--surface);color:var(--ink)}
+.nav.on{background:var(--surface);color:var(--ink);box-shadow:inset 2px 0 0 var(--signal)}
+.nav s{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.5;flex:none;text-decoration:none}
+.nav span{font-size:13px}
+.nav em{margin-left:auto;font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+.sidefoot{margin-top:auto;border-top:1px solid var(--line);padding:11px 16px;display:flex;align-items:center;gap:8px}
+.sidefoot .mono{color:var(--faint);font-size:10.5px}
+
+/* ---------- thread ---------- */
+.head{display:flex;align-items:center;gap:12px;padding:13px 24px;border-bottom:1px solid var(--line)}
+.head h1{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.head .tag{font-family:var(--mono);font-size:10.5px;color:var(--muted);border:1px solid var(--line);
+           padding:2px 7px;border-radius:20px}
+.head .sp{margin-left:auto;display:flex;gap:2px;border:1px solid var(--line);border-radius:var(--r);padding:2px}
+.head .sp button{border:0;background:transparent;cursor:pointer;font-size:12px;padding:4px 10px;
+                 border-radius:4px;color:var(--muted)}
+.head .sp button[aria-pressed="true"]{background:var(--ground);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+
+.thread{flex:1;overflow:auto;padding:24px;display:flex;flex-direction:column;gap:14px}
+.msg{max-width:660px}
+.who{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+.bub{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--surface)}
+.msg.me .bub{background:transparent}
+
+/* stage cards — the loop made visible */
+.card{max-width:660px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.card>.h{display:flex;align-items:center;gap:9px;padding:9px 13px;border-bottom:1px solid var(--line);
+         background:var(--surface)}
+.card>.h b{font-size:12px;font-weight:600;letter-spacing:.02em}
+.card>.h .mono{margin-left:auto;color:var(--faint);font-size:10.5px}
+.card>.b{padding:12px 13px}
+.card.think{border-left:2px solid var(--signal)}
+.pov{display:grid;grid-template-columns:52px 1fr;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+.pov:first-child{border-top:0;padding-top:0}
+.pov b{font-family:var(--mono);font-size:10.5px;color:var(--signal);padding-top:2px}
+.pov p{font-size:13px;color:var(--muted)}
+.steps{list-style:none;counter-reset:s}
+.steps li{counter-increment:s;display:flex;gap:10px;padding:5px 0;font-size:13px;color:var(--muted)}
+.steps li::before{content:counter(s);font-family:var(--mono);font-size:10.5px;color:var(--faint);
+                  width:14px;flex:none;padding-top:2px}
+.gate{max-width:660px;border:1px solid var(--signal);border-radius:8px;padding:14px;background:var(--soft)}
+.gate h4{font-size:13.5px;margin-bottom:5px}
+.gate p{font-size:13px;color:var(--muted);margin-bottom:12px}
+.row{display:flex;gap:8px}
+.btn{font-size:13px;padding:7px 14px;border-radius:var(--r);cursor:pointer;
+     border:1px solid var(--line);background:transparent;transition:background var(--fast)}
+.btn:hover{background:var(--surface)}
+.btn.pri{background:var(--signal);border-color:var(--signal);color:#fff}
+[data-mode="dark"] .btn.pri{color:#0d100e}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:12.5px;color:var(--muted)}
+.kv span:last-child{font-family:var(--mono);font-size:11.5px;color:var(--ink)}
+
+.composer{border-top:1px solid var(--line);padding:14px 24px}
+.cbox{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;
+      padding:11px 13px;background:var(--surface);transition:border-color var(--fast)}
+.cbox:focus-within{border-color:var(--signal)}
+.cbox input{flex:1;border:0;background:transparent;color:var(--ink);font:inherit;outline:none}
+.cbox .send{width:26px;height:26px;border-radius:var(--r);border:1px solid var(--line);
+            display:grid;place-items:center;cursor:pointer;color:var(--muted);background:transparent}
+.cbox .send:hover{color:var(--ink)}
+.hint{font-size:11px;color:var(--faint);margin-top:8px}
+
+/* ---------- right rail: the cycle inspector ---------- */
+.stage{display:grid;grid-template-columns:16px 1fr auto;gap:9px;align-items:center;
+       padding:6px 16px;cursor:default}
+.stage i{width:6px;height:6px;border-radius:50%;background:var(--line);justify-self:center;transition:background var(--fast)}
+.stage b{font-size:12.5px;font-weight:500;color:var(--faint);transition:color var(--fast)}
+.stage em{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--faint)}
+.stage.done i{background:var(--signal)}
+.stage.done b{color:var(--ink)}
+.stage.active i{background:var(--signal);box-shadow:0 0 0 3px var(--soft)}
+.stage.active b{color:var(--ink)}
+.stage.gated i{background:var(--signal)}
+.stage.gated b{color:var(--signal)}
+.stage.skip b{text-decoration:line-through}
+.ledger{margin:0 12px 12px;border:1px solid var(--line);border-radius:var(--r);padding:10px 11px}
+.ledger .kv{font-size:11.5px}
+.empty{padding:0 16px;font-size:12px;color:var(--faint)}
+.railscroll{flex:1;overflow:auto;padding-bottom:8px}
+
+@media (max-width:1120px){.app{grid-template-columns:1fr}.side,.rail{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

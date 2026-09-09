@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-palette="verdigris" data-mode="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FLAMO — palette lab</title>
+<style>
+  /* ---------------------------------------------------------------------
+     FLAMO palette lab. Three candidate systems, 4 tokens each per mode.
+     No gradients. No glass. No glow. Hairlines carry hierarchy.
+     ------------------------------------------------------------------ */
+
+  /* FLAMO — VERDIGRIS. The one system. Stone ground, oxidised-copper signal. */
+  [data-palette="verdigris"][data-mode="light"]{
+    --ground:#F0F0EC; --surface:#F8F8F5; --ink:#1B1E1C; --line:#D9DAD4; --signal:#3F7A6A;
+  }
+  [data-palette="verdigris"][data-mode="dark"]{
+    --ground:#131614; --surface:#1A1E1B; --ink:#E4E7E2; --line:#282D28; --signal:#6FB79F;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--ground); color:var(--ink);
+    font:14px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Inter,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    transition:background 180ms ease,color 180ms ease;
+  }
+  .mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12px}
+
+  /* ---- top bar ---- */
+  .bar{display:flex;align-items:center;gap:18px;padding:12px 20px;border-bottom:1px solid var(--line)}
+  .mark{display:flex;align-items:center;gap:9px;font-weight:600;letter-spacing:-.01em}
+  .mark i{width:9px;height:9px;border-radius:2px;background:var(--signal);display:block}
+  .switch{display:flex;gap:2px;margin-left:auto;border:1px solid var(--line);border-radius:7px;padding:2px}
+  .switch button{
+    border:0;background:transparent;color:var(--ink);opacity:.55;cursor:pointer;
+    font:inherit;font-size:12.5px;padding:5px 11px;border-radius:5px;
+  }
+  .switch button[aria-pressed="true"]{background:var(--surface);opacity:1;box-shadow:inset 0 0 0 1px var(--line)}
+
+  /* ---- token strip ---- */
+  .tokens{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+  .tok{background:var(--ground);padding:14px 16px}
+  .tok b{display:block;font-size:12.5px;font-weight:600;margin-bottom:8px}
+  .tok .chip{height:42px;border:1px solid var(--line);border-radius:5px}
+  .tok .hex{opacity:.6;margin-top:8px;display:block}
+
+  /* ---- app shell ---- */
+  .shell{display:grid;grid-template-columns:212px 1fr 268px;height:calc(100vh - 208px);min-height:440px}
+  .side,.rail{border-right:1px solid var(--line);padding:14px 12px;overflow:auto}
+  .rail{border-right:0;border-left:1px solid var(--line)}
+  .lbl{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;opacity:.5;margin:14px 6px 7px}
+  .lbl:first-child{margin-top:0}
+  .nav{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:6px;cursor:pointer;color:var(--ink);opacity:.72}
+  .nav:hover{background:var(--surface);opacity:1}
+  .nav.on{background:var(--surface);opacity:1;box-shadow:inset 2px 0 0 var(--signal)}
+  .nav s{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.45;text-decoration:none}
+  .nav span{font-size:13px}
+  .nav em{margin-left:auto;font-style:normal;font-size:11px;opacity:.5}
+
+  /* ---- thread ---- */
+  .thread{padding:22px 26px;overflow:auto;display:flex;flex-direction:column;gap:16px}
+  .msg{max-width:640px}
+  .msg .who{font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.5;margin-bottom:6px}
+  .bub{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--surface)}
+  .msg.me .bub{background:transparent}
+  .tool{border:1px solid var(--line);border-left:2px solid var(--signal);border-radius:6px;padding:9px 12px;background:transparent}
+  .tool .t{display:flex;gap:8px;align-items:center}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--signal)}
+  .approve{border:1px solid var(--signal);border-radius:8px;padding:14px;max-width:640px}
+  .approve h4{font-size:13.5px;margin-bottom:5px}
+  .approve p{opacity:.72;font-size:13px;margin-bottom:12px}
+  .row{display:flex;gap:8px}
+  .btn{font:inherit;font-size:13px;padding:7px 14px;border-radius:6px;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--ink)}
+  .btn.pri{background:var(--signal);border-color:var(--signal);color:#fff}
+  [data-mode="dark"] .btn.pri{color:#14150f}
+
+  .composer{margin-top:auto;border:1px solid var(--line);border-radius:8px;padding:11px 13px;display:flex;gap:10px;align-items:center;background:var(--surface)}
+  .composer input{flex:1;border:0;background:transparent;color:var(--ink);font:inherit;outline:none}
+  .composer .send{width:26px;height:26px;border-radius:6px;border:1px solid var(--line);display:grid;place-items:center;opacity:.7}
+
+  /* ---- rail ---- */
+  .run{border:1px solid var(--line);border-radius:7px;padding:10px 11px;margin-bottom:8px}
+  .run .h{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+  .run .h b{font-size:12.5px;font-weight:600}
+  .pill{margin-left:auto;font-size:10.5px;padding:2px 7px;border-radius:20px;border:1px solid var(--line);opacity:.75}
+  .pill.ok{border-color:var(--signal);color:var(--signal);opacity:1}
+  .kv{display:flex;justify-content:space-between;opacity:.62;font-size:11.5px;padding:2px 0}
+
+  .rules{padding:16px 26px;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .rules h5{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.5;margin-bottom:7px}
+  .rules p{font-size:12.5px;opacity:.78}
+  @media (max-width:1080px){.shell{grid-template-columns:1fr}.side,.rail{display:none}.rules{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="mark"><i></i> FLAMO</div>
+  <span class="mono" style="opacity:.5">Verdigris — 4 tokens per mode</span>
+  <div class="switch" id="mode">
+    <button data-m="light" aria-pressed="true">Light</button>
+    <button data-m="dark" aria-pressed="false">Dark</button>
+  </div>
+</div>
+
+<div class="tokens" id="tokens"></div>
+
+<div class="shell">
+  <aside class="side">
+    <div class="lbl">Workspace</div>
+    <div class="nav on"><s></s><span>Thread</span></div>
+    <div class="nav"><s></s><span>Routines</span><em>3</em></div>
+    <div class="nav"><s></s><span>Tools</span></div>
+    <div class="nav"><s></s><span>Ledger</span></div>
+    <div class="lbl">Agents</div>
+    <div class="nav"><s></s><span>Research</span></div>
+    <div class="nav"><s></s><span>Inbox</span><em>1</em></div>
+    <div class="nav"><s></s><span>Travel</span></div>
+  </aside>
+
+  <main class="thread">
+    <div class="msg me">
+      <div class="who">You</div>
+      <div class="bub">Renew the domain before Friday and move the invoice to the new entity.</div>
+    </div>
+    <div class="tool">
+      <div class="t"><span class="dot"></span><b class="mono">flamo.tools.registry.lookup</b><span class="mono" style="opacity:.5;margin-left:auto">240ms</span></div>
+    </div>
+    <div class="msg">
+      <div class="who">Flamo</div>
+      <div class="bub">Found it — expires in 6 days, auto-renew is off. I can pay the ₹1,180 renewal from the card on file, but that spends money, so I stopped here.</div>
+    </div>
+    <div class="approve">
+      <h4>Needs your approval</h4>
+      <p>Pay ₹1,180 to the registrar for a 1-year renewal. Reversible for 5 days. Recorded to the ledger either way.</p>
+      <div class="row"><button class="btn pri">Approve</button><button class="btn">Change card</button><button class="btn">Decline</button></div>
+    </div>
+    <div class="composer"><input placeholder="Message Flamo…" /><div class="send">↑</div></div>
+  </main>
+
+  <aside class="rail">
+    <div class="lbl">Run</div>
+    <div class="run">
+      <div class="h"><span class="dot"></span><b>domain-renewal</b><span class="pill ok">gated</span></div>
+      <div class="kv"><span>steps</span><span class="mono">4 / 6</span></div>
+      <div class="kv"><span>authority</span><span class="mono">human · scoped</span></div>
+      <div class="kv"><span>spent</span><span class="mono">₹0.00</span></div>
+    </div>
+    <div class="lbl">Vouched</div>
+    <div class="run">
+      <div class="kv"><span>receipt</span><span class="mono">a41f…9c2</span></div>
+      <div class="kv"><span>chain</span><span class="mono">seq 12 · ok</span></div>
+      <div class="kv"><span>egress</span><span class="mono">1 record</span></div>
+    </div>
+  </aside>
+</div>
+
+<div class="rules">
+  <div><h5>What makes it feel real</h5><p>Hairlines, not shadows. One signal colour used under 5% of the surface. 6–8px radii. Flat fills. Type does the hierarchy.</p></div>
+  <div><h5>What makes it feel like an AI gimmick</h5><p>Gradient text and buttons, backdrop-blur glass, glowing borders, emoji as icons, five competing accents, oversized rounding, floating orbs.</p></div>
+  <div><h5>Why only four colours</h5><p>Every other tone is derived by mixing the ink or the signal with the ground. A palette that can rot out of sync with itself is not a system.</p></div>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const NAMES = {ground:"Ground",surface:"Surface",ink:"Ink",signal:"Signal"};
+  function readTokens(){
+    const cs = getComputedStyle(root);
+    const t = {};
+    for (const k of ["ground","surface","ink","signal"]) t[k] = cs.getPropertyValue("--"+k).trim();
+    return t;
+  }
+  function paintTokens(){
+    const t = readTokens();
+    document.getElementById("tokens").innerHTML = Object.keys(NAMES).map(k =>
+      `<div class="tok"><b>${NAMES[k]}</b><div class="chip" style="background:${t[k]}"></div><span class="hex mono">${t[k]}</span></div>`
+    ).join("");
+  }
+  function press(group, attr, val){
+    for (const b of document.querySelectorAll(`#${group} button`))
+      b.setAttribute("aria-pressed", String(b.dataset[attr] === val));
+  }
+  document.getElementById("mode").addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return;
+    root.dataset.mode = b.dataset.m; press("mode","m",b.dataset.m); requestAnimationFrame(paintTokens);
+  });
+  paintTokens();
+</script>
+</body>
+</html>
