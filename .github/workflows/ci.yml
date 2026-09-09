@@ -1,0 +1,96 @@
+name: CI
+
+# CI compiles the real Tauri crate on Linux, macOS and Windows (cargo check/test/clippy),
+# runs the full probe suite and builds the production bundle on every push and PR.
+#
+# Runner images are retired on a published schedule; the matrix below uses only currently
+# supported labels. probe/versionDrift.test.ts §5 fails the gate if a retired label
+# (macos-13, macos-14, ubuntu-20.04, ubuntu-22.04) or an EOL Node major reappears here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            name: linux
+          - os: macos-15
+            name: macos
+          - os: windows-latest
+            name: windows
+    runs-on: ${{ matrix.os }}
+    name: verify (${{ matrix.name }})
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 20 reached end-of-life 2026-04-30; CI certifies releases only on supported runtimes.
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+
+      # Only Linux needs the GTK/WebKit dev stack; macOS/Windows use the platform webviews.
+      - name: Linux system deps (Tauri)
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev bubblewrap
+
+      - name: npm ci
+        run: npm ci
+
+      - name: TypeScript — tsc --noEmit
+        run: ./node_modules/.bin/tsc --noEmit
+
+      - name: Rust — cargo check
+        working-directory: src-tauri
+        run: cargo check --all-targets
+
+      - name: Rust — cargo test
+        working-directory: src-tauri
+        run: cargo test
+
+      - name: Rust — clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Git identity for the probe suites that drive real git
+        run: |
+          git config --global user.name "MJ CI"
+          git config --global user.email "mj-ci@users.noreply.github.com"
+
+      - name: Probes
+        shell: bash
+        env:
+          # offlinePack rebuilds all 74 bundles sequentially and then runs the whole offline
+          # pack; on a loaded CI runner the default 120s per-suite watchdog can trip on it.
+          MJ_PROBE_TIMEOUT_MS: "300000"
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee probe-run.log
+
+      - name: Upload probe log (always — a red run must be debuggable)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-log-${{ matrix.name }}
+          path: probe-run.log
+          if-no-files-found: ignore
+
+      - name: Production bundle
+        run: ./node_modules/.bin/vite build

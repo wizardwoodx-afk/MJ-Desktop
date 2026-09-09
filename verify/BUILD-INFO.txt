@@ -1,0 +1,61 @@
+MJ 14.1.2 — offline verification pack provenance
+===================================================
+
+Release identity: MJ 14.1.2 — "the external-review hardening."
+Two findings from the independent 14.1.1 review (9.2/10, "strongest MJ version
+so far"), both fixed and probe-pinned:
+
+  1. VERSION INTEGRITY: missionRecord.ts had a stale hardcoded "14.1.0" in the
+     record's mjVersion field while the drift gate never scanned the file
+     (40/40 green despite it). The record now imports MJ_VERSION;
+     probe/missionRecord asserts the seal carries the live release; and
+     probe/versionDrift gained two checks scanning the crown artifact
+     (imports MJ_VERSION; no hardcoded release literals) so this rot class
+     can never silently return.
+  2. HOSTILE-INPUT ROBUSTNESS: garbage issuer keys produced raw OpenSSL stack
+     traces in the standalone verifiers. Both now answer cleanly —
+     "INVALID: malformed issuer public key (expected 64 hex chars)" (exit 1)
+     via a shape check plus guarded key parsing; pinned by hostile-input
+     cases in missionRecord and verifierTool.
+  3. README layout's stale bundle count corrected (73 -> 80).
+
+Trust model carried from 14.1.1 (unchanged): --issuer-key pins the trusted
+Ed25519 key out-of-band; no pin -> issuer UNVERIFIED (exit 3); mismatch ->
+INVALID (exit 1); match -> issuer AUTHENTICATED (exit 0). Mission economics
+spans every cycle (perCycle + totals). Claim language: zero MJ state
+required, issuer key pinned out-of-band — never "zero trust".
+
+Toolchain (this tree's certification)
+  node          v22.23.2 (linux x64) — ALL FOUR GATES BELOW RAN UNDER IT
+  npm test      81 probe suites
+  build         vite production build (the web bundle gate)
+  esbuild       0.25.12
+  MJ            14.1.2 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml + Cargo.lock / LICENSE)
+
+Pack contents
+  verify/suites/*.mjs   80 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness
+                        gate, which runs live only)
+  verify/MANIFEST.json  sha256 per bundle + the MJ and esbuild versions that
+                        built it
+  verify/run.mjs        offline runner: no network, no installs, no MJ state
+
+Live certification (this tree, node v22.23.2)
+  tsc --noEmit          0 errors.
+  npm test              ALL PROBES SUMMARY: 81 passed, 0 failed.
+                        (includes versionDrift 42/42 — now scanning the
+                        crown artifact — and the new hostile-input pins)
+  node verify/run.mjs   OFFLINE VERIFY SUMMARY: 80 passed, 0 failed., exit 0
+  vite build            clean, 0 errors.
+
+14.1.2 — upgrade notes
+----------------------
+  1. No state migration; records sealed by 14.1.0/14.1.1 remain verifiable
+     (their recorded mjVersion is historical fact, like any receipt).
+  2. Both verifiers stay dependency-free (probes pin their import lists).
+  3. Release ritual unchanged: tag v14.1.2; release.yml re-runs the gates.
+
+Counts: 81 live / 80 offline.
+Certified under node v22.23.2 (tsc 0, 81/81 live incl. offlinePack freshness,
+80/80 offline, vite clean).
