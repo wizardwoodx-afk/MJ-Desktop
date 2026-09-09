@@ -11,11 +11,11 @@ From the extracted release tree:
 node verify/run.mjs
 ```
 
-This executes the 74 runtime probe suites as self-contained bundles — no `npm ci`,
+This executes the 80 runtime probe suites as self-contained bundles — no `npm ci`,
 no network, no `node_modules`. Expected tail:
 
 ```
-OFFLINE VERIFY SUMMARY: 74 passed, 0 failed.
+OFFLINE VERIFY SUMMARY: 80 passed, 0 failed.
 ```
 
 ~30 seconds. The bundles are byte-pinned: `verify/MANIFEST.json` carries a sha256
@@ -27,7 +27,7 @@ fresh rebuild is not byte-identical to the shipped pack.
 ```
 npm ci
 npm run typecheck     # tsc --noEmit, exit 0
-npm test              # 75 suites (74 runtime + the offline-pack freshness gate)
+npm test              # 81 suites (80 runtime + the offline-pack freshness gate)
 npm run build         # vite production build, exit 0
 ```
 
@@ -38,7 +38,7 @@ API surface) — that is exactly why Tier 1 exists: the runtime gate does not.
 
 | Claim | Tier 1 | Tier 2 |
 |---|---|---|
-| The 74 runtime probe suites pass (incl. the 270-assertion harness suite) | ✔ | ✔ |
+| The 80 runtime probe suites pass (incl. the 270-assertion harness suite) | ✔ | ✔ |
 | The offline pack is byte-fresh (rebuild == shipped) | pinned by MANIFEST | ✔ (offlinePack suite) |
 | TypeScript compiles clean | — | ✔ |
 | Production web build succeeds | — | ✔ |
@@ -120,6 +120,12 @@ API surface) — that is exactly why Tier 1 exists: the runtime gate does not.
   the user's own declaration); the honest default for an invisible endpoint
   is unknown/not-visible, never a guess; mechanical paths keep
   providerInfo null.
+
+- **missionRecord, evidenceSurfaces, finOps, assuranceScore,
+  incidentDossier, verifierTool** (14.0–14.1) — the trust-anchor and
+  economics line (measured on this tree: 81/81 live, 80/80 offline).
+  14.1.2 extends `versionDrift` to 42/42 (crown-artifact scan) and pins
+  hostile-input handling in both standalone verifiers.
 
 ## Provenance
 
