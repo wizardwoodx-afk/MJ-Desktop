@@ -1,0 +1,759 @@
+/* ===========================================================================
+   MJ 11.9.4 — REDESIGN LAYER ("KILN recut")
+   Loaded AFTER vouch.css's own rules (imported last in vouch.css), so it overrides
+   structure — radii, elevation, motion, type — without touching the pinned
+   contract selectors (titlebar .logo font, port-anchor halo, wire-hit width,
+   keyframe names, theme tokens). Everything reads theme tokens: no new hex,
+   so every palette of the 13.0 OBSIDIAN set inherits the redesign for free.
+   =========================================================================== */
+
+:where(:root) {
+  --rd-radius: 10px;            /* card surface */
+  --rd-radius-sm: 8px;          /* controls */
+  --rd-ease: cubic-bezier(0.22, 1, 0.36, 1);      /* mature deceleration */
+  --rd-spring: cubic-bezier(0.34, 1.4, 0.44, 1);  /* restrained spring */
+  --rd-shadow-1: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 1px 2px rgba(0, 0, 0, 0.28);
+  --rd-shadow-2: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 10px 28px rgba(0, 0, 0, 0.36);
+  --rd-display: "Space Grotesk", var(--font-ui);
+}
+
+/* --- motion vocabulary --------------------------------------------------- */
+@keyframes rd-rise   { from { opacity: 0; transform: translateY(9px); }  to { opacity: 1; transform: none; } }
+@keyframes rd-pop    { from { opacity: 0; transform: scale(0.965); }     to { opacity: 1; transform: none; } }
+@keyframes rd-slide-l{ from { opacity: 0; transform: translateX(-14px);}to { opacity: 1; transform: none; } }
+@keyframes rd-slide-r{ from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+@keyframes rd-lamp   { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* --- base type ------------------------------------------------------------ */
+.app { font-family: var(--font-ui); font-size: 13.5px; letter-spacing: 0; }
+.app h1, .app h2, .app h3,
+.card-title, .inspector-head, .console-head, .home-hero,
+.ev-section-title, .section-title {
+  font-family: var(--rd-display);
+  letter-spacing: -0.01em;
+}
+.app h1 { font-size: 22px; font-weight: 600; }
+.app h2, .card-title { font-size: 15px; font-weight: 600; }
+.app h3 { font-size: 13px; font-weight: 600; }
+.muted { font-size: 12px; }
+.pill, .chip, .kbd, .fold-tag {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.09em;
+  text-transform: uppercase; border-radius: 999px;
+  padding: 2px 8px; border: 1px solid var(--border);
+  background: var(--bg-input); color: var(--text-dim);
+}
+
+/* --- titlebar ------------------------------------------------------------- */
+.titlebar { backdrop-filter: none; }
+.titlebar .host-pill {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.07em;
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 3px 10px; color: var(--text-mute); background: var(--bg-input);
+  transition: color var(--t-fast) var(--rd-ease), border-color var(--t-fast) var(--rd-ease);
+}
+.titlebar .host-pill:hover { color: var(--text-dim); border-color: var(--border-strong); }
+
+/* --- buttons & inputs ------------------------------------------------------ */
+button {
+  border-radius: var(--rd-radius-sm);
+  border: 1px solid var(--border-strong);
+  transition: transform 120ms var(--rd-ease), background var(--t-fast) var(--rd-ease),
+              border-color var(--t-fast) var(--rd-ease), color var(--t-fast) var(--rd-ease),
+              box-shadow var(--t-fast) var(--rd-ease);
+}
+button:active { transform: scale(0.97); }
+button:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--accent-dim), 0 0 0 3px var(--accent); }
+button.primary {
+  border-color: var(--accent); box-shadow: var(--rd-shadow-1);
+}
+button.primary:hover { box-shadow: var(--rd-shadow-2); }
+button.danger { border-color: var(--danger); }
+input, select, textarea {
+  border-radius: var(--rd-radius-sm);
+  transition: border-color var(--t-fast) var(--rd-ease), box-shadow var(--t-fast) var(--rd-ease);
+}
+input:focus, select:focus, textarea:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+/* --- menubar ---------------------------------------------------------------- */
+.menubar .menu-item { border-radius: var(--rd-radius-sm); }
+.menu-fly {
+  border-radius: var(--rd-radius); box-shadow: var(--rd-shadow-2);
+  animation: rd-pop 160ms var(--rd-ease) both; transform-origin: top left;
+}
+
+/* --- tabstrip ---------------------------------------------------------------- */
+.tabstrip { padding: 4px 8px 0; gap: 2px; }
+.tabstrip .tab {
+  border-radius: var(--rd-radius-sm) var(--rd-radius-sm) 0 0;
+  border: 1px solid transparent; border-bottom: none;
+  position: relative; transition: color var(--t-fast) var(--rd-ease), background var(--t-fast) var(--rd-ease);
+}
+.tabstrip .tab.active::after {
+  content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2px;
+  border-radius: 2px; background: var(--accent);
+  animation: rd-pop 200ms var(--rd-spring) both;
+}
+
+/* --- sidebar (11.10.7 CLARITY) -------------------------------------------------- */
+.rail { padding: 10px 8px; gap: 2px; }
+.rail button {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; height: auto; padding: 7px 12px;
+  border: 1px solid transparent; border-radius: 9px; background: transparent;
+  color: var(--text-dim); position: relative;
+  text-transform: none; letter-spacing: 0.01em;
+}
+.rail button svg { width: 16px; height: 16px; flex: none; }
+.rail button:hover { background: var(--bg-elevated); color: var(--text-dim); }
+.rail button.active {
+  background: var(--accent-dim); color: var(--text); border-color: var(--border);
+  box-shadow: none; /* the ::before indicator bar replaces the old inset bar */
+}
+.rail button.active::before {
+  content: ""; position: absolute; left: -7px; top: 8px; bottom: 8px; width: 3px;
+  border-radius: 3px; background: var(--accent);
+}
+.rail .nav-label { font-size: 13.5px; }
+.rail-collapsed .rail button { width: 36px; padding: 8px 0; justify-content: center; }
+
+/* --- stage & cards --------------------------------------------------------------- */
+.stage { animation: rd-rise 260ms var(--rd-ease) both; }
+.card {
+  border-radius: var(--rd-radius);
+  box-shadow: var(--rd-shadow-1);
+  transition: border-color var(--t-fast) var(--rd-ease), box-shadow 160ms var(--rd-ease);
+  animation: rd-rise 300ms var(--rd-ease) both;
+}
+.card:hover { border-color: var(--border-strong); }
+.home .card:nth-child(2) { animation-delay: 40ms; }
+.home .card:nth-child(3) { animation-delay: 80ms; }
+.home .card:nth-child(4) { animation-delay: 120ms; }
+.home .card:nth-child(5) { animation-delay: 160ms; }
+
+/* --- canvas chrome ------------------------------------------------------------------ */
+.canvas-wrap { position: relative; }
+.canvas-wrap::before {                 /* quiet vignette over the dot field */
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(130% 95% at 50% 6%, transparent 58%, var(--bg) 100%);
+}
+.canvas-toolbar {
+  border-radius: 999px; box-shadow: var(--rd-shadow-2);
+  padding: 5px 6px; animation: rd-rise 320ms var(--rd-ease) both;
+}
+.canvas-toolbar button { border: none; background: transparent; border-radius: 999px; padding: 4px 9px; }
+.canvas-toolbar button:hover { background: var(--bg-input); }
+
+/* ── 13.0 FINISH — node plates, ports, wires (the connection language) ────────
+   Nodes read as precision instruments: a soft plate, a category tile on the
+   head, a state lamp, and ports that make the wire↔port join unmistakable —
+   ring = type, filled core = connected, accent halo = live target.          */
+.node-card {
+  border-radius: 12px; border-color: var(--border);
+  box-shadow: var(--rd-shadow-1);
+  transition: box-shadow 180ms var(--rd-ease), border-color 180ms var(--rd-ease),
+              transform 180ms var(--rd-ease);
+}
+.node-card:hover { box-shadow: var(--rd-shadow-2); border-color: var(--border-strong); }
+.node-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--rd-shadow-2); }
+.node-card.dragging { box-shadow: var(--rd-shadow-2); cursor: grabbing; }
+
+/* category spine — agent/control get the signal spine; every other category a quiet ink one */
+.node-card.agent::before, .node-card.control::before,
+.node-card.text::before, .node-card.gate::before, .node-card.tool::before {
+  content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px;
+  border-radius: 4px; background: var(--accent); opacity: 0.9;
+}
+.node-card.text::before, .node-card.gate::before, .node-card.tool::before { background: var(--text-mute); opacity: 0.5; }
+
+/* head: icon tile + refined title */
+.node-card .head { gap: 10px; padding: 12px 14px 4px; }
+.node-tile {
+  width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center;
+  justify-content: center; flex: none;
+  background: var(--bg-input); border: 1px solid var(--border);
+  color: var(--text-mute); box-shadow: var(--rd-shadow-1);
+  transition: color 160ms var(--rd-ease), border-color 160ms var(--rd-ease);
+}
+.node-card.selected .node-tile { color: var(--accent); border-color: var(--accent-dim); }
+.node-card.agent .head .icon { color: inherit; }
+.node-card .head .icon { color: inherit; }
+.node-card .title { font-size: 12.5px; letter-spacing: 0.01em; font-weight: 650; }
+
+/* state lamp — quiet idle, breathing signal on run, alert on error */
+.glyph-light { width: 7px; height: 7px; border: 1px solid var(--border-strong); background: var(--glyph-off); }
+.glyph-light.on { background: var(--amber); border-color: var(--amber); animation: rd-lamp 1.7s ease-in-out infinite; }
+.glyph-light.err { background: var(--danger); border-color: var(--danger); }
+.glyph-light.done { background: var(--ok); border-color: var(--ok); }
+
+/* purpose + stream previews, framed quietly */
+.node-card .purpose-preview { padding: 3px 14px 9px; letter-spacing: 0.005em; }
+.node-card .stream-preview { border-left: 2px solid var(--accent-dim); margin: 0 14px 6px; padding: 3px 8px; background: var(--bg-input); border-radius: 0 6px 6px 0; }
+.node-card .meta { gap: 8px; padding: 7px 14px 10px; }
+.node-card .meta > span { padding: 2px 7px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-input); }
+
+/* port rows — labels breathe; rows widen to 20px for a clearer wire landing line */
+.port-grid { gap: 10px; padding: 7px 10px 9px; }
+.port-row { height: 20px; font-size: 9px; letter-spacing: 0.05em; }
+.port-row.input { padding-left: 26px; }
+.port-row.output { padding-right: 26px; }
+.port-name { color: var(--text-mute); transition: color 140ms var(--rd-ease); }
+.port-row:hover .port-name { color: var(--text-dim); }
+.port-anchor { background: var(--bg-panel); border: 1.6px solid var(--port-edge); }
+.port-anchor:hover, .port-anchor.valid-target {
+  border-color: var(--amber-hot); background: var(--amber);
+  box-shadow: 0 0 0 3px var(--accent-dim), 0 0 12px var(--accent-dim);
+}
+.port-anchor.filled {
+  background: var(--accent); border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+.port-anchor.valid-target { animation: rd-port-pulse 1.1s ease-in-out infinite; }
+@keyframes rd-port-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--accent-dim); }
+  50%      { box-shadow: 0 0 0 5px var(--accent-dim); }
+}
+
+
+/* anchor "reach" — a short outward stub that visually meets the wire at the card
+   edge, so the port↔wire join reads as one continuous connector (overflow is
+   visible on .node-card, so the stub may cross the border line). */
+.port-anchor::before {
+  content: ""; position: absolute; top: 50%; width: 6px; height: 2.4px;
+  border-radius: 3px; background: var(--port-edge);
+  transform: translateY(-50%);
+  transition: background 140ms var(--rd-ease);
+}
+.port-row.input .port-anchor::before { left: -10px; }
+.port-row.output .port-anchor::before { right: -10px; }
+.port-anchor.filled::before { background: var(--accent); }
+.port-anchor:hover::before, .port-anchor.valid-target::before { background: var(--amber-hot); }
+
+/* meta line chip colour follows live state (status text is the last span) */
+.node-card .meta { gap: 6px; }
+/* wires — a touch more presence; endpoint collars make the join explicit */
+.wire { stroke-width: 1.8; }
+.wire.active { stroke-width: 2.2; }
+.wire.streaming { stroke-width: 2.2; }
+.wire.error { stroke-width: 2.2; }
+.wire.completed { stroke-width: 2; opacity: 0.9; }
+.wire-mid { transition: r 140ms var(--rd-ease); }
+.wire-group { cursor: pointer; }
+.wire-group:hover .wire { stroke-width: 2.6; filter: url(#vh-glow); }
+.wire-group:hover .wire-mid { r: 3.4px; }
+.wire-snap { fill: var(--accent); stroke: var(--bg); stroke-width: 1.5; animation: rd-port-pulse 0.9s ease-in-out infinite; }
+
+/* linking: source port stays hot while a ghost wire is out */
+.node-card.linking .port-anchor { }
+/* --- library drawer -------------------------------------------------------------------- */
+/* 11.10.7 CLARITY — the entrance animation used fill-mode "both", whose final keyframe
+   (transform: none) permanently overrode the closed state's translateX(-102%): the drawer
+   could never visually close. Animate only on .open so the canvas gets its space back. */
+.library-drawer {
+  box-shadow: var(--rd-shadow-2);
+  border-right: 1px solid var(--border);
+}
+.library-drawer.open { animation: rd-slide-l 240ms var(--rd-ease); }
+.lib-item {
+  border-radius: var(--rd-radius-sm);
+  transition: transform 140ms var(--rd-ease), background var(--t-fast) var(--rd-ease),
+              border-color var(--t-fast) var(--rd-ease);
+}
+.lib-item:hover { transform: translateX(3px); background: var(--bg-elevated); border-color: var(--border); }
+.lib-search { border-radius: 999px; }
+
+/* --- inspector ------------------------------------------------------------------------------ */
+.inspector { animation: rd-slide-r 220ms var(--rd-ease) both; box-shadow: var(--rd-shadow-2); }
+.inspector-head {
+  text-transform: uppercase; font-size: 11px; letter-spacing: 0.13em;
+  color: var(--text-mute); font-weight: 600;
+}
+.inspector-section { animation: rd-rise 240ms var(--rd-ease) both; }
+
+/* --- event console ----------------------------------------------------------------------------- */
+.event-console { border-radius: var(--rd-radius) var(--rd-radius) 0 0; overflow: hidden; }
+.console-head { cursor: pointer; }
+.ev-line { transition: background var(--t-fast) var(--rd-ease); }
+.ev-line:hover { background: var(--row-hover); }
+.ev-kind { border-radius: 4px; font-size: 9.5px; letter-spacing: 0.06em; }
+
+/* --- statusbar ------------------------------------------------------------------------------------- */
+.statusbar { letter-spacing: 0.08em; }
+.statusbar > * { transition: color var(--t-fast) var(--rd-ease); }
+
+/* --- toasts & modals ----------------------------------------------------------------------------------- */
+.toast > * {
+  border-radius: var(--rd-radius); box-shadow: var(--rd-shadow-2);
+  animation: rd-rise 260ms var(--rd-spring) both;
+}
+.modal-overlay { animation: rd-pop 140ms ease-out both; }
+.modal {
+  border-radius: 14px; box-shadow: var(--rd-shadow-2);
+  animation: rd-pop 200ms var(--rd-spring) both;
+}
+
+/* --- scrollbars ---------------------------------------------------------------------------------------------- */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--scroll-thumb-hover); }
+
+/* --- gantt & eta --------------------------------------------------------------------------------------------- */
+.gantt-bar { border-radius: 5px; transition: opacity var(--t-fast) var(--rd-ease); }
+.eta-seg { border-radius: 2px; }
+.eta-readout { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; }
+
+/* --- reduced motion: keep every rd-* entrance instantaneous ---------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .stage, .card, .menu-fly, .tab.active::after, .canvas-toolbar,
+  .node-card, .glyph-light, .port-anchor, .wire, .wire-mid, .wire-snap,
+  .node-tile, .library-drawer, .inspector, .modal-overlay, .modal, .toast > *,
+  .ev-line, .lib-item { animation: none !important; transition-duration: 0.01ms !important; }
+  .glyph-light.on, .port-anchor.valid-target, .wire-snap { animation: none !important; }
+}
+
+/* ===========================================================================
+   11.9.5 surfaces — palette, preflight, checkpoints, wire magnet, assist recut
+   =========================================================================== */
+
+/* --- command palette (Raycast-grade) -------------------------------------- */
+.palette-overlay { backdrop-filter: blur(2px); }
+.palette {
+  border-radius: 14px; box-shadow: var(--rd-shadow-2);
+  animation: rd-pop 180ms var(--rd-spring) both; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.palette-input-row {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.palette-input-row input { border: none; background: transparent; flex: 1; font-size: 14px; }
+.palette-input-row input:focus { box-shadow: none; }
+.palette-glyph { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+.palette .results { max-height: 380px; overflow-y: auto; padding: 6px; }
+.palette-group {
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text-mute); padding: 10px 8px 4px;
+}
+.palette .result {
+  display: flex; align-items: center; gap: 8px; padding: 7px 9px;
+  border-radius: var(--rd-radius-sm); cursor: pointer; font-size: 13px;
+  transition: background var(--t-fast) var(--rd-ease);
+}
+.palette .result.hot { background: var(--accent-dim); color: var(--text); }
+.palette .result .result-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette .result.empty { color: var(--text-mute); cursor: default; }
+.palette-foot {
+  display: flex; gap: 14px; align-items: center; padding: 8px 14px;
+  border-top: 1px solid var(--border); font-size: 11px; color: var(--text-mute);
+}
+
+/* --- preflight panel & statusbar chip -------------------------------------- */
+.preflight-chip { cursor: pointer; border-radius: 999px; padding: 1px 8px; border: 1px solid var(--border); transition: border-color var(--t-fast) var(--rd-ease); }
+.preflight-chip:hover { border-color: var(--border-strong); }
+.preflight-chip.err { color: var(--danger); border-color: var(--danger); }
+.preflight-chip.warn { color: var(--accent); border-color: var(--accent); }
+.preflight-chip.ok { color: var(--ok); }
+.preflight-panel {
+  position: absolute; top: 8px; right: 8px; width: 380px; max-height: 70%;
+  z-index: 90; display: flex; flex-direction: column;
+  background: var(--bg-panel); border: 1px solid var(--border-strong);
+  border-radius: var(--rd-radius); box-shadow: var(--rd-shadow-2);
+  animation: rd-slide-r 220ms var(--rd-ease) both;
+}
+.preflight-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.preflight-list { overflow-y: auto; padding: 6px; }
+.preflight-row {
+  display: flex; gap: 8px; align-items: baseline; padding: 7px 8px;
+  border-radius: var(--rd-radius-sm); font-size: 12px; line-height: 1.45;
+}
+.preflight-row.jump { cursor: pointer; transition: background var(--t-fast) var(--rd-ease); }
+.preflight-row.jump:hover { background: var(--row-hover); }
+.preflight-row .code { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.06em; color: var(--text-mute); white-space: nowrap; }
+.preflight-row .mark { width: 12px; text-align: center; }
+.preflight-row .mark.error { color: var(--danger); }
+.preflight-row .mark.warn { color: var(--accent); }
+.preflight-row .mark.info { color: var(--text-mute); }
+.preflight-foot { padding: 8px 12px; border-top: 1px solid var(--border); }
+
+/* --- checkpoints modal ------------------------------------------------------- */
+.checkpoints-modal { width: 520px; max-height: 76vh; display: flex; flex-direction: column; padding: 18px; }
+.checkpoints-list { overflow-y: auto; margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.checkpoint-row {
+  display: flex; align-items: center; gap: 8px; padding: 9px 10px;
+  border: 1px solid var(--border); border-radius: var(--rd-radius-sm);
+  animation: rd-rise 220ms var(--rd-ease) both;
+}
+.checkpoint-row:hover { border-color: var(--border-strong); }
+
+/* --- wire magnet --------------------------------------------------------------- */
+.wire-snap {
+  fill: none; stroke: var(--accent); stroke-width: 1.4;
+  animation: rd-lamp 1.1s var(--rd-ease) infinite;
+}
+
+/* --- assist 11.9.5 recut --------------------------------------------------------- */
+.assistant-panel { display: flex; flex-direction: column; }
+.asst-welcome { padding: 16px 14px 6px; animation: rd-rise 260ms var(--rd-ease) both; }
+.asst-welcome-title { font-family: var(--rd-display); font-size: 15px; font-weight: 600; }
+.asst-suggestions { display: flex; flex-direction: column; gap: 6px; }
+.asst-suggest {
+  text-align: left; padding: 10px 12px; border-radius: var(--rd-radius-sm);
+  border: 1px solid var(--border); background: var(--bg-input); color: var(--text-dim);
+  font-size: 12.5px; line-height: 1.4; display: flex; gap: 8px; align-items: flex-start;
+  transition: transform 140ms var(--rd-ease), border-color var(--t-fast) var(--rd-ease), color var(--t-fast) var(--rd-ease);
+}
+.asst-suggest:hover { transform: translateX(3px); border-color: var(--accent); color: var(--text); }
+.asst-msg.user { display: flex; justify-content: flex-end; }
+.asst-user-bubble {
+  max-width: 86%; padding: 8px 12px; border-radius: 12px 12px 3px 12px;
+  background: var(--accent-dim); border: 1px solid var(--border);
+  font-size: 13px; line-height: 1.5; white-space: pre-wrap;
+  animation: rd-rise 200ms var(--rd-ease) both;
+}
+.asst-bot-card {
+  border: 1px solid var(--border); border-radius: 12px 12px 12px 3px;
+  background: var(--bg-elevated); padding: 9px 12px;
+  animation: rd-rise 220ms var(--rd-ease) both;
+}
+.asst-bot-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.asst-actions { display: flex; gap: 8px; margin-top: 9px; }
+.asst-foot { font-family: var(--font-mono); letter-spacing: 0.05em; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   11.9.9 — Mission Control, Receipt & Compliance Center, Role Board.
+   New classes only (mc-, rb-, one pill variant); token-pure, so every theme
+   inherits them. No new motion — status is conveyed by ink and border.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.pill.warn { color: var(--amber); border-color: var(--amber-dim); }
+
+.mc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.mc-table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-strong);
+}
+.mc-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.mc-table tbody tr { transition: background 120ms var(--rd-ease, ease); }
+.mc-table tbody tr:hover { background: var(--bg-elevated); }
+
+.mc-alert { border-color: var(--danger-dim); }
+
+.rb-item {
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm, 3px);
+  background: var(--bg-panel);
+  transition: border-color 120ms ease, opacity 120ms ease;
+}
+.rb-item:hover { border-color: var(--border-strong); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MJ 13.0.1 — the INK finish: air, hierarchy, restraint.
+   The 13.0 pass swapped colours but kept the cramped instrument frame —
+   every surface still shouted in 9px mono. This layer rebuilds the *frame*:
+   copy reads in Inter with real sizes, cards breathe, the rail is quiet,
+   controls are confident. Same classes, upgraded voice. All token-pure.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* --- voice: body copy and labels read as text, not telemetry --------------- */
+.app .muted { font-family: var(--font-ui); font-size: 12.5px; letter-spacing: 0; color: var(--text-mute); }
+.app .mono { font-family: var(--font-mono); font-size: 11px; }
+.panel-page { padding: 34px 38px; }
+.panel-page .sub {
+  font-family: var(--font-ui); font-size: 13px; letter-spacing: 0;
+  color: var(--text-mute); margin-bottom: 26px;
+}
+.panel-page h2 { margin-bottom: 6px; }
+
+/* --- surfaces: cards with room to breathe ----------------------------------- */
+.card {
+  padding: 22px 24px; margin-bottom: 14px;
+  border-radius: 14px; border-color: var(--border);
+  background: var(--bg-elevated);
+}
+.card .card-title { font-size: 13.5px; font-weight: 650; letter-spacing: 0.005em; margin-bottom: 4px; }
+.card .muted { margin-top: 5px; }
+.row { gap: 12px; }
+.field { display: block; font-family: var(--font-ui); font-size: 12px; color: var(--text-dim); letter-spacing: 0.01em; }
+
+/* --- controls: calm, confident ---------------------------------------------- */
+button {
+  padding: 7px 14px; border-radius: 8px;
+  font-size: 10.5px; letter-spacing: 0.07em;
+  transition: background var(--t-fast) var(--rd-ease), color var(--t-fast) var(--rd-ease),
+              border-color var(--t-fast) var(--rd-ease), transform 120ms var(--rd-ease);
+}
+button:active:not(:disabled) { transform: translateY(0.5px); }
+button.primary {
+  color: var(--accent-contrast, #0c0a07);
+  background: var(--amber);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+input, textarea, select {
+  border-radius: 8px; padding: 8px 11px;
+  font-family: var(--font-ui); font-size: 13px; letter-spacing: 0.01em;
+  transition: border-color var(--t-fast) var(--rd-ease), box-shadow var(--t-fast) var(--rd-ease);
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+  outline: none;
+}
+input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* --- the rail: quiet typography, airy rows ----------------------------------- */
+.rail { padding: 14px 10px; gap: 3px; }
+.rail .nav-group-label {
+  font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.16em;
+  color: var(--text-4); padding: 12px 10px 4px; text-transform: uppercase;
+}
+.rail button {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 8px 10px; border: none; border-radius: 8px;
+  font-family: var(--font-ui); font-size: 12.5px; font-weight: 500;
+  letter-spacing: 0.005em; text-transform: none;
+  color: var(--text-dim); background: transparent;
+  transition: background var(--t-fast) var(--rd-ease), color var(--t-fast) var(--rd-ease);
+}
+.rail button svg { width: 15px; height: 15px; color: var(--text-4); transition: color var(--t-fast) var(--rd-ease); }
+.rail button:hover { background: var(--row-hover); color: var(--text); }
+.rail button:hover svg { color: var(--text-dim); }
+.rail button.active { background: var(--accent-dim); color: var(--text); }
+.rail button.active svg { color: var(--accent); }
+.rail button.active::before {
+  content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px;
+  border-radius: 2px; background: var(--accent);
+}
+
+/* --- chrome: title bar + tabs + status --------------------------------------- */
+.statusbar { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.05em; }
+.tab { border-radius: 8px 8px 0 0; font-family: var(--font-ui); font-size: 12px; text-transform: none; letter-spacing: 0.005em; font-weight: 500; }
+
+/* --- tables -------------------------------------------------------------------- */
+.mc-table td { padding: 10px 12px; font-size: 12.5px; }
+
+/* --- theme picker: options with real previews --------------------------------- */
+.theme-chip {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: var(--font-ui); font-size: 12.5px; font-weight: 500;
+  letter-spacing: 0.005em; text-transform: none;
+  padding: 8px 13px; border-radius: 9px;
+}
+.theme-chip .tdot {
+  width: 10px; height: 10px; border-radius: 50%; flex: none;
+  box-shadow: 0 0 0 2px var(--bg-elevated), 0 0 0 3.5px var(--border);
+}
+.theme-chip.on { box-shadow: inset 0 0 0 1px var(--accent); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MJ 13.0.1 — node anatomy v2 (the real node redesign)
+   Nodes now read as instruments, not boxes: a quiet plate, an icon tile that
+   wakes with the node's state, and ports that SIT ON the card edge so every
+   wire lands visibly on its anchor. State is carried by the border, the tile
+   and the spine — never by decoration.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.node-card {
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 color-mix(in oklab, var(--white) 3%, transparent),
+              0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.node-card:hover { transform: translateY(-1px); }
+.node-card.selected { transform: none; }
+
+/* live state: the border and the tile carry it */
+.node-card[data-status="on"] { border-color: color-mix(in oklab, var(--accent) 42%, var(--border)); }
+.node-card[data-status="err"] { border-color: color-mix(in oklab, var(--danger) 48%, var(--border)); }
+.node-card[data-status="done"] { border-color: color-mix(in oklab, var(--ok) 40%, var(--border)); }
+
+.node-card .head { padding: 13px 15px 3px; gap: 11px; }
+.node-tile {
+  width: 28px; height: 28px; border-radius: 9px;
+  background: var(--bg-input);
+  transition: color var(--t-fast) var(--rd-ease), background var(--t-fast) var(--rd-ease),
+              border-color var(--t-fast) var(--rd-ease);
+}
+.node-tile .icon svg { width: 15px; height: 15px; }
+.node-card.agent .node-tile { color: var(--accent); }
+.node-card.agent[data-status="on"] .node-tile { background: var(--accent-dim); color: var(--accent); }
+.node-card[data-status="err"] .node-tile { color: var(--danger); border-color: var(--danger-dim); }
+.node-card[data-status="done"] .node-tile { color: var(--ok); border-color: color-mix(in oklab, var(--ok) 35%, var(--border)); }
+.node-card .title { font-size: 13.5px; font-weight: 620; letter-spacing: 0; }
+
+.node-card .purpose-preview {
+  font-size: 11px; letter-spacing: 0.002em; line-height: 1.55;
+  padding: 2px 15px 10px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  max-height: none; overflow: hidden;
+}
+.node-card .stream-preview { font-size: 10px; line-height: 1.55; }
+
+/* port rows breathe; anchors straddle the card edge so wires land on them */
+.port-grid { gap: 8px; padding: 8px 15px 10px; }
+.port-row { height: 22px; font-size: 9.5px; letter-spacing: 0.04em; }
+.port-row.input { padding-left: 26px; }
+.port-row.output { padding-right: 26px; }
+.port-row .port-name { max-width: 92px; }
+.port-anchor {
+  width: 13px; height: 13px; border-width: 1.8px;
+  background: color-mix(in oklab, var(--bg-panel) 72%, var(--port-edge));
+  transition: transform 150ms var(--rd-spring), box-shadow 150ms var(--rd-ease),
+              background 150ms var(--rd-ease), border-color 150ms var(--rd-ease);
+}
+.port-row.input .port-anchor { left: -7px; }
+.port-row.output .port-anchor { right: -7px; }
+.port-row:hover .port-name { color: var(--text-dim); }
+.port-anchor.filled {
+  background: var(--accent); border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.port-anchor:hover, .port-anchor.valid-target {
+  border-color: var(--accent-hot); background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim), 0 0 12px var(--accent-dim);
+  transform: scale(1.14);
+}
+
+/* meta: one quiet line, dot-separated, no chip clutter */
+.node-card .meta { padding: 7px 15px 11px; font-size: 9px; letter-spacing: 0.09em; }
+.node-card .meta span {
+  border: none; background: none; padding: 0;
+}
+.node-card .meta span:not(:first-child)::before { content: "·"; margin: 0 8px; color: var(--text-4); }
+
+/* running spine pulse for agent nodes (reduced-motion kills it below) */
+.node-card.agent[data-status="on"]::before { animation: rd-spine 1.7s ease-in-out infinite; }
+@keyframes rd-spine { 50% { opacity: 0.3; } }
+
+/* linking: the source node stays calm while the ghost wire is out */
+
+/* --- Settings theme options: full-width rows with real previews ------------- */
+.theme-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 14px; }
+.theme-opt {
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg-panel);
+  font-family: var(--font-ui); text-transform: none; letter-spacing: 0;
+  transition: border-color var(--t-fast) var(--rd-ease), background var(--t-fast) var(--rd-ease),
+              box-shadow var(--t-fast) var(--rd-ease);
+}
+.theme-opt:hover { border-color: var(--border-strong); background: var(--bg-input); }
+.theme-opt.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: var(--accent-dim); }
+.theme-opt .theme-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.theme-opt .theme-desc { font-size: 10.5px; font-family: var(--font-mono); color: var(--text-mute); letter-spacing: 0.01em; }
+.swatch { position: relative; width: 34px; height: 22px; border-radius: 6px; flex: none; overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--border-strong); }
+.sw-ground { position: absolute; inset: 0; }
+.sw-signal { position: absolute; right: 4px; bottom: 3px; width: 8px; height: 8px; border-radius: 50%; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MJ 13.5 — the NATURA pass (built from skills/ui-premium-craft +
+   skills/ui-motion-language + skills/node-graph-craft)
+   Stark minimalism WITH warmth: softer depth, natural easing, quiet
+   micro-interactions, and a connection language that reads at a glance.
+   Everything dies under prefers-reduced-motion (kill-list at the end).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* --- natural ease: one deceleration curve for everything arriving ---------- */
+:where(:root) {
+  --ease-natural: cubic-bezier(0.33, 1, 0.68, 1);   /* settle into place  */
+  --ease-organic: cubic-bezier(0.34, 1.56, 0.64, 1); /* restrained life    */
+  --shadow-float: 0 1px 0 rgba(255,255,255,0.04) inset, 0 12px 32px rgba(0,0,0,0.42);
+  --shadow-lift:  0 1px 0 rgba(255,255,255,0.05) inset, 0 6px 18px rgba(0,0,0,0.32);
+}
+
+/* --- warmth & depth on surfaces --------------------------------------------- */
+body, .app { background: var(--bg); }
+.card, .node-card, .ctx-menu, .modal, .toast > *, .canvas-toolbar, .minimap {
+  transition: transform 220ms var(--ease-natural), box-shadow 220ms var(--ease-natural),
+              border-color 200ms var(--ease-natural), background 200ms var(--ease-natural);
+}
+.card:hover { border-color: var(--border-strong); }
+.card { box-shadow: var(--rd-shadow-1); }
+
+/* --- natural motion vocabulary (named, reused, kill-listed) ------------------ */
+@keyframes rd-settle  { from { opacity: 0; transform: translateY(10px) scale(0.995); } to { opacity: 1; transform: none; } }
+@keyframes rd-fade    { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rd-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@keyframes rd-ring    { 0% { box-shadow: 0 0 0 0 var(--accent-dim); } 100% { box-shadow: 0 0 0 8px transparent; } }
+
+/* pages settle, siblings drift in one after another (never more than 4) */
+.stage { animation: rd-settle 360ms var(--ease-natural) both; }
+.panel-page > h2 { animation: rd-settle 320ms var(--ease-natural) both; }
+.panel-page > .sub { animation: rd-fade 420ms ease both; }
+.panel-page .card { animation: rd-settle 380ms var(--ease-natural) both; }
+.panel-page .card:nth-child(2) { animation-delay: 25ms; }
+.panel-page .card:nth-child(3) { animation-delay: 50ms; }
+.panel-page .card:nth-child(4) { animation-delay: 75ms; }
+.panel-page .card:nth-child(5) { animation-delay: 100ms; }
+
+/* --- buttons: presence without noise ------------------------------------------ */
+button { transition: transform 140ms var(--ease-natural), background 160ms ease,
+         color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+button.primary { transition: transform 160ms var(--ease-natural), background 160ms ease, box-shadow 200ms ease; }
+button.primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
+button.primary:active { transform: translateY(0); }
+button:not(:disabled):hover { border-color: var(--amber-dim); }
+
+/* --- inputs: the caret and ring breathe with the theme ------------------------- */
+input, textarea, select { transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease; }
+input::placeholder, textarea::placeholder { color: var(--text-4); }
+
+/* --- the rail: active item breathes, icons warm on hover ----------------------- */
+.rail button { transition: background 160ms ease, color 160ms ease; }
+.rail button svg { transition: color 180ms ease, transform 200ms var(--ease-natural); }
+.rail button:hover svg { transform: translateX(1px); }
+.rail button.active { position: relative; }
+.rail button.active::before { animation: rd-fade 240ms ease both; }
+
+/* --- node cards: NATURA depth + readable states ------------------------------------- */
+.node-card { box-shadow: var(--rd-shadow-1); }
+.node-card:hover { box-shadow: var(--shadow-lift); }
+.node-card.selected {
+  box-shadow: 0 0 0 1.5px var(--accent), var(--shadow-float);
+  animation: rd-ring 500ms var(--ease-natural) both;
+}
+.node-card[data-status="on"], .node-card[data-status="err"], .node-card[data-status="done"] {
+  transition: border-color 300ms ease, box-shadow 300ms ease;
+}
+/* connected confirmation: the anchor ring flashes once on connect */
+.port-anchor.filled { animation: rd-ring 420ms var(--ease-natural) both; }
+
+/* wires: hue shift on state change is smooth; hover glow stays soft */
+.wire { transition: stroke 240ms ease, stroke-width 180ms ease; }
+.wire-group:hover .wire-mid { transition: r 160ms var(--ease-natural); }
+
+/* toast arrival is a settle, not a slide */
+.toast > * { animation: rd-settle 300ms var(--ease-organic) both; }
+
+/* scrollbars: slimmer, quieter */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { border-radius: 99px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* selection and text: warm, not loud */
+::selection { background: var(--sel-bg); color: var(--sel-fg); }
+
+/* --- reduced motion: the NATURA kill-list ------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .stage, .panel-page > h2, .panel-page > .sub, .panel-page .card,
+  .node-card, .port-anchor, .port-anchor.filled, .tab.active::after,
+  .statusbar .live::before, .rail button svg, .card, .ctx-menu, .modal,
+  .toast > *, .canvas-toolbar, .minimap, button, input, textarea, select {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
