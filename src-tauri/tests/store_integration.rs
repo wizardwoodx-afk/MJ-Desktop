@@ -40,7 +40,7 @@ const TABLES: [&str; 15] = [
 
 fn fresh() -> Connection {
     let conn = Connection::open_in_memory().expect("open in-memory db");
-    mj_desktop_lib::db::init(&conn).expect("v11 schema");
+    vouchharbor_lib::db::init(&conn).expect("v11 schema");
     conn
 }
 
@@ -63,14 +63,14 @@ fn init_creates_every_shipped_table() {
 #[test]
 fn init_is_idempotent() {
     let conn = Connection::open_in_memory().unwrap();
-    mj_desktop_lib::db::init(&conn).expect("first init");
-    mj_desktop_lib::db::init(&conn).expect("second init");
+    vouchharbor_lib::db::init(&conn).expect("first init");
+    vouchharbor_lib::db::init(&conn).expect("second init");
 }
 
 #[test]
 fn workflow_round_trip_preserves_the_graph_verbatim() {
     let conn = fresh();
-    let created = mj_desktop_lib::db::workflow_create(&conn, "Mission A", "an outcome").expect("create");
+    let created = vouchharbor_lib::db::workflow_create(&conn, "Mission A", "an outcome").expect("create");
     let id = created["id"].as_str().expect("id").to_string();
 
     // A graph with nested structures, unicode and floats — the store must return it
@@ -87,41 +87,41 @@ fn workflow_round_trip_preserves_the_graph_verbatim() {
         "groups": [],
         "notes": []
     });
-    mj_desktop_lib::db::workflow_save(&conn, &id, "Mission A", "an outcome", &graph).expect("save");
+    vouchharbor_lib::db::workflow_save(&conn, &id, "Mission A", "an outcome", &graph).expect("save");
 
-    let got = mj_desktop_lib::db::workflow_get(&conn, &id).expect("get");
+    let got = vouchharbor_lib::db::workflow_get(&conn, &id).expect("get");
     assert_eq!(got["name"], json!("Mission A"));
     assert_eq!(got["graph"], graph, "the stored graph must come back verbatim");
 
-    let list = mj_desktop_lib::db::workflow_list(&conn).expect("list");
+    let list = vouchharbor_lib::db::workflow_list(&conn).expect("list");
     assert_eq!(list.as_array().unwrap().len(), 1);
 
-    mj_desktop_lib::db::workflow_delete(&conn, &id).expect("delete");
-    let list = mj_desktop_lib::db::workflow_list(&conn).expect("list after delete");
+    vouchharbor_lib::db::workflow_delete(&conn, &id).expect("delete");
+    let list = vouchharbor_lib::db::workflow_list(&conn).expect("list after delete");
     assert_eq!(list.as_array().unwrap().len(), 0, "delete must really delete");
 }
 
 #[test]
 fn execution_lifecycle_is_a_chronological_append_log() {
     let conn = fresh();
-    let wf = mj_desktop_lib::db::workflow_create(&conn, "W", "").expect("create");
+    let wf = vouchharbor_lib::db::workflow_create(&conn, "W", "").expect("create");
     let wid = wf["id"].as_str().expect("id");
-    let ex = mj_desktop_lib::db::execution_create(&conn, wid, 1).expect("execution");
+    let ex = vouchharbor_lib::db::execution_create(&conn, wid, 1).expect("execution");
     let eid = ex["id"].as_str().expect("exec id").to_string();
 
-    let e1 = mj_desktop_lib::db::event_emit(&conn, &eid, "node_start", "info", Some("n1"), &json!({"k": "v"}))
+    let e1 = vouchharbor_lib::db::event_emit(&conn, &eid, "node_start", "info", Some("n1"), &json!({"k": "v"}))
         .expect("event 1");
-    let e2 = mj_desktop_lib::db::event_emit(&conn, &eid, "tool_call", "warn", None, &json!({"cmd": "go test"}))
+    let e2 = vouchharbor_lib::db::event_emit(&conn, &eid, "tool_call", "warn", None, &json!({"cmd": "go test"}))
         .expect("event 2");
     assert!(
         e2["seq"].as_i64().unwrap() > e1["seq"].as_i64().unwrap(),
         "the append log must be strictly ordered"
     );
 
-    mj_desktop_lib::db::execution_finish(&conn, &eid, "FAILED", Some("boom"), &json!({"nodesRun": 1}))
+    vouchharbor_lib::db::execution_finish(&conn, &eid, "FAILED", Some("boom"), &json!({"nodesRun": 1}))
         .expect("finish");
 
-    let events = mj_desktop_lib::db::execution_events(&conn, &eid).expect("events");
+    let events = vouchharbor_lib::db::execution_events(&conn, &eid).expect("events");
     let arr = events.as_array().unwrap();
     assert_eq!(arr.len(), 2, "the record keeps every event");
     assert_eq!(arr[0]["kind"], json!("node_start"));
@@ -129,7 +129,7 @@ fn execution_lifecycle_is_a_chronological_append_log() {
     assert_eq!(arr[1]["data"], json!({"cmd": "go test"}), "payload fidelity");
     assert_eq!(arr[1]["nodeId"], Value::Null);
 
-    let execs = mj_desktop_lib::db::execution_list(&conn).expect("executions");
+    let execs = vouchharbor_lib::db::execution_list(&conn).expect("executions");
     let row = execs
         .as_array()
         .unwrap()
@@ -143,14 +143,14 @@ fn execution_lifecycle_is_a_chronological_append_log() {
 #[test]
 fn memory_search_is_scoped_and_ranked() {
     let conn = fresh();
-    mj_desktop_lib::db::memory_add(&conn, "node-a", "lesson", "the api rate limit is 20/min", &json!(["api"]), 0.3)
+    vouchharbor_lib::db::memory_add(&conn, "node-a", "lesson", "the api rate limit is 20/min", &json!(["api"]), 0.3)
         .unwrap();
-    mj_desktop_lib::db::memory_add(&conn, "node-a", "lesson", "the api returns 429 when throttled", &json!(["api"]), 0.9)
+    vouchharbor_lib::db::memory_add(&conn, "node-a", "lesson", "the api returns 429 when throttled", &json!(["api"]), 0.9)
         .unwrap();
-    mj_desktop_lib::db::memory_add(&conn, "node-b", "lesson", "the api key lives in the keychain", &json!(["api"]), 0.9)
+    vouchharbor_lib::db::memory_add(&conn, "node-b", "lesson", "the api key lives in the keychain", &json!(["api"]), 0.9)
         .unwrap();
 
-    let hits = mj_desktop_lib::db::memory_search(&conn, "node-a", "api", 10).unwrap();
+    let hits = vouchharbor_lib::db::memory_search(&conn, "node-a", "api", 10).unwrap();
     let arr = hits.as_array().unwrap();
     assert_eq!(arr.len(), 2, "search must be scoped to the node");
     assert!(
@@ -158,7 +158,7 @@ fn memory_search_is_scoped_and_ranked() {
         "results must be ranked by importance"
     );
 
-    let none = mj_desktop_lib::db::memory_search(&conn, "node-c", "api", 10).unwrap();
+    let none = vouchharbor_lib::db::memory_search(&conn, "node-c", "api", 10).unwrap();
     assert_eq!(none.as_array().unwrap().len(), 0, "no cross-contamination");
 }
 
@@ -176,17 +176,17 @@ fn skill_usage_is_counted_not_promised() {
             .expect("clock")
             .as_nanos()
     ));
-    let conn = mj_desktop_lib::db::open(&path).expect("open production-style store");
+    let conn = vouchharbor_lib::db::open(&path).expect("open production-style store");
 
-    let s = mj_desktop_lib::db::skill_upsert(&conn, "n1", "review", "reviews a pr", "1. read diff 2. comment", "builtin")
+    let s = vouchharbor_lib::db::skill_upsert(&conn, "n1", "review", "reviews a pr", "1. read diff 2. comment", "builtin")
         .expect("upsert");
     let sid = s["id"].as_str().expect("skill id").to_string();
     assert_eq!(s["version"], json!(1));
 
-    let listed = mj_desktop_lib::db::skills_list(&conn, "n1").expect("list");
+    let listed = vouchharbor_lib::db::skills_list(&conn, "n1").expect("list");
     assert_eq!(listed["skills"].as_array().unwrap().len(), 1);
 
-    let touch = mj_desktop_lib::db::skill_touch(&conn, std::slice::from_ref(&sid)).expect("touch");
+    let touch = vouchharbor_lib::db::skill_touch(&conn, std::slice::from_ref(&sid)).expect("touch");
     assert_eq!(touch["touched"], json!(1), "the usage must be recorded in the store");
     assert_eq!(touch["requested"], json!(1));
     let count: i64 = conn
@@ -194,7 +194,7 @@ fn skill_usage_is_counted_not_promised() {
         .unwrap();
     assert_eq!(count, 1, "usage must be recorded, not echoed");
 
-    let stale = mj_desktop_lib::db::skill_touch(&conn, &["skill-does-not-exist".to_string()]).expect("stale touch");
+    let stale = vouchharbor_lib::db::skill_touch(&conn, &["skill-does-not-exist".to_string()]).expect("stale touch");
     assert_eq!(
         stale["touched"], json!(0),
         "a stale id must be counted as nothing, honestly"
@@ -209,7 +209,7 @@ fn skill_usage_is_counted_not_promised() {
 #[test]
 fn approval_gate_opens_then_gates() {
     let conn = fresh();
-    let a = mj_desktop_lib::db::approval_request(
+    let a = vouchharbor_lib::db::approval_request(
         &conn,
         "exec-1",
         "n1",
@@ -219,16 +219,16 @@ fn approval_gate_opens_then_gates() {
     .expect("request");
     let id = a["id"].as_str().expect("approval id").to_string();
 
-    assert_eq!(mj_desktop_lib::db::approval_list(&conn).unwrap().as_array().unwrap().len(), 1);
-    let before = mj_desktop_lib::db::approval_get(&conn, "exec-1", "n1").unwrap();
+    assert_eq!(vouchharbor_lib::db::approval_list(&conn).unwrap().as_array().unwrap().len(), 1);
+    let before = vouchharbor_lib::db::approval_get(&conn, "exec-1", "n1").unwrap();
     assert_eq!(before["decided"], json!(false), "an open approval is undecided, not auto-approved");
 
-    mj_desktop_lib::db::approval_decide(&conn, &id, "APPROVED").unwrap();
-    let after = mj_desktop_lib::db::approval_get(&conn, "exec-1", "n1").unwrap();
+    vouchharbor_lib::db::approval_decide(&conn, &id, "APPROVED").unwrap();
+    let after = vouchharbor_lib::db::approval_get(&conn, "exec-1", "n1").unwrap();
     assert_eq!(after["decided"], json!(true));
     assert_eq!(after["status"], json!("APPROVED"));
     assert_eq!(
-        mj_desktop_lib::db::approval_list(&conn).unwrap().as_array().unwrap().len(),
+        vouchharbor_lib::db::approval_list(&conn).unwrap().as_array().unwrap().len(),
         0,
         "decided approvals leave the open inbox"
     );
@@ -237,19 +237,19 @@ fn approval_gate_opens_then_gates() {
 #[test]
 fn dlq_entries_resolve_in_place() {
     let conn = fresh();
-    let d = mj_desktop_lib::db::dlq_add(&conn, &json!({"type": "harness", "payload": {"msg": "spawn failed"}}))
+    let d = vouchharbor_lib::db::dlq_add(&conn, &json!({"type": "harness", "payload": {"msg": "spawn failed"}}))
         .expect("add");
     let id = d["id"].as_str().expect("dlq id").to_string();
 
-    assert_eq!(mj_desktop_lib::db::dlq_list(&conn).unwrap().as_array().unwrap().len(), 1, "opened");
+    assert_eq!(vouchharbor_lib::db::dlq_list(&conn).unwrap().as_array().unwrap().len(), 1, "opened");
     let raw: String = conn
         .query_row("SELECT payload_json FROM dlq WHERE id=?1", [&id], |r| r.get(0))
         .unwrap();
     assert!(raw.contains("\"OPEN\""), "the entry is stored OPEN, not silently dropped");
 
-    mj_desktop_lib::db::dlq_resolve(&conn, &id).unwrap();
+    vouchharbor_lib::db::dlq_resolve(&conn, &id).unwrap();
     assert_eq!(
-        mj_desktop_lib::db::dlq_list(&conn).unwrap().as_array().unwrap().len(),
+        vouchharbor_lib::db::dlq_list(&conn).unwrap().as_array().unwrap().len(),
         0,
         "resolved entries are no longer open"
     );
@@ -258,21 +258,21 @@ fn dlq_entries_resolve_in_place() {
 #[test]
 fn evolution_proposals_are_decided_not_silenced() {
     let conn = fresh();
-    let p = mj_desktop_lib::db::evolution_propose(
+    let p = vouchharbor_lib::db::evolution_propose(
         &conn,
         &json!({"nodeKey": "n1", "kind": "split", "reason": "too many wires"}),
     )
     .expect("propose");
     let id = p["id"].as_str().expect("evo id").to_string();
 
-    let list = mj_desktop_lib::db::evolution_list(&conn, Some("n1")).unwrap();
+    let list = vouchharbor_lib::db::evolution_list(&conn, Some("n1")).unwrap();
     let arr = list.as_array().unwrap();
     assert_eq!(arr.len(), 1);
     assert_eq!(arr[0]["status"], json!("PROPOSED"));
     assert_eq!(arr[0]["decision"], json!("PENDING"), "no decision is invented before it happens");
 
-    mj_desktop_lib::db::evolution_decide(&conn, &id, "ACCEPTED").unwrap();
-    let list = mj_desktop_lib::db::evolution_list(&conn, Some("n1")).unwrap();
+    vouchharbor_lib::db::evolution_decide(&conn, &id, "ACCEPTED").unwrap();
+    let list = vouchharbor_lib::db::evolution_list(&conn, Some("n1")).unwrap();
     let arr = list.as_array().unwrap();
     assert_eq!(arr[0]["status"], json!("DECIDED"));
     assert_eq!(arr[0]["decision"], json!("ACCEPTED"));
@@ -282,21 +282,21 @@ fn evolution_proposals_are_decided_not_silenced() {
 fn suites_and_evaluations_round_trip() {
     let conn = fresh();
     let suite = json!({"cases": [{"name": "a", "expect": "pass"}]});
-    let s = mj_desktop_lib::db::suite_save(&conn, None, "Harness A", &suite).expect("suite save");
+    let s = vouchharbor_lib::db::suite_save(&conn, None, "Harness A", &suite).expect("suite save");
     let sid = s["id"].as_str().expect("suite id").to_string();
     assert!(!sid.is_empty(), "a new id is minted when none is supplied");
-    assert_eq!(mj_desktop_lib::db::suite_list(&conn).unwrap().as_array().unwrap().len(), 1);
+    assert_eq!(vouchharbor_lib::db::suite_list(&conn).unwrap().as_array().unwrap().len(), 1);
 
-    mj_desktop_lib::db::evaluation_save(&conn, "n1", Some("exec-1"), &suite, 0.75, &json!({"passed": 3, "failed": 1}))
+    vouchharbor_lib::db::evaluation_save(&conn, "n1", Some("exec-1"), &suite, 0.75, &json!({"passed": 3, "failed": 1}))
         .expect("evaluation save");
-    let history = mj_desktop_lib::db::evaluation_history(&conn, "n1").unwrap();
+    let history = vouchharbor_lib::db::evaluation_history(&conn, "n1").unwrap();
     let arr = history.as_array().unwrap();
     assert_eq!(arr.len(), 1);
     assert!((arr[0]["score"].as_f64().unwrap() - 0.75).abs() < 1e-9);
     assert_eq!(arr[0]["details"], json!({"passed": 3, "failed": 1}));
 
     assert_eq!(
-        mj_desktop_lib::db::evaluation_history(&conn, "n-never-evaluated")
+        vouchharbor_lib::db::evaluation_history(&conn, "n-never-evaluated")
             .unwrap()
             .as_array()
             .unwrap()
@@ -309,19 +309,19 @@ fn suites_and_evaluations_round_trip() {
 #[test]
 fn mcp_seed_is_once_and_removable() {
     let conn = fresh();
-    mj_desktop_lib::db::seed_mcp_if_empty(&conn).expect("first seed");
-    let n = mj_desktop_lib::db::mcp_list(&conn).unwrap().as_array().unwrap().len();
+    vouchharbor_lib::db::seed_mcp_if_empty(&conn).expect("first seed");
+    let n = vouchharbor_lib::db::mcp_list(&conn).unwrap().as_array().unwrap().len();
     assert_eq!(n, 7, "the built-in catalog");
 
-    mj_desktop_lib::db::seed_mcp_if_empty(&conn).expect("second seed");
+    vouchharbor_lib::db::seed_mcp_if_empty(&conn).expect("second seed");
     assert_eq!(
-        mj_desktop_lib::db::mcp_list(&conn).unwrap().as_array().unwrap().len(),
+        vouchharbor_lib::db::mcp_list(&conn).unwrap().as_array().unwrap().len(),
         n,
         "seeding must be idempotent"
     );
 
-    mj_desktop_lib::db::mcp_remove(&conn, "mcp.filesystem").expect("remove");
-    let after = mj_desktop_lib::db::mcp_list(&conn).unwrap();
+    vouchharbor_lib::db::mcp_remove(&conn, "mcp.filesystem").expect("remove");
+    let after = vouchharbor_lib::db::mcp_list(&conn).unwrap();
     assert_eq!(after.as_array().unwrap().len(), n - 1);
     assert!(after.to_string().contains("mcp.git"), "the rest of the catalog survives");
 }

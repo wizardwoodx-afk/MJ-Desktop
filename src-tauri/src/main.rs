@@ -1,5 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    mj_desktop_lib::run();
+    vouchharbor_lib::run();
 }
