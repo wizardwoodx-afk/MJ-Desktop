@@ -1,0 +1,65 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Vouch Harbor",
+  "version": "16.4.1",
+  "identifier": "com.vouchharbor.harbor",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Vouch Harbor",
+        "width": 1560,
+        "height": 980,
+        "minWidth": 1120,
+        "minHeight": 720,
+        "center": true,
+        "focus": true,
+        "theme": "Dark",
+        "decorations": false,
+        "transparent": false,
+        "shadow": false,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: http://asset.localhost; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://api.github.com https://en.wikipedia.org https://hn.algolia.com https://api.search.brave.com http://127.0.0.1:* http://localhost:*"
+    },
+    "trayIcon": {
+      "id": "main",
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true,
+      "tooltip": "Vouch Harbor — native agent workstation",
+      "menuOnLeftClick": false
+    }
+  },
+  "plugins": {},
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
+    "category": "DeveloperTool",
+    "shortDescription": "Native visual AI agent orchestration workstation",
+    "longDescription": "Vouch Harbor is a local-first desktop workstation for governing, executing, verifying, and learning from multi-agent missions. Secrets stay in the OS keychain. One mission, one vouched chain.",
+    "createUpdaterArtifacts": false,
+    "resources": [
+      "../vendor"
+    ]
+  }
+}

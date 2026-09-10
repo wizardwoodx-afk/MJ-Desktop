@@ -1,0 +1,85 @@
+name: Release
+
+# MJ 14.1.1-windows-fix. Windows-only: a tag produces the NSIS installer,
+# published by tauri-action. macOS/Linux targets were removed — MJ is built,
+# installed and demoed on Windows 11 for pre-seed; no maintainer validates
+# the other bundles, so CI no longer pretends to ship them.
+#
+# Auto-update is REMOVED, not merely unconfigured: src-tauri/src/lib.rs no
+# longer initializes tauri_plugin_updater (it was fatal at launch with an
+# empty `plugins.updater` config — exit 101 before setup). Updates are
+# "download the new zip and reinstall". Do NOT re-add the updater init
+# without a real `plugins.updater` config section (pubkey + endpoints).
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Git identity for the probe suites that drive real git
+        run: |
+          git config --global user.name "MJ Release"
+          git config --global user.email "mj-release@users.noreply.github.com"
+
+      - name: Verify before shipping (tsc + every probe — the same gate CI runs)
+        shell: bash
+        env:
+          # Same watchdog headroom as CI: offlinePack is the heavy tail on loaded runners.
+          MJ_PROBE_TIMEOUT_MS: "300000"
+        run: |
+          set -o pipefail
+          ./node_modules/.bin/tsc --noEmit
+          npm test 2>&1 | tee probe-run.log
+
+      - name: Rust tests
+        shell: bash
+        run: |
+          cd src-tauri && cargo test
+
+      - name: Build and publish installer
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "MJ ${{ github.ref_name }} (Windows)"
+          releaseBody: "Windows NSIS installer (x64). No auto-update — download the new zip and reinstall. See docs/history/VH-16.4-UPGRADE.md for what is proven and what is not."
+          releaseDraft: false
+          prerelease: false
+
+      - name: Launch smoke test (the gate that was missing)
+        shell: pwsh
+        run: |
+          # The updater-plugin misconfiguration shipped dead apps through
+          # 13.5.1 because nothing ever launched the binary. This step
+          # launches the freshly built exe and fails the run if it exits.
+          $exe = "src-tauri/target/release/vouchharbor.exe"
+          $p = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 25
+          $r = Get-Process -Id $p.Id -ErrorAction SilentlyContinue
+          if (-not $r) { Write-Error "vouchharbor.exe exited within 25s of launch"; exit 1 }
+          Write-Host ("smoke OK: pid={0} ws={1:N1}MB title='{2}'" -f $r.Id, ($r.WS/1MB), $r.MainWindowTitle)
+          Stop-Process -Id $r.Id -Force

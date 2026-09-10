@@ -1,0 +1,176 @@
+Vouch Harbor 16.4.1 — offline verification pack provenance
+==========================================================
+
+Release identity: Vouch Harbor 16.4.1 — "govern · execute · verify · learn."
+The drill release: the product proving itself on REAL missions. Standard
+scenarios — a fresh real git repository, the repository's OWN test
+command, the REAL mission loop (real governance arena, real git
+worktrees, one signed cycle receipt) — run on demand through the
+governed, RISKY run_drill tool (human gate, vouched report, unified
+mission-ledger entry, reproducible attestation digest), with an
+honest-failure scenario that must report FAILED, never a fake pass. New
+in this release: the drill (src/vouch/engine/drill.ts, the run_drill
+governed tool — the MCP surface is now 20 tools — the Drill door under
+System, and the 88th probe suite).
+
+What 16.4 adds over 16.3
+  - THE DRILL — standard real missions, run on demand: guard (fix the
+    disabled-admin bug), maths (implement clamp so the failing test
+    passes), impossible (honest-failure scenario — must report FAILED,
+    never a fake pass). Each run: fresh REAL git repo, the repo's OWN
+    test command executed for real, the REAL mission loop (real
+    governance arena, real worktrees, signed cycle receipt), a unified
+    mission-ledger entry, a vouched drill report (real test-output tail,
+    origin "drill") and a reproducible attestation digest. run_drill is
+    a governed, RISKY tool (the MCP surface is now 20 tools); UI: the
+    "Drill" door under System (scenario catalog + persisted report
+    ledger). Honesty model: real git/verification/loop/receipts; the
+    built-in drill seat is the labeled swappable-brain seam; failed
+    scenarios keep their forensic git repo.
+  - Pinned by probe/drill (suite #88): PASSED runs with the real test
+    output, the honest-failure run (real FAIL output + kept real git
+    repo + vouched), unknown-scenario refusals, digest stability, the
+    single-throat gate, and the full flow over real stdio (gate →
+    approve → real mission → PASSED → receipt verifies over the wire).
+
+Inherited from 16.3.0 (still in force)
+  - M6 GATED, REVERSIBLE META-LOOP — the product proposes changes to its
+    own control plane (risk.tier tighten-only, preference.set), every
+    decision vouched, reverts gated + terminal. Pinned by probe/metaLoop.
+  - M3 MCP CAPABILITY ROUTER — now 20 governed tools over JSON-RPC 2.0
+    (stdio): the safe surface (calculator, clock, search, web_search,
+    memory_save/recall, preference_save, workspace_list, system_info), the
+    risky surface (workspace_write, dispatch_mission — human-gated,
+    non-blocking: the call returns a pending handle, the human decides via
+    the UI or via the server's own approve_action / deny_action, and
+    call_status polls gated → running → done), and the audit surface
+    (mission_status, verify_receipt). EVERY completed call — success,
+    denial, refusal, error — mints a receipt carrying the calling face's
+    origin. Design aligned with the MCP 2026-07-28 spec direction:
+    stateless, self-describing requests; explicit handles (approvalId /
+    callId) threaded by the client instead of hidden transport state;
+    poll-based long-running work (the Tasks direction).
+  - SINGLE GOVERNED EXECUTOR — runVouchToolCall is the one route from any
+    face to the capability tools; the chat face and the MCP face share it,
+    so governance cannot be skipped by changing the door.
+  - Committed engine bundle tools/mcp-engine.mjs (esbuild, node, self-
+    contained) byte-pinned by probe/mcpRouter — a stale bundle fails the
+    gate, same discipline as this pack.
+  - Pinned by probe/mcpRouter (suite #86): in-process engine pins + the
+    real server over real stdio (initialize, tools/list, safe call +
+    receipt verify, unknown-tool refusal, full denial flow, full approval
+    flow, a REAL mission loop dispatched over the wire, JSON-RPC errors).
+
+Inherited from 16.1.0 (still in force)
+  - CLEAN IDENTITY — no "MJ"/"ROGUE" on the routed surface; one product
+    version line (VH_VERSION stamps engine, control plane, proof protocol
+    and native shell). Pinned by probe/vhClean.
+  - PROOF WIRE — vh-proof-receipt/2, per-generation seal constants,
+    dual-accept readers; pre-16.1 receipts still verify.
+  - M4 LEARNING BRIDGE — mission trajectory → test-gated skill → fast
+    path, with mission provenance bound into the receipt.
+  - M5-LITE MISSION TIMELINE — the Missions tab opens each mission into
+    its unified chain.
+  - The asymmetric merge: execution core + control plane, one mission ID,
+    one unified receipt chain, one state (docs/STEP3-MERGE-SPEC.md).
+  - The human gate on risky actions; the decision sealed in the receipt.
+  - Verifiers stay dependency-free and pin issuer keys out-of-band — never
+    "zero trust"; the INK palette hex values stay frozen (theme.test).
+  - Mission Record economics, evidence pack, assurance score, incident
+    dossier, OS-keychain issuer key, CI watchdog.
+
+Toolchain (this tree's certification)
+  node          v20.20.2 (linux x64) — the gates below ran under it
+  npm test      88 probe suites
+  build         vite production build (the web bundle gate)
+  esbuild       0.25.12
+  product       16.4.1 (package.json + package-lock.json / version.ts /
+                tauri.conf.json / Cargo.toml — one version line)
+  Tauri native  NOT built in this environment (no Rust toolchain); CI runs
+                cargo check / cargo test / clippy on the real crate
+
+Pack contents
+  verify/suites/*.mjs   87 self-contained bundles — every probe suite except
+                        probe/offlinePack.test.ts (the pack's own freshness
+                        gate, which runs live only)
+  verify/MANIFEST.json  sha256 per bundle + the product and esbuild versions
+                        that built it
+  verify/run.mjs        offline runner: no network, no installs, no product
+                        state
+
+Live certification (this tree, node v20.20.2)
+  tsc --noEmit          0 errors.
+  npm test              ALL PROBES SUMMARY: 88 passed, 0 failed.
+  node verify/run.mjs   OFFLINE VERIFY SUMMARY: 87 passed, 0 failed., exit 0
+  vite build            clean, 0 errors.
+
+16.4.1 — upgrade notes (the drill + the provenance patch)
+----------------------------------
+  1. The drill release: 88 probe suites live, 87 self-contained offline
+     bundles. See docs/history/VH-16.4-UPGRADE.md for the full notes.
+  2. New door: System → "Drill". run_drill is a mission — it gates like
+     every mission (Vouch face or MCP approve_action / deny_action).
+  3. Failed drill scenarios keep a forensic git repo in the OS temp dir
+     (path in the report); passed ones clean up after themselves.
+
+16.3.0 — upgrade notes (the gated, reversible meta-loop)
+--------------------------------------------------------
+  1. The meta release: 87 probe suites live, 86 self-contained offline
+     bundles. See docs/history/VH-16.3-UPGRADE.md for the full notes.
+  2. The meta loop touches only two control surfaces: risk tiers
+     (tighten-only) and standing preferences. The receipt protocol, the
+     gate primitive, the brain and the code are NOT self-modifiable at
+     runtime — those change by humans writing code, with git.
+  3. Meta decisions land on the one gate (the Vouch face) or over MCP
+     (approve_action / deny_action); the ledger, proposals and reverts
+     are under System → "Meta loop" and via meta_status over MCP.
+
+16.2.0 — upgrade notes (the MCP capability router)
+--------------------------------------------------
+  1. The router release: 86 probe suites live, 85 self-contained offline
+     bundles. See docs/history/VH-16.2-UPGRADE.md for the full notes,
+     including the MCP 2026-07-28 spec alignment and how to wire the
+     server into any MCP client (`npm run mcp`).
+  2. The MCP server's session is per-process (its engine state is node-
+     safe in-memory); the native app's session is separate. One process
+     is one face — labeled plainly, no silent shared state.
+  3. Risky MCP calls never block: they return a pending handle
+     (approvalId + callId). Approve/deny from the UI or from the server
+     itself (approve_action / deny_action), then poll call_status.
+     Every completed call carries a receipt id.
+
+16.1.0 — upgrade notes (the clean identity + learning bridge)
+-------------------------------------------------------------
+  1. The rebrand release: 85 probe suites live, 84 self-contained offline
+     bundles. See docs/history/VH-16.1-UPGRADE.md for the full notes,
+     including what "clean" deliberately does and does not mean
+     (legacy wire tokens survive only as the compatibility contract).
+  2. New receipts ride vh-proof-receipt/2; pre-16.1 receipts
+     (mj-proof-receipt/1|2) still verify — auditors on old exports are
+     unaffected.
+  3. Web-side storage keys that moved (mj.* → vouch.*) carry no data that
+     matters across the rename in a clean install; a fresh install is the
+     recommended path.
+
+16.0.0 — upgrade notes (the Vouch Harbor merge)
+-----------------------------------------------
+  1. The merge release: the execution engine + the control plane, one
+     product. See docs/history/MJ-16.0-UPGRADE.md.
+  2. The face door is the Vouch control plane; dispatch drives the REAL
+     mission loop under one mission ID in one unified receipt chain.
+  3. Version line: 16.0.0 across every manifest.
+
+15.1.0 — upgrade notes
+----------------------
+  1. The teammate session is schema v2; 15.0 (v1) sessions migrate
+     automatically on load (flat message list → "Main thread"; facts and
+     receipts preserved verbatim). Workspace files untouched.
+  2. The brain is still simulated and labeled as such in the UI and in
+     every receipt. The TeammateBrain seam is the documented swap point
+     for a real LLM (local-first).
+  3. Both verifiers must stay dependency-free (probes pin their import
+     lists); the INK palette hex values stay frozen (theme.test pins them).
+
+Counts: 88 live / 87 offline.
+Certified under node v20.20.2 (tsc 0, 88/88 live incl. offlinePack freshness,
+87/87 offline, vite clean).

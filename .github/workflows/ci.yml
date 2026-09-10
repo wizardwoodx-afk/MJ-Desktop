@@ -1,0 +1,79 @@
+name: CI
+
+# CI compiles the real Tauri crate on Windows (cargo check/test/clippy),
+# runs the full probe suite and builds the production bundle on every push
+# and PR. Windows-only: MJ is built, installed and demoed on Windows 11 for
+# pre-seed; no maintainer validates the other platforms, so CI does not run
+# them. probe/versionDrift.test.ts §5 still fails the gate if a retired
+# runner label or an EOL Node major reappears here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    name: verify (windows)
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 20 reached end-of-life 2026-04-30; CI certifies releases only on supported runtimes.
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+
+      - name: npm ci
+        run: npm ci
+
+      - name: TypeScript — tsc --noEmit
+        run: ./node_modules/.bin/tsc --noEmit
+
+      - name: Rust — cargo check
+        working-directory: src-tauri
+        run: cargo check --all-targets
+
+      - name: Rust — cargo test
+        working-directory: src-tauri
+        run: cargo test
+
+      - name: Rust — clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Git identity for the probe suites that drive real git
+        run: |
+          git config --global user.name "MJ CI"
+          git config --global user.email "mj-ci@users.noreply.github.com"
+
+      - name: Probes
+        shell: bash
+        env:
+          # offlinePack rebuilds all bundles sequentially and then runs the whole offline
+          # pack; on a loaded CI runner the default 120s per-suite watchdog can trip on it.
+          MJ_PROBE_TIMEOUT_MS: "300000"
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee probe-run.log
+
+      - name: Upload probe log (always — a red run must be debuggable)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-log-windows
+          path: probe-run.log
+          if-no-files-found: ignore
+
+      - name: Production bundle
+        run: ./node_modules/.bin/vite build
