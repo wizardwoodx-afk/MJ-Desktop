@@ -1,0 +1,408 @@
+{
+  "suite": "vouch-harbor-mcp-conformance",
+  "spec": "Model Context Protocol",
+  "eras": {
+    "modern": "2026-07-28",
+    "legacy": "2025-06-18"
+  },
+  "fixtures": {
+    "schema-2026-07-28.json": "ef70b61f99b6d2e5e3b46863822eab08dff6a45bedc7a08914e0e5b133f40203",
+    "schema-2025-06-18.json": "af845e7e5b9d27107d1690f0936022546177a1403e63ffb11470135b296a2e01",
+    "ext-tasks-2026-07-28.json": "bf30afb7ac251e3e22c037b7a685f60ef6603031b5484c0d08b1fa0bbe86d460"
+  },
+  "totalChecks": 65,
+  "passed": 65,
+  "failed": 0,
+  "checks": [
+    {
+      "area": "request",
+      "name": "server/discover request → DiscoverRequest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "discover response → DiscoverResult",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "request",
+      "name": "tools/list request → ListToolsRequest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tools/list response → ListToolsResult",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"approve_action\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"calculator\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"call_status\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"clock\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"deny_action\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"dispatch_mission\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"memory_recall\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"memory_save\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"meta_propose\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"meta_revert\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"meta_status\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"mission_status\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"preference_save\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"run_drill\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"search\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"system_info\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"verify_receipt\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"web_search\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"workspace_list\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tool \"workspace_write\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "request",
+      "name": "tools/call request (safe) → CallToolRequest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "safe tools/call response → CallToolResult",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "request",
+      "name": "tools/call request (risky) → CallToolRequest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "risky tools/call response → InputRequiredResult",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "request",
+      "name": "MRTR retry request (top-level inputResponses) → CallToolRequest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "MRTR retry response → CallToolResult",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "request",
+      "name": "tools/call request (tasks client) → CallToolRequest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "task creation response → CreateTaskResult",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tasks/get response (input_required) → GetTaskResult",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tasks/update response → UpdateTaskResult",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "tasks/get poll 1 → GetTaskResult",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "-32021 error envelope → MissingRequiredClientCapabilityError",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "-32022 error envelope → UnsupportedProtocolVersionError",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "request",
+      "name": "legacy initialize request → InitializeRequest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy initialize response → InitializeResult",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "request",
+      "name": "legacy tools/list request → ListToolsRequest",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tools/list response → ListToolsResult",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"calculator\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"clock\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"search\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"web_search\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"memory_save\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"memory_recall\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"preference_save\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"workspace_list\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"workspace_write\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"dispatch_mission\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"approve_action\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"deny_action\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"call_status\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"mission_status\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"verify_receipt\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"system_info\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"meta_propose\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"meta_status\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"meta_revert\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy tool \"run_drill\" → Tool",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy risky call response → CallToolResult",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy approve_action response → CallToolResult",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy call_status poll 1 → CallToolResult",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "area": "response",
+      "name": "legacy call_status poll 2 → CallToolResult",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}
